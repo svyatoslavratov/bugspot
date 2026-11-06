@@ -35,10 +35,11 @@ your app's own login.
 - **A workflow.** Open → in progress → fixed → resolved, or declined, plus a separate *checked by a
   person* box. Replies, editing by clicking the text, search, this page / all pages, pins on and off,
   "show on the page" with a short highlight, a draggable button.
-- **One click to comment.** Right-click (or Alt+click) the bug and pick an element — the panel opens
-  with the form; a plain click still opens the panel. Shift+click picks several elements with the
-  same problem for one comment (a pin on each). After sending, the next element can be picked at
-  once; Esc finishes.
+- **Quick to comment.** Alt+C (⌥C; any shortcut you like) or Alt+click on the bug starts picking an
+  element. Shift+click picks several elements with the same problem for one comment (a pin on
+  each). Write in the full form in the panel or, in *tiny* mode, in a small box right at the
+  element, as in Figma (Enter sends). After sending, the next element can be picked at once; Esc
+  finishes. The bug's right-click menu switches the mode, the shortcut and the pins.
 - **Agents are first-class.** An MCP server (`bugspot mcp`), agent tokens with scopes, a CLI and a
   plain REST API. Agents move threads to *fixed*; only people check and resolve them.
 - **Flexible access.** Identity from your app's session (`forward`), a JWT, a trusted proxy header,
@@ -102,6 +103,11 @@ nginx is in [examples/docker-compose](examples/docker-compose).
    | `data-lang` | `en`, `ru` | browser language |
    | `data-theme` | `light`, `dark`, `auto` | `light` |
    | `data-position` | `bottom-right`, `bottom-left`, `top-right`, `top-left` | `bottom-right` |
+   | `data-mode` | `full` (the form in the panel), `tiny` (a small box at the element) | `full` |
+   | `data-hotkey` | the picking shortcut by key code, e.g. `Alt+KeyC`, `Ctrl+Shift+KeyK`, `F2`; `off` | `Alt+KeyC` |
+
+   `data-mode` and `data-hotkey` are defaults: each person can change them in the bug's menu (kept in
+   their browser).
 
    `window.bugspotConfig = { token, appVersion, fetch }` set before the script overrides these
    from code (`token` returns a JWT for the `jwt` provider).

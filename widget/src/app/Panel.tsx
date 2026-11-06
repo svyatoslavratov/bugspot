@@ -3,7 +3,6 @@ import {
   Card,
   Classes,
   Elevation,
-  HTMLSelect,
   InputGroup,
   NonIdealState,
   Spinner,
@@ -13,15 +12,18 @@ import {
 } from '@blueprintjs/core';
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { STATUSES, type Page, type Point, type Status, type Thread } from '../shared/types';
+import type { Page, Point, Thread } from '../shared/types';
 import type { View } from './App';
 import { useWidget } from './context';
+import { StatusFilterPicker, type StatusFilter } from './labels';
 import { buttonPoint, panelBox } from './layout';
 import { ThreadList } from './ThreadList';
 import type { Loaded } from './useData';
 
+const PROJECT_URL = 'https://github.com/svyatoslavratov/bugspot';
+
 export type Tab = 'page' | 'all';
-export type StatusFilter = 'active' | 'all' | Status;
+export type { StatusFilter } from './labels';
 
 interface Props {
   buttonPosition: Point | null;
@@ -99,16 +101,7 @@ export function Panel(p: Props) {
                 type="search"
                 fill
               />
-              <HTMLSelect
-                value={p.status}
-                onChange={(e) => p.onStatus(e.currentTarget.value as StatusFilter)}
-                aria-label={t.setStatus}
-                options={[
-                  { value: 'active', label: t.active },
-                  { value: 'all', label: t.allStatuses },
-                  ...STATUSES.map((s) => ({ value: s, label: t.status[s] })),
-                ]}
-              />
+              <StatusFilterPicker value={p.status} onChange={p.onStatus} />
             </div>
           </div>
           <div className="bugspot-panel-body">
@@ -118,6 +111,11 @@ export function Panel(p: Props) {
       ) : (
         <div className="bugspot-panel-body">{p.children}</div>
       )}
+      <footer className="bugspot-panel-footer">
+        <a href={PROJECT_URL} target="_blank" rel="noopener noreferrer" title={t.aboutProject}>
+          bugspot ↗
+        </a>
+      </footer>
     </Card>
   );
 }

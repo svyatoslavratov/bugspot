@@ -104,10 +104,15 @@ export function ThreadView({
           busy={busy}
           onChange={(status) => void act(() => api.update(thread.id, { status }))}
         />
+        {/* Icons with tooltips, like delete: the header stays on one line at any panel width. */}
         {here ? (
-          <Button icon="map-marker" variant="minimal" text={t.showOnPage} onClick={() => onShow(thread)} />
+          <Tooltip content={t.showOnPage} placement="bottom">
+            <Button icon="map-marker" variant="minimal" aria-label={t.showOnPage} onClick={() => onShow(thread)} />
+          </Tooltip>
         ) : (
-          <Button icon="link" variant="minimal" text={t.openPage} onClick={() => onGo(thread)} />
+          <Tooltip content={t.openPage} placement="bottom">
+            <Button icon="link" variant="minimal" aria-label={t.openPage} onClick={() => onGo(thread)} />
+          </Tooltip>
         )}
         {thread.allowed.delete && (
           <Tooltip content={t.delete} placement="bottom" className="bugspot-push-right">

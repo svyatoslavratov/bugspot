@@ -162,8 +162,15 @@ export interface ThreadQuery {
   limit?: number;
 }
 
+/** Where a new comment is written: the panel form, or a tiny box next to the element. */
+export type ComposeMode = 'full' | 'tiny';
+
 /** Settings from the script tag and window.bugspotConfig. */
 export interface Settings {
+  /** The default compose mode (data-mode); each person can switch it in the bug's menu. */
+  mode: ComposeMode;
+  /** The default picking shortcut (data-hotkey, "Alt+KeyC"; "off" — none); people can change it. */
+  hotkey: string;
   /** Route mode: path, the hash path of a hash router, or auto (hash when the hash starts with #/). */
   route: 'auto' | 'path' | 'hash';
   appVersion?: string;
