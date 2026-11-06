@@ -17,7 +17,7 @@ your app's own login.
 
 [Русская версия](README.ru.md)
 
-![The panel with threads and pins on the page](docs/images/panel.png)
+![A person comments, the agent fixes over MCP, a person checks and resolves](docs/images/demo.gif)
 
 ## Features
 
@@ -27,10 +27,13 @@ your app's own login.
 - **Context for free.** A screenshot of the visible page with the element marked (or a real tab
   capture), browser and window size, app version, the last console errors and failed requests
   (with `X-Request-ID`; query values are dropped).
-- **A workflow.** Open → in progress → fixed → resolved, or declined. Replies, edit, delete, search,
-  this page / all pages, pins on and off, a draggable button.
-- **Agents are first-class.** Agent tokens with scopes, a CLI (`bugspot threads list/show/reply/status/screenshot`)
-  and a plain REST API. Agents move threads to *fixed*; only people resolve them.
+- **A workflow.** Open → in progress → fixed → resolved, or declined, plus a separate *checked by a
+  person* box. Replies, editing by clicking the text, search, this page / all pages, pins on and off,
+  "show on the page" with a short highlight, a draggable button.
+- **One click to comment.** Right-click (or Alt+click) the bug and pick an element — the panel opens
+  with the form; a plain click still opens the panel.
+- **Agents are first-class.** An MCP server (`bugspot mcp`), agent tokens with scopes, a CLI and a
+  plain REST API. Agents move threads to *fixed*; only people check and resolve them.
 - **Flexible access.** Identity from your app's session (`forward`), a JWT, a trusted proxy header,
   share links with access keys, or anonymous — combined in any order, with view / comment /
   moderate rules by role or user.
@@ -41,6 +44,8 @@ your app's own login.
 
 The widget is React + [Blueprint](https://blueprintjs.com) inside a Shadow DOM, so it neither
 breaks nor inherits your styles.
+
+![The panel with threads and pins on the page](docs/images/panel.png)
 
 ## Quick start
 
@@ -154,6 +159,25 @@ Only the listed cookies are forwarded, only to that URL; answers are cached for 
 More recipes (JWT in Go and Node, oauth2-proxy, another domain): [docs/integration.md](docs/integration.md).
 
 ## Agents
+
+### MCP
+
+`bugspot mcp` is an MCP server on stdio with the tools `list_threads`, `get_thread`,
+`get_screenshot` (the image itself), `reply`, `set_status` and `summary`. It works through the API
+with an agent token, so the agent has exactly the token's rights.
+
+```sh
+# Claude Code
+claude mcp add bugspot --env BUGSPOT_URL=https://app.example.com/bugspot --env BUGSPOT_TOKEN=bsp_… -- bugspot mcp
+# without a local binary
+claude mcp add bugspot -- docker run -i --rm -e BUGSPOT_URL=… -e BUGSPOT_TOKEN=… ghcr.io/svyatoslavratov/bugspot mcp
+```
+
+Then: *"Fix the open bugspot comments"* — the agent lists them, looks at the screenshots, takes one
+into work, fixes the code, replies and sets *fixed*. A person checks the result, ticks *checked*
+and resolves.
+
+### CLI
 
 ```sh
 # next to the service: create a token (shown once; only its hash is stored)
