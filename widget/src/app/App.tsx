@@ -7,7 +7,6 @@ import { loadPrefs, savePrefs, setPendingThread, takePendingThread, type Prefs }
 import { currentRoute, onRouteChange } from '../lib/route';
 import { ACTIVE_STATUSES, type ComposeMode, type Status, type Thread } from '../shared/types';
 import { BugButton } from './BugButton';
-import { BugMenu } from './BugMenu';
 import { useWidget } from './context';
 import { Flash, FLASH_MS } from './Flash';
 import { NewThread } from './NewThread';
@@ -15,6 +14,7 @@ import { Panel, type StatusFilter, type Tab } from './Panel';
 import { Picker, type Pick } from './Picker';
 import { PinLayer } from './PinLayer';
 import { QuickComposer } from './QuickComposer';
+import { SettingsMenu } from './SettingsMenu';
 import { ThreadView } from './ThreadView';
 import { useData } from './useData';
 import type { Draft, Target } from './useDraft';
@@ -45,7 +45,6 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
       hotkey: settings.hotkey === '' || parseHotkey(settings.hotkey) ? settings.hotkey : DEFAULT_HOTKEY,
     }),
   );
-  const [menuOpen, setMenuOpen] = useState(false);
   const recordingHotkey = useRef(false);
   // The tiny box at the element (tiny mode) instead of the form in the panel.
   const [quick, setQuick] = useState<Target | null>(null);
@@ -113,7 +112,6 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
 
   const startPicking = useCallback(() => {
     openBeforePicking.current = open;
-    setMenuOpen(false);
     setPickNotice(undefined);
     setPicking(true);
   }, [open]);
@@ -258,20 +256,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
         count={counts.page}
         open={open}
         position={prefs.button}
-        hint={t.bugHint(formatHotkey(prefs.hotkey))}
-        menuOpen={menuOpen}
-        onMenu={setMenuOpen}
-        menu={
-          <BugMenu
-            prefs={prefs}
-            canComment={canComment}
-            onPick={startPicking}
-            onMode={setMode}
-            onHotkey={setHotkey}
-            onPins={setPins}
-            onRecording={setRecording}
-          />
-        }
+        hint={canComment ? t.bugHint(formatHotkey(prefs.hotkey)) : t.title}
         onMove={(button) => updatePrefs({ button })}
         onClick={() => setOpen((o) => !o)}
         onQuick={canComment ? startPicking : undefined}
@@ -291,6 +276,11 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
           onStatus={setStatus}
           onQuery={setQuery}
           onPins={setPins}
+          settings={
+            canComment ? (
+              <SettingsMenu prefs={prefs} onMode={setMode} onHotkey={setHotkey} onRecording={setRecording} />
+            ) : undefined
+          }
           onNew={startPicking}
           onClose={() => setOpen(false)}
           onSelect={goToThread}

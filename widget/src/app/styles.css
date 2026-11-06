@@ -21,6 +21,14 @@
   pointer-events: none;
 }
 
+/* Blueprint rings every :focus and hides the ring for mouse users with a class on the page's <html>,
+   which the shadow root does not see: a clicked tab kept its ring until the next click elsewhere.
+   :focus-visible keeps the ring for keyboard focus only. */
+:focus:not(:focus-visible),
+:focus:not(:focus-visible) ~ .bp6-control-indicator {
+  outline: none !important;
+}
+
 .bugspot-portal
   :is(.bp6-portal, .bp6-overlay, .bp6-overlay-content, .bp6-popover-transition-container, .bp6-overlay-backdrop),
 .bugspot-bug,

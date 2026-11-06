@@ -2,9 +2,9 @@ import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { BugMenu } from '../src/app/BugMenu';
 import { WidgetContext, type Widget } from '../src/app/context';
 import { QuickComposer } from '../src/app/QuickComposer';
+import { SettingsMenu } from '../src/app/SettingsMenu';
 import type { Target } from '../src/app/useDraft';
 import { dictionaries } from '../src/lib/i18n';
 import type { Prefs } from '../src/lib/prefs';
@@ -109,26 +109,17 @@ describe('QuickComposer', () => {
   });
 });
 
-describe('BugMenu', () => {
+describe('SettingsMenu', () => {
   const prefs: Prefs = { button: null, pins: true, mode: 'full', hotkey: 'Alt+KeyC' };
 
   test('switches the mode and records a new shortcut', () => {
     const onMode = vi.fn();
     const onHotkey = vi.fn();
     const onRecording = vi.fn();
-    render(
-      createElement(BugMenu, {
-        prefs,
-        canComment: true,
-        onPick: vi.fn(),
-        onMode,
-        onHotkey,
-        onPins: vi.fn(),
-        onRecording,
-      }),
-    );
+    render(createElement(SettingsMenu, { prefs, onMode, onHotkey, onRecording }));
     const item = (text: string) =>
       [...container.querySelectorAll<HTMLElement>('.bp6-menu-item')].find((el) => el.textContent?.includes(text))!;
+    expect(item('Full — in the panel').closest('[aria-selected]')?.getAttribute('aria-selected')).toBe('true');
     act(() => item('Tiny — next to the element').click());
     expect(onMode).toHaveBeenCalledWith('tiny');
 
@@ -150,20 +141,17 @@ describe('BugMenu', () => {
     expect(onHotkey).toHaveBeenLastCalledWith('');
   });
 
-  test('people who may not comment only get the pins switch', () => {
-    render(
-      createElement(BugMenu, {
-        prefs,
-        canComment: false,
-        onPick: vi.fn(),
-        onMode: vi.fn(),
-        onHotkey: vi.fn(),
-        onPins: vi.fn(),
-        onRecording: vi.fn(),
-      }),
-    );
-    expect([...container.querySelectorAll('.bp6-menu-item')].map((el) => el.textContent)).toEqual([
-      'Hide pins from the page',
-    ]);
+  test('Esc stops recording and keeps the shortcut', () => {
+    const onHotkey = vi.fn();
+    render(createElement(SettingsMenu, { prefs, onMode: vi.fn(), onHotkey, onRecording: vi.fn() }));
+    const change = [...container.querySelectorAll<HTMLElement>('.bp6-menu-item')].find((el) =>
+      el.textContent?.includes('change'),
+    )!;
+    act(() => change.click());
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' }));
+    });
+    expect(onHotkey).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('Alt+C'); // jsdom is not a Mac
   });
 });
