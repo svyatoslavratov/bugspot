@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-06
+
+### Fixed
+
+- The tooltip of a pin opened in the top left corner of the page instead of at the pin.
+
 ## [0.1.0] - 2026-11-06
 
 The first release.

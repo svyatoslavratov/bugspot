@@ -65,19 +65,28 @@ export function PinLayer({
   return (
     <div className="bugspot-pins">
       {pins.map(({ thread, point, detached }) => (
-        <Tooltip key={thread.id} content={thread.body.slice(0, 140)} placement="top" className="bugspot-pin-wrap">
-          <button
-            type="button"
-            className={`bugspot-pin intent-${statusIntent[thread.status]} ${detached ? 'is-detached' : ''} ${
-              thread.id === selectedId ? 'is-selected' : ''
-            } ${thread.id === flashId ? 'is-flashing' : ''}`}
-            style={{ left: point!.x, top: point!.y }}
-            onClick={() => onOpen(thread.id)}
-            aria-label={`#${thread.number}`}
-          >
-            {thread.number}
-          </button>
-        </Tooltip>
+        // The pin itself is the tooltip target: a wrapper around a fixed pin has no box of its
+        // own and would anchor the tooltip to the top left corner of the page.
+        <Tooltip
+          key={thread.id}
+          content={thread.body.slice(0, 140)}
+          placement="top"
+          renderTarget={({ isOpen: _isOpen, ref, className, ...target }) => (
+            <button
+              {...target}
+              ref={ref}
+              type="button"
+              className={`${className ?? ''} bugspot-pin intent-${statusIntent[thread.status]} ${
+                detached ? 'is-detached' : ''
+              } ${thread.id === selectedId ? 'is-selected' : ''} ${thread.id === flashId ? 'is-flashing' : ''}`}
+              style={{ left: point!.x, top: point!.y }}
+              onClick={() => onOpen(thread.id)}
+              aria-label={`#${thread.number}`}
+            >
+              {thread.number}
+            </button>
+          )}
+        />
       ))}
     </div>
   );
