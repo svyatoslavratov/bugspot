@@ -2,7 +2,7 @@
 # The widget is built first and embedded into the Go binary; the image is distroless and runs as
 # nonroot with a read-only filesystem except /data (the SQLite file).
 
-FROM node:22-alpine AS widget
+FROM node:25-alpine AS widget
 WORKDIR /src/widget
 COPY widget/package.json widget/package-lock.json widget/.npmrc ./
 RUN npm ci
