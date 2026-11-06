@@ -3,14 +3,11 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/svyatoslavratov/bugspot/internal/auth"
@@ -27,16 +24,17 @@ func openStore(ctx context.Context, cfg config.Config) (*sqlite.Store, error) {
 	return sqlite.Open(ctx, filepath.Join(cfg.DataDir, "bugspot.db"))
 }
 
-func serve(args []string) error {
-	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	_ = fs.Parse(args)
-	cfg, err := config.Load(os.Getenv)
+func (a *app) serve(args []string) error {
+	fs := a.flags("serve")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	cfg, err := config.Load(a.getenv)
 	if err != nil {
 		return fmt.Errorf("configuration:\n%w", err)
 	}
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	logger := slog.New(slog.NewJSONHandler(a.stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
+	ctx := a.ctx
 
 	st, err := openStore(ctx, cfg)
 	if err != nil {
@@ -88,13 +86,15 @@ func serve(args []string) error {
 }
 
 // healthcheck lets a distroless container (no curl) check itself.
-func healthcheck(args []string) error {
-	fs := flag.NewFlagSet("healthcheck", flag.ExitOnError)
+func (a *app) healthcheck(args []string) error {
+	fs := a.flags("healthcheck")
 	addr := fs.String("url", "", "health URL (default: http://127.0.0.1<BUGSPOT_ADDR>/healthz)")
-	_ = fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	url := *addr
 	if url == "" {
-		listen := os.Getenv("BUGSPOT_ADDR")
+		listen := a.getenv("BUGSPOT_ADDR")
 		if listen == "" {
 			listen = ":8090"
 		}
@@ -104,7 +104,7 @@ func healthcheck(args []string) error {
 		url = "http://" + listen + "/healthz"
 	}
 	client := &http.Client{Timeout: 3 * time.Second}
-	res, err := client.Get(url) //nolint:noctx,gosec // a one-shot probe of the configured local address
+	res, err := client.Get(url) //nolint:noctx // a one-shot probe of the configured local address
 	if err != nil {
 		return err
 	}

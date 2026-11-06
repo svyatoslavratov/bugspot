@@ -249,7 +249,7 @@ components:
               error: { type: string }
               code:
                 type: string
-                enum: [bad_request, forbidden, not_found, too_large, rate_limited, csrf, invalid_key, internal, unhealthy, no_widget]
+                enum: [bad_request, forbidden, not_found, too_large, rate_limited, csrf, invalid_key, invalid_token, internal, unhealthy, no_widget]
   schemas:
     Status:
       type: string

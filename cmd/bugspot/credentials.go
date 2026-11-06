@@ -3,9 +3,7 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
-	"os"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -17,7 +15,7 @@ import (
 
 // credentials manages agent tokens (token) or access keys (key) directly in the database, so it
 // runs next to the service: docker compose exec bugspot bugspot token create --name claude.
-func credentials(args []string, agent bool) error {
+func (a *app) credentials(args []string, agent bool) error {
 	noun, kind, prefix := "key", domain.CredentialKey, secret.KeyPrefix
 	if agent {
 		noun, kind, prefix = "token", domain.CredentialAgent, secret.AgentPrefix
@@ -25,7 +23,7 @@ func credentials(args []string, agent bool) error {
 	if len(args) == 0 {
 		return fmt.Errorf("usage: bugspot %s create|list|revoke", noun)
 	}
-	cfg, err := config.Load(os.Getenv)
+	cfg, err := config.Load(a.getenv)
 	if err != nil {
 		return fmt.Errorf("configuration:\n%w", err)
 	}
@@ -38,12 +36,14 @@ func credentials(args []string, agent bool) error {
 
 	switch args[0] {
 	case "create":
-		fs := flag.NewFlagSet(noun+" create", flag.ExitOnError)
+		fs := a.flags(noun + " create")
 		name := fs.String("name", "", "who uses it; shown as the author of their replies (required)")
 		scopes := fs.String("scopes", "read,reply,status", "agent scopes: read, reply, status")
 		roles := fs.String("roles", "", "roles for the policy, comma separated (keys only)")
 		expires := fs.Duration("expires", 0, "lifetime such as 720h; 0 means no expiry")
-		_ = fs.Parse(args[1:])
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
 		if strings.TrimSpace(*name) == "" {
 			return errors.New("--name is required")
 		}
@@ -67,17 +67,17 @@ func credentials(args []string, agent bool) error {
 		if err := st.CreateCredential(ctx, c); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "Created %s %s (%s). It is shown once; only its hash is stored.\n", noun, c.ID, c.Name)
+		fmt.Fprintf(a.stderr, "Created %s %s (%s). It is shown once; only its hash is stored.\n", noun, c.ID, c.Name)
 		if !agent {
-			fmt.Fprintf(os.Stderr, "Share a link with ?bugspot_key=%s added to any page that loads the widget.\n", raw)
+			fmt.Fprintf(a.stderr, "Share a link with ?bugspot_key=%s added to any page that loads the widget.\n", raw)
 		}
-		fmt.Println(raw)
+		fmt.Fprintln(a.stdout, raw)
 	case "list":
 		list, err := st.ListCredentials(ctx, kind)
 		if err != nil {
 			return err
 		}
-		tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+		tw := tabwriter.NewWriter(a.stdout, 0, 2, 2, ' ', 0)
 		fmt.Fprintln(tw, "ID\tNAME\tSCOPES/ROLES\tCREATED\tEXPIRES\tLAST USED\tSTATE")
 		for _, c := range list {
 			state := "active"
@@ -95,7 +95,7 @@ func credentials(args []string, agent bool) error {
 		if err := st.RevokeCredential(ctx, args[1], time.Now().UTC()); err != nil {
 			return fmt.Errorf("revoke %s: %w", args[1], err)
 		}
-		fmt.Fprintf(os.Stderr, "Revoked %s %s.\n", noun, args[1])
+		fmt.Fprintf(a.stderr, "Revoked %s %s.\n", noun, args[1])
 	default:
 		return fmt.Errorf("unknown %s command %q", noun, args[0])
 	}

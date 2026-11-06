@@ -20,3 +20,5 @@ The first release.
 - "Checked by a person": a separate mark only people set; reopening clears it.
 - `bugspot mcp`: an MCP server for agents (list, read, screenshot, reply, move threads).
 - The GitHub Pages demo with the API compiled to WebAssembly.
+- Releases: binaries for Linux and macOS and a multi-arch image, signed keylessly with Sigstore,
+  with SLSA provenance and an SBOM.

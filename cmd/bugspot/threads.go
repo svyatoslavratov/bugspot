@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,9 +23,9 @@ type client struct {
 	http  *http.Client
 }
 
-func newClient() (*client, error) {
-	raw := os.Getenv("BUGSPOT_URL")
-	token := os.Getenv("BUGSPOT_TOKEN")
+func (a *app) newClient() (*client, error) {
+	raw := a.getenv("BUGSPOT_URL")
+	token := a.getenv("BUGSPOT_TOKEN")
 	if raw == "" || token == "" {
 		return nil, errors.New("set BUGSPOT_URL (the service root, e.g. https://app.example.com/bugspot) and BUGSPOT_TOKEN (an agent token)")
 	}
@@ -120,22 +119,24 @@ func short(s string, n int) string {
 
 func ref(arg string) string { return url.PathEscape(strings.TrimPrefix(arg, "#")) }
 
-func threads(args []string) error {
+func (a *app) threads(args []string) error {
 	if len(args) == 0 {
 		return errors.New("usage: bugspot threads list|show|reply|status|screenshot")
 	}
-	c, err := newClient()
+	c, err := a.newClient()
 	if err != nil {
 		return err
 	}
 	switch args[0] {
 	case "list":
-		fs := flag.NewFlagSet("threads list", flag.ExitOnError)
+		fs := a.flags("threads list")
 		status := fs.String("status", "open,in_progress", "statuses, comma separated; empty for all")
 		route := fs.String("route", "", "only this page route")
 		query := fs.String("q", "", "search text")
 		asJSON := fs.Bool("json", false, "print the API answer as is")
-		_ = fs.Parse(args[1:])
+		if err := fs.Parse(args[1:]); err != nil {
+			return err
+		}
 		q := url.Values{"limit": {"100"}}
 		for k, v := range map[string]string{"status": *status, "route": *route, "q": *query} {
 			if v != "" {
@@ -147,7 +148,7 @@ func threads(args []string) error {
 			return err
 		}
 		if *asJSON {
-			_, err := os.Stdout.Write(raw)
+			_, err := a.stdout.Write(raw)
 			return err
 		}
 		var page struct {
@@ -157,7 +158,7 @@ func threads(args []string) error {
 		if err := json.Unmarshal(raw, &page); err != nil {
 			return err
 		}
-		tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+		tw := tabwriter.NewWriter(a.stdout, 0, 2, 2, ' ', 0)
 		fmt.Fprintln(tw, "#\tSTATUS\tCHECKED\tKIND\tROUTE\tAUTHOR\tREPLIES\tUPDATED\tTEXT")
 		for _, t := range page.Data {
 			checked := "-"
@@ -170,7 +171,7 @@ func threads(args []string) error {
 		if err := tw.Flush(); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "%d of %d\n", len(page.Data), page.Meta.Total)
+		fmt.Fprintf(a.stderr, "%d of %d\n", len(page.Data), page.Meta.Total)
 	case "show":
 		if len(args) != 2 {
 			return errors.New("usage: bugspot threads show <number or id>")
@@ -179,16 +180,16 @@ func threads(args []string) error {
 		if err := c.do(http.MethodGet, "api/v1/threads/"+ref(args[1]), nil, &t); err != nil {
 			return err
 		}
-		fmt.Printf("#%d [%s, %s] %s\n%s\nroute: %s\nby: %s\n\n%s\n\nanchor: %s\ncontext: %s\n", t.Number, t.Status, t.Kind,
+		fmt.Fprintf(a.stdout, "#%d [%s, %s] %s\n%s\nroute: %s\nby: %s\n\n%s\n\nanchor: %s\ncontext: %s\n", t.Number, t.Status, t.Kind,
 			t.Title, t.URL, t.Route, t.Author.Name, t.Body, t.Anchor, t.Context)
 		if t.VerifiedBy != nil {
-			fmt.Printf("checked by a person: %s\n", t.VerifiedBy.Name)
+			fmt.Fprintf(a.stdout, "checked by a person: %s\n", t.VerifiedBy.Name)
 		}
 		if t.HasScreenshot {
-			fmt.Printf("screenshot: bugspot threads screenshot %d --out screenshot-%d.png\n", t.Number, t.Number)
+			fmt.Fprintf(a.stdout, "screenshot: bugspot threads screenshot %d --out screenshot-%d.png\n", t.Number, t.Number)
 		}
 		for _, r := range t.Replies {
-			fmt.Printf("\n— %s (%s, %s):\n%s\n", r.Author.Name, r.Author.Kind, r.CreatedAt.Local().Format("2006-01-02 15:04"), r.Body)
+			fmt.Fprintf(a.stdout, "\n— %s (%s, %s):\n%s\n", r.Author.Name, r.Author.Kind, r.CreatedAt.Local().Format("2006-01-02 15:04"), r.Body)
 		}
 	case "reply":
 		if len(args) != 3 {
@@ -201,12 +202,14 @@ func threads(args []string) error {
 		}
 		return c.do(http.MethodPatch, "api/v1/threads/"+ref(args[1]), map[string]string{"status": args[2]}, nil)
 	case "screenshot":
-		fs := flag.NewFlagSet("threads screenshot", flag.ExitOnError)
+		fs := a.flags("threads screenshot")
 		out := fs.String("out", "", "file to write (required)")
 		if len(args) < 2 {
 			return errors.New("usage: bugspot threads screenshot <number or id> --out file")
 		}
-		_ = fs.Parse(args[2:])
+		if err := fs.Parse(args[2:]); err != nil {
+			return err
+		}
 		if *out == "" {
 			return errors.New("--out is required")
 		}

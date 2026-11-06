@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -126,12 +125,12 @@ var mcpTools = []mcpTool{
 }
 
 // mcp runs the server on stdin/stdout until stdin closes.
-func mcp(_ []string) error {
-	api, err := newClient()
+func (a *app) mcp(_ []string) error {
+	api, err := a.newClient()
 	if err != nil {
 		return err
 	}
-	return (&mcpServer{api: api}).serve(os.Stdin, os.Stdout)
+	return (&mcpServer{api: api}).serve(a.stdin, a.stdout)
 }
 
 func (s *mcpServer) serve(in io.Reader, out io.Writer) error {

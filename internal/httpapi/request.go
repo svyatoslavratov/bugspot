@@ -35,6 +35,10 @@ type handler func(w http.ResponseWriter, r *http.Request, c caller) error
 func (s *Server) api(h handler, write bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id, err := s.identify(r)
+		if errors.Is(err, errInvalidToken) {
+			writeError(w, http.StatusUnauthorized, "invalid_token", "the agent token is unknown, expired or revoked")
+			return
+		}
 		if err != nil {
 			s.o.Logger.Error("identify", "err", err)
 			writeError(w, http.StatusInternalServerError, "internal", "internal error")
@@ -77,6 +81,8 @@ func (s *Server) api(h handler, write bool) http.Handler {
 var (
 	errForbidden = errors.New("forbidden")
 	errTooLarge  = errors.New("too large")
+	// errInvalidToken: a request that names an agent token must not fall back to another identity.
+	errInvalidToken = errors.New("invalid agent token")
 )
 
 func (s *Server) fail(w http.ResponseWriter, err error) {
@@ -122,13 +128,13 @@ func agentToken(r *http.Request) string {
 func (s *Server) agent(ctx context.Context, token string) (*auth.Identity, error) {
 	c, err := s.o.Store.CredentialByHash(ctx, secret.Hash(token))
 	if errors.Is(err, domain.ErrNotFound) {
-		return nil, nil
+		return nil, errInvalidToken
 	}
 	if err != nil {
 		return nil, err
 	}
 	if c.Kind != domain.CredentialAgent || !c.Active(s.o.Now()) {
-		return nil, nil
+		return nil, errInvalidToken
 	}
 	_ = s.o.Store.TouchCredential(ctx, c.ID, s.o.Now())
 	return &auth.Identity{ID: "agent:" + c.ID, Name: c.Name, Provider: auth.ProviderAgent, Scopes: c.Scopes, CredentialID: c.ID}, nil

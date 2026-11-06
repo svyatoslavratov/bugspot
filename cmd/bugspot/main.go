@@ -3,8 +3,14 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"flag"
 	"fmt"
+	"io"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 // version is set at build time: -ldflags "-X main.version=v0.1.0".
@@ -25,8 +31,24 @@ Usage:
 Run "bugspot <command> -h" for the flags of a command.
 `
 
+// app is one run of the command: its environment and its streams, so commands run in tests too.
+type app struct {
+	ctx    context.Context
+	stdin  io.Reader
+	stdout io.Writer
+	stderr io.Writer
+	getenv func(string) string
+}
+
 func main() {
-	args := os.Args[1:]
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	code := (&app{ctx: ctx, stdin: os.Stdin, stdout: os.Stdout, stderr: os.Stderr, getenv: os.Getenv}).run(os.Args[1:])
+	stop()
+	os.Exit(code)
+}
+
+// run executes one command and returns the exit code.
+func (a *app) run(args []string) int {
 	cmd := "serve"
 	if len(args) > 0 {
 		cmd, args = args[0], args[1:]
@@ -34,27 +56,38 @@ func main() {
 	var err error
 	switch cmd {
 	case "serve":
-		err = serve(args)
+		err = a.serve(args)
 	case "healthcheck":
-		err = healthcheck(args)
+		err = a.healthcheck(args)
 	case "token":
-		err = credentials(args, true)
+		err = a.credentials(args, true)
 	case "key":
-		err = credentials(args, false)
+		err = a.credentials(args, false)
 	case "threads":
-		err = threads(args)
+		err = a.threads(args)
 	case "mcp":
-		err = mcp(args)
+		err = a.mcp(args)
 	case "version", "--version", "-v":
-		fmt.Println(version)
+		fmt.Fprintln(a.stdout, version)
 	case "help", "-h", "--help":
-		fmt.Print(usage)
+		fmt.Fprint(a.stdout, usage)
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command %q\n\n%s", cmd, usage)
-		os.Exit(2)
+		fmt.Fprintf(a.stderr, "unknown command %q\n\n%s", cmd, usage)
+		return 2
+	}
+	if errors.Is(err, flag.ErrHelp) {
+		return 0
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "bugspot:", err)
-		os.Exit(1)
+		fmt.Fprintln(a.stderr, "bugspot:", err)
+		return 1
 	}
+	return 0
+}
+
+// flags is a flag set that reports to stderr and returns errors instead of exiting.
+func (a *app) flags(name string) *flag.FlagSet {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(a.stderr)
+	return fs
 }

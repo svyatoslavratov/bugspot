@@ -66,9 +66,12 @@ jobs:
         run: go test -race -count=1 -coverpkg=./... -coverprofile=coverage.out ./...
       - name: Coverage
         run: go tool cover -func=coverage.out | tail -n 1
+      - name: Coverage for Coveralls
+        # The shared store tests are a test helper, not part of the service.
+        run: grep -v -E '^github.com/svyatoslavratov/bugspot/internal/store/storetest/' coverage.out > coverage.coveralls.out
       - uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
         with:
-          file: coverage.out
+          file: coverage.coveralls.out
           format: golang
           fail-on-error: false
       - name: Build

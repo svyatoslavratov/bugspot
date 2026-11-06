@@ -6,6 +6,22 @@ Please report vulnerabilities privately through
 [GitHub security advisories](https://github.com/svyatoslavratov/bugspot/security/advisories/new),
 not in public issues. You will get an answer within a week.
 
+## Verifying releases
+
+Release checksums and container images are signed keylessly with [Sigstore](https://www.sigstore.dev)
+by the release workflow:
+
+```sh
+cosign verify-blob checksums.txt --bundle checksums.txt.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/svyatoslavratov/bugspot/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+cosign verify ghcr.io/svyatoslavratov/bugspot:v0.1.0 \
+  --certificate-identity-regexp '^https://github.com/svyatoslavratov/bugspot/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+The images also carry SLSA provenance and an SBOM.
+
 ## How bugspot protects its data
 
 - **Access is decided by the service.** The loader asks `/api/v1/session`; a hidden answer carries

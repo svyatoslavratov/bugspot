@@ -9,3 +9,4 @@ widget/node_modules/
 /internal/widgetfs/dist/*
 !/internal/widgetfs/dist/README.md
 .DS_Store
+/bugspot
