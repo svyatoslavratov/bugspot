@@ -1,0 +1,16 @@
+name: Feature request
+description: Something bugspot should do.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you need?
+      description: The use case — who does what, and why the current widget, API or MCP tools do not cover it.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: How it could look in the widget, the API, the configuration or the MCP tools.

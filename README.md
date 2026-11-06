@@ -1,7 +1,12 @@
 # bugspot
 
 [![CI](https://github.com/svyatoslavratov/bugspot/actions/workflows/ci.yml/badge.svg)](https://github.com/svyatoslavratov/bugspot/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/svyatoslavratov/bugspot?sort=semver)](https://github.com/svyatoslavratov/bugspot/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/svyatoslavratov/bugspot.svg)](https://pkg.go.dev/github.com/svyatoslavratov/bugspot)
+[![Coverage Status](https://coveralls.io/repos/github/svyatoslavratov/bugspot/badge.svg?branch=main)](https://coveralls.io/github/svyatoslavratov/bugspot?branch=main)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/svyatoslavratov/bugspot/badge)](https://scorecard.dev/viewer/?uri=github.com/svyatoslavratov/bugspot)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![Demo](https://img.shields.io/badge/demo-live-2d72d2)](https://svyatoslavratov.github.io/bugspot/)
 
 **Pinned page comments for your team and your agents.** A floating bug on any web app: click it, pick
 an element, write what is wrong. The comment is pinned to that element with a screenshot, the
@@ -44,8 +49,6 @@ your app's own login.
 
 The widget is React + [Blueprint](https://blueprintjs.com) inside a Shadow DOM, so it neither
 breaks nor inherits your styles.
-
-![The panel with threads and pins on the page](docs/images/panel.png)
 
 ## Quick start
 
