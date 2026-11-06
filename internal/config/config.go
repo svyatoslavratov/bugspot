@@ -196,9 +196,14 @@ func Load(getenv func(string) string) (Config, error) {
 		RateRead:           int(r.integer("RATE_READ", 600)),
 		RateWrite:          int(r.integer("RATE_WRITE", 60)),
 
-		BackupDir:      r.str("BACKUP_DIR", ""),
-		BackupEvery:    r.duration("BACKUP_EVERY", 24*time.Hour),
-		BackupKeepDays: int(r.integer("BACKUP_KEEP_DAYS", 14)),
+		BackupDir:   r.str("BACKUP_DIR", ""),
+		BackupEvery: r.duration("BACKUP_EVERY", 24*time.Hour),
+	}
+	// Days fit an int only after a bound check (and a century is retention enough).
+	if keep := r.integer("BACKUP_KEEP_DAYS", 14); keep >= 0 && keep <= 36500 {
+		c.BackupKeepDays = int(keep)
+	} else {
+		r.errs = append(r.errs, fmt.Errorf("BUGSPOT_BACKUP_KEEP_DAYS=%d: from 0 to 36500", keep))
 	}
 	if pk := r.str("JWT_PUBLIC_KEY", ""); pk != "" {
 		key, err := parsePublicKey(pk)
@@ -260,9 +265,6 @@ func (c *Config) validate() []error {
 	}
 	if c.BackupDir != "" && c.BackupEvery < time.Minute {
 		errs = append(errs, fmt.Errorf("BUGSPOT_BACKUP_EVERY=%s: at least 1m", c.BackupEvery))
-	}
-	if c.BackupKeepDays < 0 {
-		errs = append(errs, errors.New("BUGSPOT_BACKUP_KEEP_DAYS: 0 or more"))
 	}
 	for _, o := range c.AllowedOrigins {
 		if !strings.HasPrefix(o, "https://") && !strings.HasPrefix(o, "http://") || strings.HasSuffix(o, "/") {
