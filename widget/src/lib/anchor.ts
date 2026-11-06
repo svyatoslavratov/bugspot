@@ -1,4 +1,4 @@
-import type { Anchor, Point } from '../shared/types';
+import type { Anchor, ElementAnchor, Point } from '../shared/types';
 
 const TEXT_LIMIT = 120;
 
@@ -130,4 +130,19 @@ export function pinPoint(anchor: Partial<Anchor>, el: Element | null): Point | n
   }
   if (!anchor.page) return null;
   return { x: anchor.page.x - scrollX, y: anchor.page.y - scrollY };
+}
+
+/** Most elements one comment can mark: keeps the anchor well under the service's 16 KB limit. */
+export const MAX_ELEMENTS = 10;
+
+/** The elements of an anchor: the first one and those picked with Shift. */
+export function anchorsOf(anchor: Partial<Anchor>): Partial<ElementAnchor>[] {
+  const { more, ...first } = anchor;
+  return [first, ...(Array.isArray(more) ? more : [])];
+}
+
+/** One anchor for several picked elements: the first at the top level, the rest in more. */
+export function combineAnchors(list: ElementAnchor[]): Anchor {
+  const [first, ...more] = list;
+  return more.length ? { ...first, more } : first;
 }

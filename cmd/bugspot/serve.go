@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/svyatoslavratov/bugspot/internal/auth"
+	"github.com/svyatoslavratov/bugspot/internal/backup"
 	"github.com/svyatoslavratov/bugspot/internal/config"
 	"github.com/svyatoslavratov/bugspot/internal/httpapi"
 	"github.com/svyatoslavratov/bugspot/internal/store/sqlite"
@@ -66,11 +67,15 @@ func (a *app) serve(args []string) error {
 		IdleTimeout:       2 * time.Minute,
 		MaxHeaderBytes:    32 << 10,
 	}
+	backups := backup.Options{Dir: cfg.BackupDir, Every: cfg.BackupEvery, KeepDays: cfg.BackupKeepDays, Store: st, Logger: logger}
 	errs := make(chan error, 1)
 	go func() { errs <- srv.ListenAndServe() }()
 	logger.Info("bugspot started", "addr", cfg.Addr, "version", version, "project", cfg.Project,
 		"providers", cfg.Providers, "view", cfg.Policy.View.String(), "comment", cfg.Policy.Comment.String(),
-		"moderate", cfg.Policy.Moderate.String())
+		"moderate", cfg.Policy.Moderate.String(), "backups", backup.Describe(backups))
+	if cfg.BackupDir != "" {
+		go backup.Run(ctx, backups)
+	}
 	select {
 	case err := <-errs:
 		if !errors.Is(err, http.ErrServerClosed) {

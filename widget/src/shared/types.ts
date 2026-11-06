@@ -31,7 +31,15 @@ export interface Anchor {
   viewport: { w: number; h: number };
   /** Source location from a data-bugspot-src attribute, when the app's dev build adds it. */
   source?: string;
+  /**
+   * More elements with the same problem, picked with Shift. The first element stays at the top
+   * level, so readers that know one element keep working.
+   */
+  more?: ElementAnchor[];
 }
+
+/** One element of an anchor. */
+export type ElementAnchor = Omit<Anchor, 'more'>;
 
 export interface ConsoleEntry {
   level: 'error' | 'warn';

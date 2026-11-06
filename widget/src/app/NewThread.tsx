@@ -54,8 +54,7 @@ export function NewThread({
     try {
       // Let the panel finish rendering: the screenshot leaves the widget out anyway.
       await new Promise((r) => requestAnimationFrame(() => r(null)));
-      const next =
-        how === 'dom' ? await captureViewport(host, view.target, view.point, maxBytes) : await captureTab(maxBytes);
+      const next = how === 'dom' ? await captureViewport(host, view.picks, maxBytes) : await captureTab(maxBytes);
       if (shotUrl.current) URL.revokeObjectURL(shotUrl.current);
       shotUrl.current = next.url;
       setShot({ kind: 'ready', shot: next });
@@ -72,7 +71,7 @@ export function NewThread({
       if (shotUrl.current) URL.revokeObjectURL(shotUrl.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view.target]);
+  }, [view.picks]);
 
   const submit = async () => {
     setBusy(true);
@@ -99,7 +98,9 @@ export function NewThread({
     }
   };
 
-  const element = view.anchor.text ? `${view.anchor.tag} «${view.anchor.text}»` : view.anchor.tag;
+  const first = view.anchor.text ? `${view.anchor.tag} «${view.anchor.text}»` : view.anchor.tag;
+  const more = view.anchor.more?.length ?? 0;
+  const element = more ? `${first} ${t.andMore(more)}` : first;
   return (
     <form
       className="bugspot-new"

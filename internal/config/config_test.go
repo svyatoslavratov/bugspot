@@ -16,7 +16,8 @@ func TestDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	if c.Addr != ":8090" || !c.Enabled || len(c.Providers) != 0 || c.Policy.View.String() != "authenticated" ||
-		len(c.Policy.Moderate) != 0 || c.ScreenshotMaxBytes != 3<<20 || c.KeyTTL != 30*24*time.Hour {
+		len(c.Policy.Moderate) != 0 || c.ScreenshotMaxBytes != 3<<20 || c.KeyTTL != 30*24*time.Hour ||
+		c.BackupDir != "" || c.BackupEvery != 24*time.Hour || c.BackupKeepDays != 14 {
 		t.Fatalf("defaults = %+v", c)
 	}
 }
@@ -43,18 +44,21 @@ func TestForwardSetup(t *testing.T) {
 
 func TestErrors(t *testing.T) {
 	_, err := Load(env(map[string]string{
-		"BUGSPOT_AUTH":            "forward,jwt,header,ldap",
-		"BUGSPOT_JWT_SECRET":      "short",
-		"BUGSPOT_VIEW":            "admins",
-		"BUGSPOT_FORWARD_CACHE":   "soon",
-		"BUGSPOT_ALLOWED_ORIGINS": "app.example.com",
-		"BUGSPOT_COOKIE_SECURE":   "maybe",
+		"BUGSPOT_AUTH":             "forward,jwt,header,ldap",
+		"BUGSPOT_JWT_SECRET":       "short",
+		"BUGSPOT_VIEW":             "admins",
+		"BUGSPOT_FORWARD_CACHE":    "soon",
+		"BUGSPOT_ALLOWED_ORIGINS":  "app.example.com",
+		"BUGSPOT_COOKIE_SECURE":    "maybe",
+		"BUGSPOT_BACKUP_DIR":       "/backups",
+		"BUGSPOT_BACKUP_EVERY":     "5s",
+		"BUGSPOT_BACKUP_KEEP_DAYS": "-1",
 	}))
 	if err == nil {
 		t.Fatal("no error")
 	}
 	for _, want := range []string{"unknown provider \"ldap\"", "BUGSPOT_FORWARD_URL", "32 bytes", "TRUSTED_PROXIES",
-		"BUGSPOT_VIEW", "FORWARD_CACHE", "ALLOWED_ORIGINS", "COOKIE_SECURE"} {
+		"BUGSPOT_VIEW", "FORWARD_CACHE", "ALLOWED_ORIGINS", "COOKIE_SECURE", "BACKUP_EVERY", "BACKUP_KEEP_DAYS"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error does not mention %q:\n%v", want, err)
 		}

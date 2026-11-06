@@ -37,7 +37,7 @@ describe('PinLayer', () => {
     const pin = container.querySelector<HTMLButtonElement>('.bugspot-pin')!;
     // No wrapper between the layer and the pin: a wrapper of a fixed pin has no box and put the
     // tooltip in the top left corner of the page.
-    expect(pin.parentElement?.className).toBe('bugspot-pins');
+    expect(pin.parentElement?.classList.contains('bugspot-pins')).toBe(true);
     expect(pin.classList).toContain('bp6-popover-target');
     expect(pin.style.left).toBe('120px');
     expect(pin.style.top).toBe('240px');
@@ -45,5 +45,32 @@ describe('PinLayer', () => {
 
     act(() => pin.click());
     expect(onOpen).toHaveBeenCalledWith('t1');
+  });
+});
+
+describe('PinLayer with several elements', () => {
+  test('a pin with the same number on every element; picking makes the pins passive', () => {
+    const several = {
+      ...thread,
+      anchor: { page: { x: 10, y: 20 }, more: [{ page: { x: 30, y: 40 } }, { page: { x: 50, y: 60 } }] },
+    } as Thread;
+    act(() =>
+      root.render(
+        createElement(PinLayer, {
+          threads: [several],
+          selectedId: null,
+          flashId: null,
+          passive: true,
+          onOpen: vi.fn(),
+        }),
+      ),
+    );
+    const pins = [...container.querySelectorAll<HTMLButtonElement>('.bugspot-pin')];
+    expect(pins.map((p) => [p.textContent, p.style.left, p.style.top])).toEqual([
+      ['2', '10px', '20px'],
+      ['2', '30px', '40px'],
+      ['2', '50px', '60px'],
+    ]);
+    expect(container.querySelector('.bugspot-pins')!.classList).toContain('is-passive');
   });
 });
