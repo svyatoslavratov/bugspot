@@ -1,0 +1,108 @@
+import type { Point } from '../shared/types';
+
+export interface Shot {
+  blob: Blob;
+  url: string;
+}
+
+function encode(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
+/** Draws a highlight around the chosen element and a dot at the click point. */
+function highlight(ctx: CanvasRenderingContext2D, scale: number, rect: DOMRect | null, point: Point | null) {
+  ctx.save();
+  ctx.scale(scale, scale);
+  if (rect) {
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#cd4246';
+    ctx.strokeRect(rect.left - 3, rect.top - 3, rect.width + 6, rect.height + 6);
+  }
+  if (point) {
+    ctx.fillStyle = '#cd4246';
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** Fits the image under maxBytes: WebP (or JPEG), lowering quality, then size. */
+async function fit(source: HTMLCanvasElement, maxBytes: number): Promise<Blob> {
+  let canvas = source;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    for (const quality of [0.85, 0.7, 0.55]) {
+      const blob = (await encode(canvas, 'image/webp', quality)) ?? (await encode(canvas, 'image/jpeg', quality));
+      if (blob && blob.size <= maxBytes) return blob;
+    }
+    const smaller = document.createElement('canvas');
+    smaller.width = Math.round(canvas.width * 0.75);
+    smaller.height = Math.round(canvas.height * 0.75);
+    smaller.getContext('2d')!.drawImage(canvas, 0, 0, smaller.width, smaller.height);
+    canvas = smaller;
+  }
+  throw new Error('screenshot is too large');
+}
+
+/**
+ * Renders the visible part of the page (not the widget) to an image with the element marked.
+ * DOM rendering cannot draw cross-origin images without CORS or closed shadow roots; those parts
+ * come out blank, which is still useful.
+ */
+export async function captureViewport(
+  exclude: Element,
+  target: Element | null,
+  point: Point | null,
+  maxBytes: number,
+): Promise<Shot> {
+  const { domToCanvas } = await import('modern-screenshot');
+  const rect = target?.getBoundingClientRect() ?? null;
+  const width = innerWidth;
+  const height = innerHeight;
+  const scale = Math.min(devicePixelRatio || 1, 1600 / width, 2);
+  const canvas = await domToCanvas(document.documentElement, {
+    width,
+    height,
+    scale,
+    backgroundColor: getComputedStyle(document.body).backgroundColor || '#ffffff',
+    filter: (node) => node !== exclude,
+    style: { transform: `translate(${-scrollX}px, ${-scrollY}px)` },
+    features: { restoreScrollPosition: true },
+    timeout: 8000,
+    workerNumber: 0,
+  });
+  highlight(canvas.getContext('2d')!, scale, rect, point);
+  const blob = await fit(canvas, maxBytes);
+  return { blob, url: URL.createObjectURL(blob) };
+}
+
+/**
+ * Asks the browser for a real screen capture of this tab (a permission prompt), for pages the DOM
+ * renderer draws badly.
+ */
+export async function captureTab(maxBytes: number): Promise<Shot> {
+  const stream = await navigator.mediaDevices.getDisplayMedia({
+    video: { displaySurface: 'browser' },
+    audio: false,
+    // Chrome: offer the current tab first.
+    ...({ preferCurrentTab: true } as object),
+  } as DisplayMediaStreamOptions);
+  try {
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.muted = true;
+    await video.play();
+    await new Promise((r) => setTimeout(r, 300));
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')!.drawImage(video, 0, 0);
+    const blob = await fit(canvas, maxBytes);
+    return { blob, url: URL.createObjectURL(blob) };
+  } finally {
+    stream.getTracks().forEach((t) => t.stop());
+  }
+}

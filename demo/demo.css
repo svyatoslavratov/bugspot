@@ -1,0 +1,38 @@
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1c2127; background: #f6f7f9; }
+.demo-bar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 16px; background: #1c2127; color: #f6f7f9; font-size: 13px; }
+.demo-bar label { display: flex; gap: 6px; align-items: center; }
+.demo-bar select, .demo-bar button { font: inherit; padding: 4px 6px; border-radius: 4px; border: 1px solid #5f6b7c; background: #2f343c; color: #f6f7f9; }
+.demo-bar a { color: #8abbff; }
+.demo-hint { opacity: .75; flex: 1 1 320px; }
+.demo-status { color: #72ca9b; }
+.app { display: flex; min-height: calc(100vh - 52px); }
+.app-nav { flex: 0 0 200px; display: flex; flex-direction: column; gap: 4px; padding: 16px; background: #fff; border-right: 1px solid #e5e8eb; }
+.app-logo { font-weight: 700; font-size: 18px; margin-bottom: 16px; }
+.app-nav a { padding: 8px 10px; border-radius: 6px; color: #1c2127; text-decoration: none; }
+.app-nav a.active { background: #e6effc; color: #215db0; }
+.app-main { flex: 1; padding: 24px 32px; min-width: 0; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.crumb { color: #5f6b7c; font-size: 12px; }
+h1 { margin: 2px 0 0; font-size: 26px; }
+.btn { font: inherit; padding: 8px 14px; border-radius: 6px; border: 1px solid #c5cbd3; background: #fff; cursor: pointer; }
+.btn.primary { background: #2d72d2; border-color: #2d72d2; color: #fff; }
+.filters { display: flex; gap: 8px; margin-bottom: 16px; }
+.search { flex: 0 1 320px; height: 40px; padding: 0 12px; border: 1px solid #dce1e6; border-radius: 8px; font: inherit; }
+.filters select { height: 40px; border-radius: 8px; border: 1px solid #dce1e6; padding: 0 10px; font: inherit; background: #fff; }
+.table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
+.table th, .table td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #edf0f2; }
+.table th { color: #5f6b7c; font-weight: 500; background: #fafbfc; }
+.badge { padding: 2px 8px; border-radius: 10px; background: #edf0f2; font-size: 12px; }
+.badge.ok { background: #e3f5ea; color: #1c6e42; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.card { padding: 16px; background: #fff; border-radius: 10px; border: 1px solid #e5e8eb; }
+.card h3 { margin: 0 0 6px; }
+.card p { margin: 2px 0; color: #5f6b7c; }
+@media (max-width: 700px) {
+  .app { flex-direction: column; }
+  .app-nav { flex: none; flex-direction: row; align-items: center; border-right: 0; border-bottom: 1px solid #e5e8eb; }
+  .app-logo { margin: 0 12px 0 0; }
+  .app-main { padding: 16px; }
+  .table { font-size: 12px; }
+}

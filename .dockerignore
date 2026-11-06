@@ -1,0 +1,9 @@
+.git
+.github
+_site
+bin
+data
+widget/node_modules
+internal/widgetfs/dist/assets
+internal/widgetfs/dist/widget.js
+*.db

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bugspot demo — Acme CRM</title>
+    <meta name="description" content="Pinned page comments for your team and your agents: try the bugspot widget on a pretend app." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%227%22 fill=%22%232d72d2%22/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <div class="demo-bar" data-bugspot-ignore>
+      <strong>bugspot demo</strong>
+      <span class="demo-hint">The bug in the corner is the widget. The API runs in your browser (Go → WebAssembly); data stays in localStorage.</span>
+      <label>User
+        <select id="persona">
+          <option value="anna">Anna — role admin</option>
+          <option value="boris">Boris — role developer</option>
+          <option value="guest">Guest — not signed in</option>
+        </select>
+      </label>
+      <label>Access
+        <select id="preset">
+          <option value="team">Team: signed-in users comment, admins moderate</option>
+          <option value="closed">Closed: admins only</option>
+          <option value="public">Public: everyone, guests too</option>
+        </select>
+      </label>
+      <label>Widget language
+        <select id="lang">
+          <option value="en">English</option>
+          <option value="ru">Русский</option>
+        </select>
+      </label>
+      <button id="reset" type="button">Reset data</button>
+      <a href="https://github.com/svyatoslavratov/bugspot">GitHub</a>
+      <span id="status" class="demo-status" role="status"></span>
+    </div>
+
+    <div class="app">
+      <aside class="app-nav">
+        <div class="app-logo">Acme CRM</div>
+        <a href="#/campaigns" data-route="/campaigns">Campaigns</a>
+        <a href="#/authors" data-route="/authors">Authors</a>
+      </aside>
+      <main class="app-main" id="page"></main>
+    </div>
+
+    <template id="campaigns">
+      <header class="page-head">
+        <div>
+          <div class="crumb">Advertisers</div>
+          <h1>Active campaigns</h1>
+        </div>
+        <button class="btn" data-bugspot="export">Export</button>
+      </header>
+      <div class="filters">
+        <input data-bugspot="search" class="search" placeholder="Search campaigns" aria-label="Search campaigns" />
+        <select aria-label="Status"><option>All statuses</option><option>Active</option><option>Completed</option></select>
+      </div>
+      <table class="table">
+        <thead><tr><th>Brand</th><th>Campaign</th><th>Status</th><th>Starts</th><th>Ends</th><th>Budget</th></tr></thead>
+        <tbody>
+          <tr><td>Northwind</td><td>Winter sale</td><td><span class="badge ok">Active</span></td><td>10.11</td><td>30.11</td><td data-bugspot="budget-1">480 000 ₽</td></tr>
+          <tr><td>Contoso</td><td>New collection</td><td><span class="badge ok">Active</span></td><td>15.11</td><td>15.12</td><td data-bugspot="budget-2">1 250 000 ₽</td></tr>
+          <tr><td>Fabrikam</td><td>Back to school</td><td><span class="badge">Completed</span></td><td>01.09</td><td>30.09</td><td data-bugspot="budget-3">300 000 ₽</td></tr>
+          <tr><td>Tailspin</td><td>Black Friday</td><td><span class="badge ok">Active</span></td><td>20.11</td><td>30.11</td><td data-bugspot="budget-4">2 100 000 ₽</td></tr>
+        </tbody>
+      </table>
+    </template>
+
+    <template id="authors">
+      <header class="page-head">
+        <div>
+          <div class="crumb">Authors</div>
+          <h1>Authors</h1>
+        </div>
+        <button class="btn primary" data-bugspot="add-author">Add author</button>
+      </header>
+      <div class="cards">
+        <article class="card"><h3>Maria Ivanova</h3><p>Beauty · 120k subscribers</p><p>2 units: 18 000 ₽</p></article>
+        <article class="card"><h3>Pavel Smirnov</h3><p>Home · 64k subscribers</p><p>2 units: 9 500 ₽</p></article>
+        <article class="card"><h3>Olga Petrova</h3><p>Family · 210k subscribers</p><p>2 units: 26 000 ₽</p></article>
+      </div>
+    </template>
+
+    <script src="wasm_exec.js"></script>
+    <script src="demo.js"></script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+# A static "app" and bugspot behind one nginx: http://localhost:8080 (PORT=… to change)
+# Public access for a try; see docs/integration.md for real access control.
+services:
+  nginx:
+    image: nginx:1.29-alpine
+    ports: ["${PORT:-8080}:80"]
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./site:/usr/share/nginx/html:ro
+    depends_on: [bugspot]
+
+  bugspot:
+    image: ghcr.io/svyatoslavratov/bugspot:latest
+    # build: ../..   # or build it from the repository
+    read_only: true
+    volumes: [bugspot-data:/data]
+    environment:
+      BUGSPOT_PROJECT: example
+      BUGSPOT_AUTH: anonymous
+      BUGSPOT_VIEW: "*"
+      BUGSPOT_COMMENT: "*"
+      BUGSPOT_TRUSTED_PROXIES: 172.16.0.0/12
+
+volumes:
+  bugspot-data:

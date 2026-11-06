@@ -1,0 +1,360 @@
+/* Widget styles; Blueprint's own come first. Everything lives in the shadow root. */
+
+:host {
+  all: initial;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 2147483000;
+  font-family: -apple-system, 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #1c2127;
+}
+
+.bugspot,
+.bugspot-portal {
+  pointer-events: none;
+}
+
+.bugspot-portal
+  :is(.bp6-portal, .bp6-overlay, .bp6-overlay-content, .bp6-popover-transition-container, .bp6-overlay-backdrop),
+.bugspot-bug,
+.bugspot-panel,
+.bugspot-pin,
+.bugspot-pick-bar {
+  pointer-events: auto;
+}
+
+.bugspot-portal .bp6-portal {
+  z-index: 2147483001;
+}
+
+/* The floating bug */
+.bugspot-bug {
+  position: fixed;
+  touch-action: none;
+  user-select: none;
+}
+.bugspot-bug .bugspot-bug-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgb(17 20 24 / 28%);
+}
+.bugspot-bug.is-dragging .bugspot-bug-button {
+  cursor: grabbing;
+  transform: scale(1.06);
+}
+.bugspot-bug-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #cd4246;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* The panel */
+.bugspot-panel.bp6-card {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.bugspot-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 10px 10px 16px;
+  border-bottom: 1px solid rgb(17 20 24 / 10%);
+}
+.bugspot-panel-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.bugspot-panel-title span {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bugspot-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 16px 10px;
+  border-bottom: 1px solid rgb(17 20 24 / 10%);
+}
+.bugspot-filters {
+  display: flex;
+  gap: 8px;
+}
+.bugspot-filters .bp6-input-group {
+  flex: 1;
+}
+.bugspot-toolbar .bp6-control {
+  margin: 0;
+}
+.bugspot-panel-body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 16px 16px;
+}
+.bugspot-spinner {
+  margin: 24px auto;
+}
+.bp6-dark .bugspot-panel-header,
+.bp6-dark .bugspot-toolbar {
+  border-color: rgb(255 255 255 / 12%);
+}
+
+/* The list */
+.bugspot-list.bp6-card-list {
+  margin: 0 -16px;
+}
+.bugspot-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch !important;
+  gap: 4px;
+}
+.bugspot-item-head,
+.bugspot-item-meta,
+.bugspot-thread-nav,
+.bugspot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.bugspot-item-time {
+  margin-left: auto;
+  font-size: 12px;
+}
+.bugspot-item-body {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.bugspot-item-meta {
+  font-size: 12px;
+}
+.bugspot-number {
+  font-weight: 600;
+}
+.bugspot-route {
+  margin-left: auto;
+  overflow: hidden;
+  max-width: 50%;
+  font-family: monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A thread */
+.bugspot-thread,
+.bugspot-new {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bugspot-thread-nav {
+  margin: 0 -8px;
+}
+.bugspot-thread-body,
+.bugspot-reply p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.bugspot-thread-body {
+  font-size: 15px;
+}
+.bugspot-meta {
+  font-size: 12px;
+}
+.bugspot-edit,
+.bugspot-reply-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.bugspot-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bugspot-reply {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgb(143 153 168 / 12%);
+}
+.bugspot-reply.is-agent {
+  background: rgb(45 114 210 / 10%);
+}
+.bugspot-shot.bp6-button {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgb(17 20 24 / 15%);
+  border-radius: 6px;
+}
+.bugspot-shot img,
+.bugspot-preview img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  object-position: top;
+}
+.bugspot-shot-dialog.bp6-dialog {
+  width: min(1200px, 94vw);
+}
+.bugspot-shot-dialog img {
+  display: block;
+  width: 100%;
+}
+.bugspot-context-table {
+  width: 100%;
+  font-size: 12px;
+}
+.bugspot-context-table th {
+  width: 90px;
+  font-weight: 500;
+}
+.bugspot-code {
+  font-family: 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+.bugspot-log {
+  margin: 0;
+  padding-left: 16px;
+}
+
+/* A new thread */
+.bugspot-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px dashed rgb(17 20 24 / 20%);
+  border-radius: 6px;
+}
+.bugspot-preview-wait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.bugspot-preview-actions,
+.bugspot-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Picking */
+.bugspot-highlight {
+  position: fixed;
+  border: 2px solid #2d72d2;
+  border-radius: 3px;
+  background: rgb(45 114 210 / 12%);
+  pointer-events: none;
+}
+.bugspot-highlight-label {
+  position: absolute;
+  top: -22px;
+  left: -2px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #2d72d2;
+  color: #fff;
+  font-family: monospace;
+  font-size: 11px;
+}
+.bugspot-pick-bar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 8px;
+  background: #1c2127;
+  color: #fff;
+  box-shadow: 0 6px 20px rgb(17 20 24 / 30%);
+  transform: translateX(-50%);
+}
+
+/* Pins */
+.bugspot-pins .bugspot-pin-wrap {
+  position: static;
+}
+.bugspot-pin {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 2px solid #fff;
+  border-radius: 13px 13px 13px 2px;
+  background: #cd4246;
+  color: #fff;
+  box-shadow: 0 2px 8px rgb(17 20 24 / 35%);
+  font:
+    600 12px/1 -apple-system,
+    'Segoe UI',
+    sans-serif;
+  cursor: pointer;
+  transform: translate(0, -100%);
+}
+.bugspot-pin.intent-warning {
+  background: #c87619;
+}
+.bugspot-pin.intent-primary {
+  background: #2d72d2;
+}
+.bugspot-pin.intent-success {
+  background: #238551;
+}
+.bugspot-pin.intent-none {
+  background: #5f6b7c;
+}
+.bugspot-pin.is-detached {
+  opacity: 0.6;
+  border-style: dashed;
+}
+.bugspot-pin.is-selected {
+  outline: 3px solid rgb(45 114 210 / 45%);
+}
+.bugspot-pin:hover {
+  transform: translate(0, -100%) scale(1.1);
+}
+
+/* Form controls do not inherit the font by default, and the page's normalize does not reach here. */
+.bugspot :is(input, textarea, select, button),
+.bugspot-portal :is(input, textarea, select, button) {
+  font-family: inherit;
+}

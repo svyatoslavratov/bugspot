@@ -1,0 +1,358 @@
+openapi: 3.1.0
+info:
+  title: bugspot API
+  version: 1.0.0
+  license:
+    name: AGPL-3.0-only
+    identifier: AGPL-3.0-only
+  description: |
+    Pinned page comments. The widget and agents use the same API.
+
+    **Who is calling.** An agent sends its token in `X-Bugspot-Token` (or `Authorization: Bearer`).
+    Everyone else is recognized by the identity providers configured with `BUGSPOT_AUTH`
+    (forward, jwt, header, key, anonymous); a JWT for the jwt provider also goes in
+    `X-Bugspot-Token`. Permissions come from the policy (`BUGSPOT_VIEW`, `BUGSPOT_COMMENT`,
+    `BUGSPOT_MODERATE`); agents get theirs from token scopes.
+
+    **CSRF.** Every state-changing request from a browser must carry `X-Bugspot-Request: 1`.
+    Requests with an agent token are exempt.
+
+    **Threads by number.** Wherever a path takes `{id}`, the thread number (`12`, or `#12` URL-encoded)
+    works as well.
+servers:
+  - url: /
+security:
+  - {}
+  - agentToken: []
+paths:
+  /healthz:
+    get:
+      operationId: health
+      summary: Liveness and storage check
+      security: []
+      responses:
+        "200": { description: OK }
+        "503": { $ref: "#/components/responses/Error" }
+  /widget.js:
+    get:
+      operationId: loader
+      summary: The widget loader (short cache, ETag)
+      security: []
+      responses:
+        "200": { description: JavaScript, content: { text/javascript: {} } }
+        "304": { description: Not modified }
+  /api/v1/session:
+    get:
+      operationId: getSession
+      summary: Whether the caller sees the widget, and what they may do
+      description: Hidden answers carry only `visible:false`. An anonymous visitor gets a `bugspot_anon` cookie.
+      responses:
+        "200":
+          description: Session
+          content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } }
+  /api/v1/session/key:
+    post:
+      operationId: openKey
+      summary: Exchange an access key from a link for an httpOnly cookie
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key]
+              properties: { key: { type: string, example: bsk_… } }
+      responses:
+        "200":
+          description: Session of the key
+          content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: closeKey
+      summary: Forget the access key cookie
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      responses:
+        "204": { description: Done }
+  /api/v1/threads:
+    get:
+      operationId: listThreads
+      summary: Threads, newest activity first
+      parameters:
+        - { name: route, in: query, schema: { type: string }, description: Only this page route }
+        - name: status
+          in: query
+          description: Comma-separated statuses
+          schema: { type: string, example: "open,in_progress" }
+        - { name: kind, in: query, schema: { $ref: "#/components/schemas/Kind" } }
+        - { name: q, in: query, schema: { type: string }, description: Case-insensitive search in text, author and route }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: A page of threads
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Thread" } }
+                  meta: { $ref: "#/components/schemas/PageMeta" }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+    post:
+      operationId: createThread
+      summary: Pin a new thread
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ThreadInput" } } }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Thread" } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /api/v1/threads/summary:
+    get:
+      operationId: summary
+      summary: Thread counts by status, in the project and on one route
+      parameters:
+        - { name: route, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Counts
+          content: { application/json: { schema: { $ref: "#/components/schemas/Summary" } } }
+  /api/v1/threads/{id}:
+    parameters: [{ $ref: "#/components/parameters/ThreadID" }]
+    get:
+      operationId: getThread
+      summary: A thread with its replies
+      responses:
+        "200":
+          description: Thread
+          content: { application/json: { schema: { $ref: "#/components/schemas/ThreadDetail" } } }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      operationId: updateThread
+      summary: Change the status, or the text and kind of one's own thread
+      description: |
+        Moderators set any status. Agents with the `status` scope set open, in_progress, fixed and
+        wontfix — resolving is for people. The author may resolve or reopen their own thread and edit it.
+        `allowed.statuses` of a thread lists what the caller may set.
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { $ref: "#/components/schemas/Status" }
+                body: { type: string, maxLength: 10000 }
+                kind: { $ref: "#/components/schemas/Kind" }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/Thread" } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+    delete:
+      operationId: deleteThread
+      summary: Delete a thread (the author or a moderator)
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/v1/threads/{id}/replies:
+    parameters: [{ $ref: "#/components/parameters/ThreadID" }]
+    post:
+      operationId: reply
+      summary: Answer in a thread
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties: { body: { type: string, maxLength: 10000 } }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Reply" } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/v1/threads/{id}/screenshot:
+    parameters: [{ $ref: "#/components/parameters/ThreadID" }]
+    put:
+      operationId: putScreenshot
+      summary: Attach or replace the screenshot (the author or a moderator)
+      description: PNG, JPEG or WebP, detected by content; up to `BUGSPOT_SCREENSHOT_MAX_BYTES`.
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content:
+          image/webp: {}
+          image/png: {}
+          image/jpeg: {}
+      responses:
+        "204": { description: Saved }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "413": { $ref: "#/components/responses/Error" }
+    get:
+      operationId: getScreenshot
+      summary: The screenshot image
+      responses:
+        "200": { description: Image, content: { image/webp: {}, image/png: {}, image/jpeg: {} } }
+        "404": { $ref: "#/components/responses/Error" }
+components:
+  securitySchemes:
+    agentToken:
+      type: apiKey
+      in: header
+      name: X-Bugspot-Token
+      description: An agent token (bsp_…) from `bugspot token create`, or a JWT for the jwt provider.
+  parameters:
+    ThreadID:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      description: Thread id or number
+    RequestHeader:
+      name: X-Bugspot-Request
+      in: header
+      required: false
+      schema: { type: string, example: "1" }
+      description: Required on browser requests that change state (CSRF protection).
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error, code]
+            properties:
+              error: { type: string }
+              code:
+                type: string
+                enum: [bad_request, forbidden, not_found, too_large, rate_limited, csrf, invalid_key, internal, unhealthy, no_widget]
+  schemas:
+    Status:
+      type: string
+      enum: [open, in_progress, fixed, resolved, wontfix]
+    Kind:
+      type: string
+      enum: [issue, question, idea]
+    Author:
+      type: object
+      required: [id, name, kind]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        kind: { type: string, enum: [user, agent] }
+    Permissions:
+      type: object
+      required: [view, comment, reply, moderate]
+      properties:
+        view: { type: boolean }
+        comment: { type: boolean }
+        reply: { type: boolean }
+        moderate: { type: boolean }
+    Session:
+      type: object
+      required: [visible]
+      properties:
+        visible: { type: boolean }
+        project: { type: string }
+        user:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            provider: { type: string }
+        can: { $ref: "#/components/schemas/Permissions" }
+        limits:
+          type: object
+          properties:
+            screenshotMaxBytes: { type: integer }
+            bodyMaxLength: { type: integer }
+    ThreadInput:
+      type: object
+      required: [route, url, body]
+      properties:
+        route: { type: string, maxLength: 2048, example: /campaigns }
+        url: { type: string, maxLength: 2048 }
+        title: { type: string, maxLength: 300 }
+        kind: { $ref: "#/components/schemas/Kind" }
+        body: { type: string, maxLength: 10000 }
+        anchor: { type: object, description: "Selector, text, tag, offset, page point, viewport (≤16 KB)" }
+        context: { type: object, description: "Browser, viewport, app version, console errors, failed requests (≤64 KB)" }
+        authorName: { type: string, maxLength: 80, description: Anonymous visitors only }
+    Thread:
+      type: object
+      required: [id, number, route, url, kind, status, body, anchor, context, author, hasScreenshot, replyCount, createdAt, updatedAt, allowed]
+      properties:
+        id: { type: string }
+        number: { type: integer }
+        project: { type: string }
+        route: { type: string }
+        url: { type: string }
+        title: { type: string }
+        kind: { $ref: "#/components/schemas/Kind" }
+        status: { $ref: "#/components/schemas/Status" }
+        statusBy: { $ref: "#/components/schemas/Author" }
+        statusAt: { type: string, format: date-time }
+        body: { type: string }
+        anchor: { type: object }
+        context: { type: object }
+        author: { $ref: "#/components/schemas/Author" }
+        hasScreenshot: { type: boolean }
+        replyCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        allowed:
+          type: object
+          description: What the caller may do with this thread
+          properties:
+            edit: { type: boolean }
+            delete: { type: boolean }
+            reply: { type: boolean }
+            statuses: { type: array, items: { $ref: "#/components/schemas/Status" } }
+    Reply:
+      type: object
+      required: [id, threadId, body, author, createdAt]
+      properties:
+        id: { type: string }
+        threadId: { type: string }
+        body: { type: string }
+        author: { $ref: "#/components/schemas/Author" }
+        createdAt: { type: string, format: date-time }
+    ThreadDetail:
+      allOf:
+        - $ref: "#/components/schemas/Thread"
+        - type: object
+          required: [replies]
+          properties:
+            replies: { type: array, items: { $ref: "#/components/schemas/Reply" } }
+    Summary:
+      type: object
+      properties:
+        total: { type: object, additionalProperties: { type: integer } }
+        route: { type: object, additionalProperties: { type: integer } }
+    PageMeta:
+      type: object
+      required: [page, limit, total]
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }

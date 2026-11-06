@@ -1,0 +1,11 @@
+/bin/
+/data/
+/_site/
+*.db
+*.db-shm
+*.db-wal
+widget/node_modules/
+# Built by `make widget`; the Docker build and releases build it themselves.
+/internal/widgetfs/dist/*
+!/internal/widgetfs/dist/README.md
+.DS_Store
