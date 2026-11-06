@@ -30,6 +30,8 @@ export interface MountOptions {
 export interface BugspotHandle {
   open(threadId?: string): void;
   close(): void;
+  /** Reload threads now instead of waiting for the next poll. */
+  refresh(): void;
   destroy(): void;
 }
 

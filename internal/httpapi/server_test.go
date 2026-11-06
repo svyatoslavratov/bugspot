@@ -225,6 +225,15 @@ func TestThreadLifecycle(t *testing.T) {
 		t.Fatalf("agent fixed: %d", w.Code)
 	}
 
+	// A person — not the agent — ticks "checked"; reopening clears the tick.
+	if w := e.do(call{method: "PATCH", path: path, body: map[string]any{"verified": true}, headers: agent, noCSRF: true}); w.Code != http.StatusForbidden {
+		t.Fatalf("agent verify: %d", w.Code)
+	}
+	verified := decodeBody[threadView](t, e.do(call{method: "PATCH", path: path, user: "boris", body: map[string]any{"verified": true}}))
+	if !verified.Verified || verified.VerifiedBy.ID != "boris" || verified.VerifiedAt == nil || !verified.Allowed.Verify {
+		t.Fatalf("boris verifies = %+v", verified)
+	}
+
 	// The author checks and resolves; the detail shows the reply and who changed the status.
 	if w := e.do(call{method: "PATCH", path: path, user: "anna", body: map[string]any{"status": "resolved"}}); w.Code != http.StatusOK {
 		t.Fatalf("author resolve: %d %s", w.Code, w.Body)
@@ -236,6 +245,14 @@ func TestThreadLifecycle(t *testing.T) {
 	}
 	if got := detail.Allowed.Statuses; len(got) != 1 || got[0] != domain.StatusOpen {
 		t.Fatalf("author may now only reopen: %v", got)
+	}
+
+	if !detail.Verified {
+		t.Fatal("resolving must keep the verification")
+	}
+	reopened := decodeBody[threadView](t, e.do(call{method: "PATCH", path: path, user: "anna", body: map[string]any{"status": "open"}}))
+	if reopened.Verified || reopened.VerifiedBy != nil {
+		t.Fatalf("reopen keeps the verification: %+v", reopened)
 	}
 
 	// Moderators set anything and delete anything.

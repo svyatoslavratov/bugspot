@@ -1,7 +1,12 @@
 # bugspot
 
 [![CI](https://github.com/svyatoslavratov/bugspot/actions/workflows/ci.yml/badge.svg)](https://github.com/svyatoslavratov/bugspot/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/svyatoslavratov/bugspot?sort=semver)](https://github.com/svyatoslavratov/bugspot/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/svyatoslavratov/bugspot.svg)](https://pkg.go.dev/github.com/svyatoslavratov/bugspot)
+[![Coverage Status](https://coveralls.io/repos/github/svyatoslavratov/bugspot/badge.svg?branch=main)](https://coveralls.io/github/svyatoslavratov/bugspot?branch=main)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/svyatoslavratov/bugspot/badge)](https://scorecard.dev/viewer/?uri=github.com/svyatoslavratov/bugspot)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![Demo](https://img.shields.io/badge/demo-live-2d72d2)](https://svyatoslavratov.github.io/bugspot/)
 
 **Комментарии к элементам страницы для команды и для агентов.** Плавающий жучок в любом
 веб-приложении: нажали, выбрали элемент, написали, что не так. Комментарий закрепляется за этим
@@ -17,7 +22,7 @@
 
 [English version](README.md)
 
-![Панель с комментариями и метки на странице](docs/images/panel.png)
+![Человек оставляет комментарий, агент исправляет через MCP, человек проверяет и закрывает](docs/images/demo.gif)
 
 ## Что умеет
 
@@ -27,10 +32,13 @@
 - **Контекст сам собой.** Скриншот видимой части страницы с обведённым элементом (или снимок
   вкладки средствами браузера), браузер и размер окна, версия приложения, последние ошибки консоли
   и неудачные запросы (с `X-Request-ID`; значения параметров запроса отбрасываются).
-- **Работа с замечаниями.** Открыт → в работе → исправлен → решён, или отклонён. Ответы, правка,
-  удаление, поиск, «эта страница» и «все», метки можно скрыть, кнопку можно перетащить.
-- **Агенты — полноправные участники.** Токены с правами, CLI (`bugspot threads list/show/reply/status/screenshot`)
-  и обычный REST API. Агент доводит до «исправлен», закрывает только человек.
+- **Работа с замечаниями.** Открыт → в работе → исправлен → решён, или отклонён, и отдельная
+  отметка «проверено человеком». Ответы, правка по клику на текст, поиск, «эта страница» и «все»,
+  метки можно скрыть, «показать на странице» с короткой подсветкой, кнопку можно перетащить.
+- **Комментарий в один клик.** Правый клик (или Alt+клик) по жучку — и сразу выбор элемента, панель
+  откроется уже с формой; обычный клик по-прежнему открывает панель.
+- **Агенты — полноправные участники.** MCP-сервер (`bugspot mcp`), токены с правами, CLI и обычный
+  REST API. Агент доводит до «исправлен», проверяет и закрывает только человек.
 - **Гибкий доступ.** Пользователь из сессии вашего приложения (`forward`), из JWT, из заголовков
   доверенного прокси, по ссылке с ключом доступа или анонимно — в любом сочетании, с правилами
   «видеть / писать / модерировать» по ролям и пользователям.
@@ -148,6 +156,25 @@ location /bugspot/ {
 Другие рецепты (JWT на Go и Node, oauth2-proxy, другой домен, Traefik, Vite): [docs/integration.md](docs/integration.md).
 
 ## Агенты
+
+### MCP
+
+`bugspot mcp` — MCP-сервер на stdio с инструментами `list_threads`, `get_thread`, `get_screenshot`
+(сама картинка), `reply`, `set_status` и `summary`. Он работает через API с токеном агента, поэтому
+у агента ровно те права, что у токена.
+
+```sh
+# Claude Code
+claude mcp add bugspot --env BUGSPOT_URL=https://app.example.com/bugspot --env BUGSPOT_TOKEN=bsp_… -- bugspot mcp
+# без локального бинарника
+claude mcp add bugspot -- docker run -i --rm -e BUGSPOT_URL=… -e BUGSPOT_TOKEN=… ghcr.io/svyatoslavratov/bugspot mcp
+```
+
+Дальше: *«Почини открытые комментарии bugspot»* — агент получает список, смотрит скриншоты, берёт
+комментарий в работу, правит код, отвечает и ставит «исправлен». Человек проверяет, ставит отметку
+«проверено» и закрывает.
+
+### CLI
 
 ```sh
 # рядом с сервисом: создать токен (показывается один раз, хранится только хеш)

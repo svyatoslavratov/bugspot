@@ -28,6 +28,11 @@ var (
 // seed fills an empty demo with threads pinned to elements of the demo page.
 func seed() {
 	ctx := context.Background()
+	if _, err := st.CredentialByHash(ctx, secret.Hash(demoAgentToken)); err != nil {
+		_ = st.CreateCredential(ctx, domain.Credential{ID: "demo-agent", Kind: domain.CredentialAgent, Name: "Claude",
+			Hash: secret.Hash(demoAgentToken), Scopes: []string{domain.ScopeRead, domain.ScopeReply, domain.ScopeStatus},
+			CreatedAt: time.Now().UTC()})
+	}
 	if list, _, _ := st.ListThreads(ctx, domain.ThreadFilter{Project: "demo", Limit: 1}); len(list) > 0 {
 		return
 	}

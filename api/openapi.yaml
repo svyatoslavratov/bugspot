@@ -138,11 +138,14 @@ paths:
         "404": { $ref: "#/components/responses/Error" }
     patch:
       operationId: updateThread
-      summary: Change the status, or the text and kind of one's own thread
+      summary: Change the status, the "checked by a person" mark, or the text and kind of one's own thread
       description: |
         Moderators set any status. Agents with the `status` scope set open, in_progress, fixed and
         wontfix — resolving is for people. The author may resolve or reopen their own thread and edit it.
         `allowed.statuses` of a thread lists what the caller may set.
+
+        `verified` is a separate checkbox: a person who may comment confirms the result (agents may
+        not). Reopening a thread clears it.
       parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
       requestBody:
         required: true
@@ -154,6 +157,7 @@ paths:
                 status: { $ref: "#/components/schemas/Status" }
                 body: { type: string, maxLength: 10000 }
                 kind: { $ref: "#/components/schemas/Kind" }
+                verified: { type: boolean }
       responses:
         "200":
           description: Updated
@@ -300,7 +304,7 @@ components:
         authorName: { type: string, maxLength: 80, description: Anonymous visitors only }
     Thread:
       type: object
-      required: [id, number, route, url, kind, status, body, anchor, context, author, hasScreenshot, replyCount, createdAt, updatedAt, allowed]
+      required: [id, number, route, url, kind, status, verified, body, anchor, context, author, hasScreenshot, replyCount, createdAt, updatedAt, allowed]
       properties:
         id: { type: string }
         number: { type: integer }
@@ -312,6 +316,9 @@ components:
         status: { $ref: "#/components/schemas/Status" }
         statusBy: { $ref: "#/components/schemas/Author" }
         statusAt: { type: string, format: date-time }
+        verified: { type: boolean, description: A person checked the result }
+        verifiedBy: { $ref: "#/components/schemas/Author" }
+        verifiedAt: { type: string, format: date-time }
         body: { type: string }
         anchor: { type: object }
         context: { type: object }
@@ -327,6 +334,7 @@ components:
             edit: { type: boolean }
             delete: { type: boolean }
             reply: { type: boolean }
+            verify: { type: boolean }
             statuses: { type: array, items: { $ref: "#/components/schemas/Status" } }
     Reply:
       type: object

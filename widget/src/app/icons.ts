@@ -16,6 +16,7 @@ import doubleCaret16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/doubl
 import edit16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/edit';
 import error16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/error';
 import eyeOff16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/eye-off';
+import eyeOpen16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/eye-open';
 import help16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/help';
 import infoSign16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/info-sign';
 import lightbulb16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/lightbulb';
@@ -46,6 +47,7 @@ const icons16: Partial<Record<IconName, string[]>> = {
   edit: edit16,
   error: error16,
   'eye-off': eyeOff16,
+  'eye-open': eyeOpen16,
   help: help16,
   'info-sign': infoSign16,
   lightbulb: lightbulb16,

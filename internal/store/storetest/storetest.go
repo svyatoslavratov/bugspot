@@ -71,6 +71,8 @@ func threads(t *testing.T, s store.Store) {
 	updated, err := s.UpdateThread(ctx, "p", "t1", func(th *domain.Thread) error {
 		th.Status, th.StatusAt, th.UpdatedAt = domain.StatusFixed, &at, at
 		th.StatusBy = &domain.Author{ID: "bot", Name: "Agent", Kind: domain.AuthorAgent}
+		th.Verified, th.VerifiedAt = true, &at
+		th.VerifiedBy = &domain.Author{ID: "u2", Name: "Борис", Kind: domain.AuthorUser}
 		return nil
 	})
 	if err != nil || updated.Status != domain.StatusFixed {
@@ -79,6 +81,9 @@ func threads(t *testing.T, s store.Store) {
 	got, err := s.GetThread(ctx, "p", "t1")
 	if err != nil || got.StatusBy == nil || got.StatusBy.Kind != domain.AuthorAgent || !got.UpdatedAt.Equal(at) {
 		t.Fatalf("get after update = %+v, %v", got, err)
+	}
+	if !got.Verified || got.VerifiedBy == nil || got.VerifiedBy.Name != "Борис" || !got.VerifiedAt.Equal(at) {
+		t.Fatalf("verification after update = %v %+v %v", got.Verified, got.VerifiedBy, got.VerifiedAt)
 	}
 	if string(got.Anchor) != `{"selector":"#x"}` {
 		t.Fatalf("anchor = %s", got.Anchor)

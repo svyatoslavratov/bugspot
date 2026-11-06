@@ -57,6 +57,7 @@ export function mount(options: MountOptions): BugspotHandle {
   return {
     open: (id) => handle.current?.open(id),
     close: () => handle.current?.close(),
+    refresh: () => handle.current?.refresh(),
     destroy: () => {
       root.unmount();
       host.remove();

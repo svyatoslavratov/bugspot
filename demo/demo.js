@@ -99,6 +99,43 @@
     mount();
   });
 
+  // The demo agent: what an agent does over MCP (list_threads, set_status, reply), through the same
+  // API with an agent token — so it cannot resolve a thread or mark it checked either.
+  const say = (line) => {
+    status.textContent = `Agent: ${line}`;
+    window.dispatchEvent(new CustomEvent('bugspot-demo-agent', { detail: line }));
+  };
+  const asAgent = async (method, path, body) => {
+    const out = window.bugspotServer.serve({
+      method,
+      path,
+      headers: { 'x-bugspot-token': window.bugspotServer.agentToken, 'content-type': 'application/json' },
+      body: body ? new TextEncoder().encode(JSON.stringify(body)) : null,
+    });
+    return out.body.length ? JSON.parse(new TextDecoder().decode(out.body)) : null;
+  };
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+  document.getElementById('agent').addEventListener('click', async () => {
+    const { data } = await asAgent('GET', '/api/v1/threads?status=open&limit=1');
+    const thread = data?.[0];
+    if (!thread) return say('nothing open to fix.');
+    say(`list_threads → #${thread.number} “${thread.body.slice(0, 48)}”`);
+    await pause(1200);
+    await asAgent('PATCH', `/api/v1/threads/${thread.id}`, { status: 'in_progress' });
+    say(`set_status #${thread.number} in_progress`);
+    window.bugspot?.refresh();
+    await pause(1600);
+    await asAgent('POST', `/api/v1/threads/${thread.id}/replies`, {
+      body: 'Fixed in 0.4.2: the cell wraps now and keeps the currency. Please check.',
+    });
+    say(`reply #${thread.number} “Fixed in 0.4.2…”`);
+    window.bugspot?.refresh();
+    await pause(1200);
+    await asAgent('PATCH', `/api/v1/threads/${thread.id}`, { status: 'fixed' });
+    say(`set_status #${thread.number} fixed — waiting for a person to check`);
+    window.bugspot?.refresh();
+  });
+
   window.onBugspotServerReady = mount;
   status.textContent = 'Starting the API…';
   const go = new Go();

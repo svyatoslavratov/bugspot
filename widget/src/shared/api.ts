@@ -81,7 +81,7 @@ export function createApi(options: ApiOptions) {
     summary: (route: string) => send<Summary>('GET', `api/v1/threads/summary${query({ route })}`),
     thread: (id: string) => send<ThreadDetail>('GET', `api/v1/threads/${encodeURIComponent(id)}`),
     create: (input: ThreadInput) => send<Thread>('POST', 'api/v1/threads', input),
-    update: (id: string, patch: { status?: Status; body?: string; kind?: Kind }) =>
+    update: (id: string, patch: { status?: Status; body?: string; kind?: Kind; verified?: boolean }) =>
       send<Thread>('PATCH', `api/v1/threads/${encodeURIComponent(id)}`, patch),
     remove: (id: string) => send<void>('DELETE', `api/v1/threads/${encodeURIComponent(id)}`),
     reply: (id: string, body: string) =>

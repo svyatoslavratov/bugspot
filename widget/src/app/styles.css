@@ -5,8 +5,10 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 0;
+  /* Full width (and no height): popovers size against it instead of wrapping word by word. */
+  width: 100vw;
   height: 0;
+  pointer-events: none;
   z-index: 2147483000;
   font-family: -apple-system, 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
   font-size: 14px;
@@ -30,6 +32,24 @@
 
 .bugspot-portal .bp6-portal {
   z-index: 2147483001;
+}
+
+/* Layers inside the widget: pins and the flash frame under the panel, the bug and picking on top. */
+.bugspot-pin {
+  z-index: 1;
+}
+.bugspot-flash {
+  z-index: 2;
+}
+.bugspot-panel.bp6-card {
+  z-index: 3;
+}
+.bugspot-bug {
+  z-index: 4;
+}
+.bugspot-highlight,
+.bugspot-pick-bar {
+  z-index: 5;
 }
 
 /* The floating bug */
@@ -68,6 +88,7 @@
 /* The panel */
 .bugspot-panel.bp6-card {
   position: fixed;
+  transition: opacity 0.2s ease;
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -176,6 +197,7 @@
   gap: 10px;
 }
 .bugspot-thread-nav {
+  flex-wrap: nowrap;
   margin: 0 -8px;
 }
 .bugspot-thread-body,
@@ -357,4 +379,89 @@
 .bugspot :is(input, textarea, select, button),
 .bugspot-portal :is(input, textarea, select, button) {
   font-family: inherit;
+}
+
+/* "Show on the page": a frame around the element and a pulsing pin. */
+.bugspot-flash {
+  position: fixed;
+  border: 3px solid #2d72d2;
+  border-radius: 6px;
+  box-shadow: 0 0 0 6px rgb(45 114 210 / 22%);
+  pointer-events: none;
+  animation: bugspot-flash 1.8s ease-out forwards;
+}
+@keyframes bugspot-flash {
+  0% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.bugspot-panel.is-peeking {
+  opacity: 0.12;
+  pointer-events: none;
+}
+.bugspot-pin.is-flashing {
+  z-index: 2;
+  animation: bugspot-pin-pulse 0.6s ease-in-out 3;
+}
+@keyframes bugspot-pin-pulse {
+  0%,
+  100% {
+    transform: translate(0, -100%) scale(1);
+  }
+  50% {
+    transform: translate(0, -100%) scale(1.35);
+    box-shadow: 0 0 0 8px rgb(45 114 210 / 30%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bugspot-flash,
+  .bugspot-pin.is-flashing {
+    animation-duration: 0.01s;
+  }
+  .bugspot-flash {
+    animation: none;
+  }
+}
+
+.bugspot-verified.bp6-control {
+  margin: 0;
+}
+
+/* Thread header: the status tag opens the status menu; delete sits at the right edge. */
+.bugspot-push-right {
+  margin-left: auto;
+}
+.bugspot-status-picker.bp6-tag {
+  cursor: pointer;
+}
+/* Editable text: looks like text, shows it is editable on hover. */
+button.bugspot-thread-body.is-editable {
+  display: block;
+  width: 100%;
+  margin: 0 -6px;
+  padding: 4px 6px;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: text;
+}
+button.bugspot-thread-body.is-editable:hover,
+button.bugspot-thread-body.is-editable:focus-visible {
+  border-color: rgb(45 114 210 / 45%);
+  background: rgb(45 114 210 / 5%);
 }

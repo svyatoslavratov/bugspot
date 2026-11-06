@@ -41,8 +41,15 @@ export function NewThread({
   const maxBytes = session.limits?.screenshotMaxBytes ?? 3 << 20;
   const anonymous = session.user?.provider === 'anonymous';
   const shotUrl = useRef<string | null>(null);
+  // The capture in progress: sending waits for it, so a quick "Send" still attaches the screenshot.
+  const capturing = useRef<Promise<Shot | null> | null>(null);
 
-  const take = async (how: 'dom' | 'tab') => {
+  const take = (how: 'dom' | 'tab') => {
+    const run = capture(how);
+    capturing.current = run;
+    return run;
+  };
+  const capture = async (how: 'dom' | 'tab'): Promise<Shot | null> => {
     setShot({ kind: 'pending' });
     try {
       // Let the panel finish rendering: the screenshot leaves the widget out anyway.
@@ -52,8 +59,10 @@ export function NewThread({
       if (shotUrl.current) URL.revokeObjectURL(shotUrl.current);
       shotUrl.current = next.url;
       setShot({ kind: 'ready', shot: next });
+      return next;
     } catch (e) {
       setShot({ kind: 'failed', message: e instanceof Error ? e.message : String(e) });
+      return null;
     }
   };
 
@@ -79,8 +88,9 @@ export function NewThread({
         context: view.context,
         authorName: anonymous && name.trim() ? name.trim() : undefined,
       });
-      if (attach && shot.kind === 'ready') {
-        await api.putScreenshot(thread.id, shot.shot.blob).catch(() => undefined);
+      if (attach) {
+        const ready = shot.kind === 'ready' ? shot.shot : await capturing.current;
+        if (ready) await api.putScreenshot(thread.id, ready.blob).catch(() => undefined);
       }
       onCreated(thread);
     } catch (e) {

@@ -9,6 +9,9 @@ CREATE TABLE threads (
     status         TEXT NOT NULL,
     status_by      TEXT,
     status_at      TEXT,
+    -- A person confirmed the result: who and when; empty while not checked.
+    verified_by    TEXT,
+    verified_at    TEXT,
     body           TEXT NOT NULL,
     anchor         TEXT NOT NULL,
     context        TEXT NOT NULL,

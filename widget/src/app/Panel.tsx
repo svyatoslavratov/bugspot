@@ -7,7 +7,6 @@ import {
   InputGroup,
   NonIdealState,
   Spinner,
-  Switch,
   Tab as BpTab,
   Tabs,
   Tooltip,
@@ -26,6 +25,8 @@ export type StatusFilter = 'active' | 'all' | Status;
 
 interface Props {
   buttonPosition: Point | null;
+  /** While a thread flashes on the page, the panel turns almost transparent to show it. */
+  peek: boolean;
   tab: Tab;
   counts: { page: number; all: number };
   status: StatusFilter;
@@ -40,7 +41,6 @@ interface Props {
   onPins: (on: boolean) => void;
   onNew: () => void;
   onClose: () => void;
-  onHide: () => void;
   onSelect: (thread: Thread) => void;
 }
 
@@ -56,7 +56,13 @@ export function Panel(p: Props) {
   const canComment = session.can?.comment ?? false;
 
   return (
-    <Card className="bugspot-panel" elevation={Elevation.FOUR} style={box} role="dialog" aria-label={t.title}>
+    <Card
+      className={`bugspot-panel ${p.peek ? 'is-peeking' : ''}`}
+      elevation={Elevation.FOUR}
+      style={box}
+      role="dialog"
+      aria-label={t.title}
+    >
       <header className="bugspot-panel-header">
         <div className="bugspot-panel-title">
           <strong>{t.title}</strong>
@@ -64,11 +70,16 @@ export function Panel(p: Props) {
             {t.signedAs}: {session.user?.name}
           </span>
         </div>
-        {canComment && p.view.kind === 'list' && (
-          <Button icon="add" intent="primary" text={t.newComment} onClick={p.onNew} />
-        )}
-        <Tooltip content={t.hide} placement="bottom">
-          <Button icon="eye-off" variant="minimal" aria-label={t.hide} onClick={p.onHide} />
+        {canComment && <Button icon="add" intent="primary" text={t.newComment} onClick={p.onNew} />}
+        <Tooltip content={p.pins ? t.hidePins : t.showPins} placement="bottom">
+          <Button
+            icon={p.pins ? 'eye-open' : 'eye-off'}
+            variant="minimal"
+            active={!p.pins}
+            aria-label={p.pins ? t.hidePins : t.showPins}
+            aria-pressed={!p.pins}
+            onClick={() => p.onPins(!p.pins)}
+          />
         </Tooltip>
         <Button icon="cross" variant="minimal" aria-label={t.close} onClick={p.onClose} />
       </header>
@@ -99,7 +110,6 @@ export function Panel(p: Props) {
                 ]}
               />
             </div>
-            <Switch checked={p.pins} label={t.pins} onChange={(e) => p.onPins(e.currentTarget.checked)} />
           </div>
           <div className="bugspot-panel-body">
             <ListBody {...p} />
