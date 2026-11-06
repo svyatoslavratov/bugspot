@@ -9,25 +9,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ### Added
 
-- The bug's menu (right click): pick an element, the comment form, the picking shortcut and pins.
+- Settings under a gear in the panel header: the comment form and the picking shortcut.
 - Tiny mode: a small box right at the picked element, as in Figma — Enter sends, Shift+Enter starts
   a new line, Esc cancels, the screenshot is attached on its own, "expand" moves the text to the
   full form. With several elements their numbered frames stay and the box sits at the last one.
-  `data-mode` sets the default; each person switches it in the menu.
+  `data-mode` sets the default; each person switches it under the gear.
 - A picking shortcut, Alt+C (⌥C) by default: by the physical key, so any keyboard layout works; a
-  second press cancels. Each person records their own or turns it off in the menu; `data-hotkey`
-  sets the default.
+  second press cancels. Each person records their own or turns it off under the gear; `data-hotkey`
+  sets the default. The right click on the bug still picks at once.
 - A quiet link to the project under the panel.
 
 ### Changed
 
-- The right click on the bug opens its menu; picking at once is Alt+C or Alt+click.
 - "Show on the page" and "Open the page" are icons with tooltips: the thread header fits one line.
 - The status filter of the list is a tag with a menu, like the thread's status.
 
 ### Fixed
 
-- Clicks inside a menu of the bug no longer reach the bug (they used to start a drag).
+- A clicked tab, menu item or button kept its focus ring until the next click elsewhere: the ring
+  now shows for keyboard focus only (Blueprint's focus manager marks the page, which the shadow root
+  does not see).
 
 ## [0.2.0] - 2026-11-06
 

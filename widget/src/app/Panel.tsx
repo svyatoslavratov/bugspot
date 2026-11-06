@@ -5,12 +5,13 @@ import {
   Elevation,
   InputGroup,
   NonIdealState,
+  Popover,
   Spinner,
   Tab as BpTab,
   Tabs,
   Tooltip,
 } from '@blueprintjs/core';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type JSX, type ReactNode } from 'react';
 
 import type { Page, Point, Thread } from '../shared/types';
 import type { View } from './App';
@@ -41,6 +42,8 @@ interface Props {
   onStatus: (s: StatusFilter) => void;
   onQuery: (q: string) => void;
   onPins: (on: boolean) => void;
+  /** The settings menu behind the gear; absent for people who may not comment. */
+  settings?: JSX.Element;
   onNew: () => void;
   onClose: () => void;
   onSelect: (thread: Thread) => void;
@@ -83,6 +86,13 @@ export function Panel(p: Props) {
             onClick={() => p.onPins(!p.pins)}
           />
         </Tooltip>
+        {p.settings && (
+          <Popover content={p.settings} placement="bottom-end">
+            <Tooltip content={t.settings} placement="bottom">
+              <Button icon="cog" variant="minimal" aria-label={t.settings} />
+            </Tooltip>
+          </Popover>
+        )}
         <Button icon="cross" variant="minimal" aria-label={t.close} onClick={p.onClose} />
       </header>
       {p.view.kind === 'list' ? (

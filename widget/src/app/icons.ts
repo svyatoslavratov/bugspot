@@ -9,6 +9,7 @@ import camera16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/camera';
 import caretDown16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/caret-down';
 import chevronDown16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/chevron-down';
 import chevronRight16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/chevron-right';
+import cog16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/cog';
 import comment16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/comment';
 import cross16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/cross';
 import cross20 from '@blueprintjs/icons/lib/esm/generated/20px/paths/cross';
@@ -42,6 +43,7 @@ const icons16: Partial<Record<IconName, string[]>> = {
   'caret-down': caretDown16,
   'chevron-down': chevronDown16,
   'chevron-right': chevronRight16,
+  cog: cog16,
   comment: comment16,
   cross: cross16,
   'double-caret-vertical': doubleCaret16,

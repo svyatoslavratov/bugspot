@@ -1,5 +1,5 @@
-import { Button, Popover, Tooltip } from '@blueprintjs/core';
-import { useEffect, useRef, useState, type JSX, type PointerEvent } from 'react';
+import { Button, Tooltip } from '@blueprintjs/core';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 
 import type { Point } from '../shared/types';
 import { useWidget } from './context';
@@ -8,17 +8,14 @@ import { buttonPoint } from './layout';
 const DRAG = 4;
 
 /**
- * The floating bug: a click toggles the panel, a drag moves it (the place is remembered), Alt+click
- * starts picking an element at once, a right click opens its menu (settings).
+ * The floating bug: a click toggles the panel, a drag moves it (the place is remembered), a right
+ * click (or Alt+click) starts picking an element at once, without opening the panel.
  */
 export function BugButton({
   count,
   open,
   position,
   hint,
-  menu,
-  menuOpen,
-  onMenu,
   onMove,
   onClick,
   onQuick,
@@ -27,12 +24,9 @@ export function BugButton({
   open: boolean;
   position: Point | null;
   hint: string;
-  menu: JSX.Element;
-  menuOpen: boolean;
-  onMenu: (open: boolean) => void;
   onMove: (p: Point) => void;
   onClick: () => void;
-  /** Absent when the user may not comment: Alt+click then just opens the panel. */
+  /** Absent when the user may not comment: the right click then does nothing special. */
   onQuick?: () => void;
 }) {
   const { t, settings } = useWidget();
@@ -47,8 +41,8 @@ export function BugButton({
 
   const point = drag ?? buttonPoint(position, settings.position);
 
-  // The menu is portalled, yet React bubbles its events up here: only events that start on the bug
-  // itself drag it or toggle the panel, or the bug would capture the pointer and eat menu clicks.
+  // Portalled children (tooltips) still bubble React events up here: only events that start on the
+  // bug itself drag it or toggle the panel.
   const own = (e: { currentTarget: HTMLElement; target: EventTarget }) =>
     e.target instanceof Node && e.currentTarget.contains(e.target);
 
@@ -84,36 +78,25 @@ export function BugButton({
       onPointerMove={move}
       onPointerUp={up}
       onContextMenu={(e) => {
-        if (!own(e)) return;
+        if (!onQuick || !own(e)) return;
         e.preventDefault();
-        onMenu(true);
+        onQuick();
       }}
       onPointerCancel={() => {
         start.current = null;
         setDrag(null);
       }}
     >
-      <Popover
-        content={menu}
-        isOpen={menuOpen}
-        placement="left-end"
-        autoFocus={false}
-        enforceFocus={false}
-        // Opened by the right click only; a click outside or Esc closes it.
-        onInteraction={(next) => !next && onMenu(false)}
-      >
-        <Tooltip content={hint} placement="left" disabled={open || menuOpen || drag !== null}>
-          <Button
-            icon="bug"
-            intent={open ? 'none' : 'primary'}
-            size="large"
-            aria-label={t.title}
-            aria-expanded={open}
-            aria-haspopup="menu"
-            className="bugspot-bug-button"
-          />
-        </Tooltip>
-      </Popover>
+      <Tooltip content={hint} placement="left" disabled={open || drag !== null}>
+        <Button
+          icon="bug"
+          intent={open ? 'none' : 'primary'}
+          size="large"
+          aria-label={t.title}
+          aria-expanded={open}
+          className="bugspot-bug-button"
+        />
+      </Tooltip>
       {count > 0 && <span className="bugspot-bug-count">{count > 99 ? '99+' : count}</span>}
     </div>
   );
