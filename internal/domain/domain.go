@@ -79,7 +79,11 @@ type Thread struct {
 	Status   Status     `json:"status"`
 	StatusBy *Author    `json:"statusBy,omitempty"`
 	StatusAt *time.Time `json:"statusAt,omitempty"`
-	Body     string     `json:"body"`
+	// Verified marks that a person checked the result (an agent cannot); reopening clears it.
+	Verified   bool       `json:"verified"`
+	VerifiedBy *Author    `json:"verifiedBy,omitempty"`
+	VerifiedAt *time.Time `json:"verifiedAt,omitempty"`
+	Body       string     `json:"body"`
 	// Anchor finds the element again: selector, text, offset, page point and viewport.
 	Anchor json.RawMessage `json:"anchor"`
 	// Context is what the widget captured: browser, viewport, app version, console errors and

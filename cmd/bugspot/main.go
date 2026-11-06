@@ -17,8 +17,9 @@ Usage:
   bugspot healthcheck                 exit 0 when the local service answers /healthz
   bugspot token create|list|revoke    API tokens for agents (scopes read, reply, status)
   bugspot key create|list|revoke      access keys for people without an account in your app
-  bugspot threads list|show|reply|status
+  bugspot threads list|show|reply|status|screenshot
                                       read and answer threads over the API (BUGSPOT_URL, BUGSPOT_TOKEN)
+  bugspot mcp                         an MCP server on stdio for agents (BUGSPOT_URL, BUGSPOT_TOKEN)
   bugspot version
 
 Run "bugspot <command> -h" for the flags of a command.
@@ -42,6 +43,8 @@ func main() {
 		err = credentials(args, false)
 	case "threads":
 		err = threads(args)
+	case "mcp":
+		err = mcp(args)
 	case "version", "--version", "-v":
 		fmt.Println(version)
 	case "help", "-h", "--help":

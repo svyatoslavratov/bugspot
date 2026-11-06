@@ -126,7 +126,8 @@ func authorJSON(a *domain.Author) any {
 }
 
 const threadColumns = `id, number, project, route, url, title, kind, status, status_by, status_at, body,
-	anchor, context, author_id, author_name, author_kind, has_screenshot, reply_count, created_at, updated_at`
+	anchor, context, author_id, author_name, author_kind, has_screenshot, reply_count, created_at, updated_at,
+	verified_by, verified_at`
 
 type scanner interface{ Scan(dest ...any) error }
 
@@ -134,13 +135,14 @@ func scanThread(row scanner) (domain.Thread, error) {
 	var (
 		t                    domain.Thread
 		statusBy, statusAt   sql.NullString
+		verifiedBy, verified sql.NullString
 		anchor, context      string
 		created, updated     string
 		kind, status, author string
 	)
 	err := row.Scan(&t.ID, &t.Number, &t.Project, &t.Route, &t.URL, &t.Title, &kind, &status,
 		&statusBy, &statusAt, &t.Body, &anchor, &context, &t.Author.ID, &t.Author.Name, &author,
-		&t.HasScreenshot, &t.ReplyCount, &created, &updated)
+		&t.HasScreenshot, &t.ReplyCount, &created, &updated, &verifiedBy, &verified)
 	if errors.Is(err, sql.ErrNoRows) {
 		return t, domain.ErrNotFound
 	}
@@ -151,13 +153,21 @@ func scanThread(row scanner) (domain.Thread, error) {
 	t.Anchor, t.Context = json.RawMessage(anchor), json.RawMessage(context)
 	t.CreatedAt, t.UpdatedAt = parseTS(created), parseTS(updated)
 	t.StatusAt = parseOptTS(statusAt)
-	if statusBy.Valid {
-		var a domain.Author
-		if json.Unmarshal([]byte(statusBy.String), &a) == nil {
-			t.StatusBy = &a
-		}
-	}
+	t.StatusBy = parseAuthor(statusBy)
+	t.VerifiedBy, t.VerifiedAt = parseAuthor(verifiedBy), parseOptTS(verified)
+	t.Verified = t.VerifiedAt != nil
 	return t, nil
+}
+
+func parseAuthor(v sql.NullString) *domain.Author {
+	if !v.Valid {
+		return nil
+	}
+	var a domain.Author
+	if json.Unmarshal([]byte(v.String), &a) != nil {
+		return nil
+	}
+	return &a
 }
 
 func rawOrEmpty(v json.RawMessage) string {
@@ -178,11 +188,11 @@ func (s *Store) CreateThread(ctx context.Context, t *domain.Thread) error {
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO threads (`+threadColumns+`, search)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		t.ID, t.Number, t.Project, t.Route, t.URL, t.Title, string(t.Kind), string(t.Status),
 		authorJSON(t.StatusBy), optTS(t.StatusAt), t.Body, rawOrEmpty(t.Anchor), rawOrEmpty(t.Context),
 		t.Author.ID, t.Author.Name, string(t.Author.Kind), t.HasScreenshot, t.ReplyCount,
-		ts(t.CreatedAt), ts(t.UpdatedAt), searchText(t))
+		ts(t.CreatedAt), ts(t.UpdatedAt), authorJSON(t.VerifiedBy), optTS(t.VerifiedAt), searchText(t))
 	if err != nil {
 		return err
 	}
@@ -291,9 +301,11 @@ func (s *Store) UpdateThread(ctx context.Context, project, id string, fn func(*d
 		return domain.Thread{}, err
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE threads SET kind = ?, status = ?, status_by = ?, status_at = ?,
-		body = ?, has_screenshot = ?, reply_count = ?, updated_at = ?, search = ? WHERE id = ?`,
+		body = ?, has_screenshot = ?, reply_count = ?, updated_at = ?, verified_by = ?, verified_at = ?,
+		search = ? WHERE id = ?`,
 		string(t.Kind), string(t.Status), authorJSON(t.StatusBy), optTS(t.StatusAt), t.Body,
-		t.HasScreenshot, t.ReplyCount, ts(t.UpdatedAt), searchText(&t), t.ID)
+		t.HasScreenshot, t.ReplyCount, ts(t.UpdatedAt), authorJSON(t.VerifiedBy), optTS(t.VerifiedAt),
+		searchText(&t), t.ID)
 	if err != nil {
 		return domain.Thread{}, err
 	}

@@ -12,10 +12,13 @@ import { statusIntent } from './labels';
 export function PinLayer({
   threads,
   selectedId,
+  flashId,
   onOpen,
 }: {
   threads: Thread[];
   selectedId: string | null;
+  /** A pin that pulses after "Show on the page". */
+  flashId: string | null;
   onOpen: (id: string) => void;
 }) {
   const [frame, setFrame] = useState(0);
@@ -67,7 +70,7 @@ export function PinLayer({
             type="button"
             className={`bugspot-pin intent-${statusIntent[thread.status]} ${detached ? 'is-detached' : ''} ${
               thread.id === selectedId ? 'is-selected' : ''
-            }`}
+            } ${thread.id === flashId ? 'is-flashing' : ''}`}
             style={{ left: point!.x, top: point!.y }}
             onClick={() => onOpen(thread.id)}
             aria-label={`#${thread.number}`}

@@ -22,6 +22,10 @@ import (
 
 const storageKey = "bugspot-demo-v1"
 
+// demoAgentToken lets the demo page act as an agent through the real API rules. It only ever
+// exists inside the visitor's browser.
+const demoAgentToken = "bsp_DEMOAGENTDEMOAGENTDEMOAGENTDEMOAGENT"
+
 var (
 	st      = memory.New()
 	handler http.Handler
@@ -131,6 +135,7 @@ func main() {
 	api.Set("configure", js.FuncOf(configure))
 	api.Set("reset", js.FuncOf(reset))
 	api.Set("startedAt", time.Now().UnixMilli())
+	api.Set("agentToken", demoAgentToken)
 	js.Global().Set("bugspotServer", api)
 	if ready := js.Global().Get("onBugspotServerReady"); ready.Type() == js.TypeFunction {
 		ready.Invoke()

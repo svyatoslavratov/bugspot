@@ -87,16 +87,18 @@ func (c *client) do(method, path string, body any, out any) error {
 }
 
 type cliThread struct {
-	ID            string          `json:"id"`
-	Number        int             `json:"number"`
-	Route         string          `json:"route"`
-	URL           string          `json:"url"`
-	Title         string          `json:"title"`
-	Kind          string          `json:"kind"`
-	Status        string          `json:"status"`
-	Body          string          `json:"body"`
-	Anchor        json.RawMessage `json:"anchor"`
-	Context       json.RawMessage `json:"context"`
+	ID            string                 `json:"id"`
+	Number        int                    `json:"number"`
+	Route         string                 `json:"route"`
+	URL           string                 `json:"url"`
+	Title         string                 `json:"title"`
+	Kind          string                 `json:"kind"`
+	Status        string                 `json:"status"`
+	Verified      bool                   `json:"verified"`
+	VerifiedBy    *struct{ Name string } `json:"verifiedBy"`
+	Body          string                 `json:"body"`
+	Anchor        json.RawMessage        `json:"anchor"`
+	Context       json.RawMessage        `json:"context"`
 	Author        struct{ Name string }
 	HasScreenshot bool      `json:"hasScreenshot"`
 	ReplyCount    int       `json:"replyCount"`
@@ -156,9 +158,13 @@ func threads(args []string) error {
 			return err
 		}
 		tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
-		fmt.Fprintln(tw, "#\tSTATUS\tKIND\tROUTE\tAUTHOR\tREPLIES\tUPDATED\tTEXT")
+		fmt.Fprintln(tw, "#\tSTATUS\tCHECKED\tKIND\tROUTE\tAUTHOR\tREPLIES\tUPDATED\tTEXT")
 		for _, t := range page.Data {
-			fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%d\t%s\t%s\n", t.Number, t.Status, t.Kind, short(t.Route, 40),
+			checked := "-"
+			if t.Verified {
+				checked = "yes"
+			}
+			fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\t%s\t%d\t%s\t%s\n", t.Number, t.Status, checked, t.Kind, short(t.Route, 40),
 				short(t.Author.Name, 20), t.ReplyCount, t.UpdatedAt.Local().Format("01-02 15:04"), short(t.Body, 60))
 		}
 		if err := tw.Flush(); err != nil {
@@ -175,6 +181,9 @@ func threads(args []string) error {
 		}
 		fmt.Printf("#%d [%s, %s] %s\n%s\nroute: %s\nby: %s\n\n%s\n\nanchor: %s\ncontext: %s\n", t.Number, t.Status, t.Kind,
 			t.Title, t.URL, t.Route, t.Author.Name, t.Body, t.Anchor, t.Context)
+		if t.VerifiedBy != nil {
+			fmt.Printf("checked by a person: %s\n", t.VerifiedBy.Name)
+		}
 		if t.HasScreenshot {
 			fmt.Printf("screenshot: bugspot threads screenshot %d --out screenshot-%d.png\n", t.Number, t.Number)
 		}

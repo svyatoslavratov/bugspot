@@ -67,6 +67,8 @@ export interface Allowed {
   edit: boolean;
   delete: boolean;
   reply: boolean;
+  /** May tick "checked by a person" (people only, never agents). */
+  verify: boolean;
   statuses: Status[];
 }
 
@@ -81,6 +83,9 @@ export interface Thread {
   status: Status;
   statusBy?: Author;
   statusAt?: string;
+  verified: boolean;
+  verifiedBy?: Author;
+  verifiedAt?: string;
   body: string;
   anchor: Partial<Anchor>;
   context: Partial<PageContext>;

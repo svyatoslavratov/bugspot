@@ -1,12 +1,13 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 
-import { buildAnchor } from '../lib/anchor';
+import { buildAnchor, pinPoint, resolveAnchor } from '../lib/anchor';
 import { pageContext } from '../lib/context';
 import { loadPrefs, savePrefs, setPendingThread, takePendingThread, type Prefs } from '../lib/prefs';
 import { currentRoute, onRouteChange } from '../lib/route';
 import { ACTIVE_STATUSES, type Anchor, type PageContext, type Point, type Status, type Thread } from '../shared/types';
 import { BugButton } from './BugButton';
 import { useWidget } from './context';
+import { Flash, FLASH_MS } from './Flash';
 import { NewThread } from './NewThread';
 import { Panel, type StatusFilter, type Tab } from './Panel';
 import { Picker } from './Picker';
@@ -17,6 +18,7 @@ import { useData } from './useData';
 export interface AppHandle {
   open(threadId?: string): void;
   close(): void;
+  refresh(): void;
 }
 
 export type View =
@@ -33,12 +35,13 @@ function statusesOf(filter: StatusFilter): Status[] | undefined {
 }
 
 export const App = forwardRef<AppHandle>(function App(_, ref) {
-  const { api, settings, capture } = useWidget();
+  const { api, settings, capture, session } = useWidget();
+  const canComment = session.can?.comment ?? false;
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
   const [route, setRoute] = useState(() => currentRoute(settings.route));
   const [open, setOpen] = useState(false);
-  const [hidden, setHidden] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [flash, setFlash] = useState<{ thread: Thread; key: number } | null>(null);
   const [view, setView] = useState<View>({ kind: 'list' });
   const [tab, setTab] = useState<Tab>('page');
   const [status, setStatus] = useState<StatusFilter>('active');
@@ -100,7 +103,24 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
   useImperativeHandle(ref, () => ({
     open: (id?: string) => (id ? openThread(id) : setOpen(true)),
     close: () => setOpen(false),
+    refresh,
   }));
+
+  /** Scrolls to the thread's element and highlights it and its pin for a moment. */
+  const showOnPage = useCallback((thread: Thread) => {
+    const el = resolveAnchor(thread.anchor);
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    else {
+      const point = pinPoint(thread.anchor, null);
+      if (point) scrollTo({ top: Math.max(0, point.y + scrollY - innerHeight / 2), behavior: 'smooth' });
+    }
+    setFlash({ thread, key: Date.now() });
+  }, []);
+  useEffect(() => {
+    if (!flash) return;
+    const id = setTimeout(() => setFlash(null), FLASH_MS);
+    return () => clearTimeout(id);
+  }, [flash]);
 
   const goToThread = useCallback(
     (thread: Thread) => {
@@ -134,14 +154,19 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
     return { page: sum(summary.data?.route), all: sum(summary.data?.total) };
   }, [summary.data]);
 
-  if (hidden) return null;
   const selectedId = view.kind === 'thread' ? view.id : null;
 
   return (
     <>
       {prefs.pins && !picking && (
-        <PinLayer threads={pins.data?.data ?? []} selectedId={selectedId} onOpen={openThread} />
+        <PinLayer
+          threads={pins.data?.data ?? []}
+          selectedId={selectedId}
+          flashId={flash?.thread.id ?? null}
+          onOpen={openThread}
+        />
       )}
+      {flash && !picking && <Flash key={flash.key} anchor={flash.thread.anchor} />}
       {picking && <Picker onPick={onPick} onCancel={() => setPicking(false)} />}
       <BugButton
         count={counts.page}
@@ -149,10 +174,12 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
         position={prefs.button}
         onMove={(button) => updatePrefs({ button })}
         onClick={() => setOpen((o) => !o)}
+        onQuick={canComment ? () => setPicking(true) : undefined}
       />
       {open && !picking && (
         <Panel
           buttonPosition={prefs.button}
+          peek={flash !== null}
           tab={tab}
           counts={counts}
           status={status}
@@ -166,7 +193,6 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
           onPins={(on) => updatePrefs({ pins: on })}
           onNew={() => setPicking(true)}
           onClose={() => setOpen(false)}
-          onHide={() => setHidden(true)}
           onSelect={goToThread}
         >
           {view.kind === 'thread' && (
@@ -177,6 +203,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
               onBack={() => setView({ kind: 'list' })}
               onChanged={refresh}
               onGo={goToThread}
+              onShow={showOnPage}
             />
           )}
           {view.kind === 'new' && (
