@@ -134,7 +134,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
   // The picking shortcut: starts picking, a second press cancels it. Not while a comment is being
   // written or a new shortcut is being recorded.
   const hotkey = useMemo(() => parseHotkey(prefs.hotkey), [prefs.hotkey]);
-  const composing = quick !== null || view.kind === 'new';
+  const composing = quick !== null || (open && view.kind === 'new');
   useEffect(() => {
     if (!hotkey || !canComment) return;
     const onKey = (e: KeyboardEvent) => {
@@ -153,6 +153,12 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
   const setHotkey = useCallback((value: string) => updatePrefs({ hotkey: value }), [updatePrefs]);
   const setPins = useCallback((on: boolean) => updatePrefs({ pins: on }), [updatePrefs]);
   const setRecording = useCallback((on: boolean) => void (recordingHotkey.current = on), []);
+
+  // Closing the panel cancels a comment being written there, as "Cancel" does: a forgotten draft
+  // must not come back on the next open or keep the shortcut from picking.
+  useEffect(() => {
+    if (!open) setView((v) => (v.kind === 'new' ? { kind: 'list' } : v));
+  }, [open]);
 
   useEffect(() => {
     const pending = takePendingThread();
