@@ -1,4 +1,4 @@
-import type { Anchor, ElementAnchor, Point } from '../shared/types';
+import type { Anchor, ElementAnchor, Layer, Point } from '../shared/types';
 
 const TEXT_LIMIT = 120;
 
@@ -64,6 +64,27 @@ export function selectorOf(el: Element, root: ParentNode = document): string {
   return node === document.body || node === document.documentElement ? `body > ${path}` : path;
 }
 
+const DIALOGS = 'dialog, [role="dialog"], [role="alertdialog"], [aria-modal="true"]';
+const POPUPS = '[popover], [role="menu"], [role="listbox"], [role="tooltip"]';
+
+/** The dialog or popup el is in, with its title; undefined for an element of the page itself. */
+export function layerOf(el: Element): Layer | undefined {
+  const dialog = el.closest(DIALOGS);
+  const box = dialog ?? el.closest(POPUPS);
+  if (!box) return undefined;
+  const labelled = box
+    .getAttribute('aria-labelledby')
+    ?.split(/\s+/)
+    .map((id) => document.getElementById(id)?.textContent ?? '')
+    .join(' ');
+  const heading = box.querySelector('h1, h2, h3, h4, h5, h6, [role="heading"]');
+  const title = (box.getAttribute('aria-label') || labelled || (heading ? textOf(heading) : ''))
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return { kind: dialog ? 'dialog' : 'popup', ...(title ? { title } : {}) };
+}
+
 /** Builds the anchor for a click at (clientX, clientY) on el. */
 export function buildAnchor(el: Element, client: Point): Anchor {
   const rect = el.getBoundingClientRect();
@@ -80,6 +101,7 @@ export function buildAnchor(el: Element, client: Point): Anchor {
     page: { x: Math.round(client.x + scrollX), y: Math.round(client.y + scrollY) },
     viewport: { w: innerWidth, h: innerHeight },
     source,
+    layer: layerOf(el),
   };
 }
 
@@ -119,7 +141,10 @@ export function resolveAnchor(anchor: Partial<Anchor>, root: ParentNode = docume
   return best;
 }
 
-/** Where the pin goes, in viewport coordinates; detached anchors fall back to the page point. */
+/**
+ * Where the element's pin goes, in viewport coordinates. Without the element (null) it is the
+ * original click point: only "show on the page" uses that, pins are drawn on found elements only.
+ */
 export function pinPoint(anchor: Partial<Anchor>, el: Element | null): Point | null {
   if (el) {
     const rect = el.getBoundingClientRect();

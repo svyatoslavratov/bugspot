@@ -126,12 +126,18 @@ export function ThreadView({
           </Tooltip>
         )}
       </div>
-      {detached && (
-        <Callout intent="warning" compact icon="warning-sign">
-          {t.detached}
-          {thread.anchor.text ? `: «${thread.anchor.text}»` : ''}
-        </Callout>
-      )}
+      {detached &&
+        (thread.anchor.layer ? (
+          // The element was in a modal or popup: it is back with its pin once the window opens.
+          <Callout intent="primary" compact icon="info-sign">
+            {t.inLayer(thread.anchor.layer.kind, thread.anchor.layer.title)}
+          </Callout>
+        ) : (
+          <Callout intent="warning" compact icon="warning-sign">
+            {t.detached}
+            {thread.anchor.text ? `: «${thread.anchor.text}»` : ''}
+          </Callout>
+        ))}
       {error && (
         <Callout intent="danger" compact>
           {error}

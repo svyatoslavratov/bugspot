@@ -5,6 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-07
+
+### Fixed
+
+- A comment on an element of a modal kept its pin at the old click point after the modal closed,
+  over unrelated content. Pins now go on found elements only; the anchor remembers the modal or
+  popup (`anchor.layer`: kind and title), the thread says "the element is in the window «…» — open
+  it to see the pin", and "show on the page" does not flash a stray ring. When the window opens
+  again, the pin is back on its element.
+
 ## [0.3.1] - 2026-11-07
 
 ### Fixed

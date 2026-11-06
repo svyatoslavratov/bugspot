@@ -32,10 +32,22 @@ export interface Anchor {
   /** Source location from a data-bugspot-src attribute, when the app's dev build adds it. */
   source?: string;
   /**
+   * The modal or popup the element was in: such an element is gone once the window closes, so its
+   * pin shows only while the window is open, and the thread names the window.
+   */
+  layer?: Layer;
+  /**
    * More elements with the same problem, picked with Shift. The first element stays at the top
    * level, so readers that know one element keep working.
    */
   more?: ElementAnchor[];
+}
+
+/** A window that comes and goes over the page: a dialog (modal, alert) or a popup (menu, list). */
+export interface Layer {
+  kind: 'dialog' | 'popup';
+  /** The window's title (aria-label, aria-labelledby or its first heading), up to 80 characters. */
+  title?: string;
 }
 
 /** One element of an anchor. */

@@ -177,7 +177,10 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
       .map((a) => resolveAnchor(a))
       .find((e) => e !== null);
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    else {
+    else if (thread.anchor.layer) {
+      // The element is in a closed modal or popup: nothing to show, the thread says where it is.
+      return;
+    } else {
       const point = pinPoint(thread.anchor, null);
       if (point) scrollTo({ top: Math.max(0, point.y + scrollY - innerHeight / 2), behavior: 'smooth' });
     }
