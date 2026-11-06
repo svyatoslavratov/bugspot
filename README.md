@@ -143,7 +143,7 @@ signed-in user and `401` otherwise:
 
 ```yaml
 bugspot:
-  image: ghcr.io/svyatoslavratov/bugspot:v0.1.0
+  image: ghcr.io/svyatoslavratov/bugspot:v0.1.1
   read_only: true
   volumes: [bugspot-data:/data]
   environment:

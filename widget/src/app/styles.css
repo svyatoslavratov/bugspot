@@ -329,9 +329,6 @@
 }
 
 /* Pins */
-.bugspot-pins .bugspot-pin-wrap {
-  position: static;
-}
 .bugspot-pin {
   position: fixed;
   display: flex;

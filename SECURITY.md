@@ -15,7 +15,7 @@ by the release workflow:
 cosign verify-blob checksums.txt --bundle checksums.txt.sigstore.json \
   --certificate-identity-regexp '^https://github.com/svyatoslavratov/bugspot/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
-cosign verify ghcr.io/svyatoslavratov/bugspot:v0.1.0 \
+cosign verify ghcr.io/svyatoslavratov/bugspot:v0.1.1 \
   --certificate-identity-regexp '^https://github.com/svyatoslavratov/bugspot/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
