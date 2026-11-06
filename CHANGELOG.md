@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-07
+
+### Fixed
+
+- Closing the panel with an unsent comment form (picked in the full form, or a tiny box expanded to
+  it) left the form behind: the picking shortcut stayed silent and the form came back on the next
+  open. Closing the panel now cancels the form, as "Cancel" does.
+
 ## [0.3.0] - 2026-11-06
 
 ### Added

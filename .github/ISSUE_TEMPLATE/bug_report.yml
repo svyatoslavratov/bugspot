@@ -11,7 +11,7 @@ body:
     attributes:
       label: bugspot version
       description: "`bugspot version`, or the image tag."
-      placeholder: v0.2.0
+      placeholder: v0.3.1
     validations:
       required: true
   - type: dropdown

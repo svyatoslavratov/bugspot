@@ -64,7 +64,7 @@
 
 ```yaml
 bugspot:
-  image: ghcr.io/svyatoslavratov/bugspot:v0.2.0
+  image: ghcr.io/svyatoslavratov/bugspot:v0.3.1
   restart: unless-stopped
   read_only: true
   volumes: [bugspot-data:/data]
