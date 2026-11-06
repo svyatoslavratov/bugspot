@@ -52,13 +52,16 @@ export function PinLayer({
       threads
         .flatMap((thread) =>
           anchorsOf(thread.anchor).map((anchor, index) => {
+            // Only found elements get a pin: a click point without its element (a closed modal,
+            // a removed row) would put the pin over something unrelated. When the element comes
+            // back (the modal opens again) the next DOM change redraws the pin on it.
             const el = resolveAnchor(anchor);
-            return { thread, index, point: pinPoint(anchor, el), detached: !el };
+            return { thread, index, point: el ? pinPoint(anchor, el) : null };
           }),
         )
         .filter(
-          (p) =>
-            p.point &&
+          (p): p is typeof p & { point: NonNullable<typeof p.point> } =>
+            p.point !== null &&
             p.point.x >= -20 &&
             p.point.y >= -20 &&
             p.point.x <= innerWidth + 20 &&
@@ -70,7 +73,7 @@ export function PinLayer({
 
   return (
     <div className={`bugspot-pins ${passive ? 'is-passive' : ''}`}>
-      {pins.map(({ thread, index, point, detached }) => (
+      {pins.map(({ thread, index, point }) => (
         // The pin itself is the tooltip target: a wrapper around a fixed pin has no box of its
         // own and would anchor the tooltip to the top left corner of the page.
         <Tooltip
@@ -84,9 +87,9 @@ export function PinLayer({
               ref={ref}
               type="button"
               className={`${className ?? ''} bugspot-pin intent-${statusIntent[thread.status]} ${
-                detached ? 'is-detached' : ''
-              } ${thread.id === selectedId ? 'is-selected' : ''} ${thread.id === flashId ? 'is-flashing' : ''}`}
-              style={{ left: point!.x, top: point!.y }}
+                thread.id === selectedId ? 'is-selected' : ''
+              } ${thread.id === flashId ? 'is-flashing' : ''}`}
+              style={{ left: point.x, top: point.y }}
               onClick={() => onOpen(thread.id)}
               aria-label={`#${thread.number}`}
             >

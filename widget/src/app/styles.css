@@ -455,10 +455,6 @@
   opacity: 0.55;
   pointer-events: none;
 }
-.bugspot-pin.is-detached {
-  opacity: 0.6;
-  border-style: dashed;
-}
 .bugspot-pin.is-selected {
   outline: 3px solid rgb(45 114 210 / 45%);
 }

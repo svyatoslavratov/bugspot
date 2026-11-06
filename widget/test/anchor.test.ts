@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 
-import { anchorsOf, buildAnchor, combineAnchors, pinPoint, resolveAnchor, selectorOf, textOf } from '../src/lib/anchor';
+import {
+  anchorsOf,
+  buildAnchor,
+  combineAnchors,
+  layerOf,
+  pinPoint,
+  resolveAnchor,
+  selectorOf,
+  textOf,
+} from '../src/lib/anchor';
 
 function rect(el: Element, x: number, y: number, w: number, h: number) {
   el.getBoundingClientRect = () => ({
@@ -101,5 +110,25 @@ describe('several elements', () => {
     expect(anchorsOf(both).map((x) => x.selector)).toEqual([one.selector, two.selector]);
     expect(anchorsOf({ selector: '#x', more: 'junk' as never })).toEqual([{ selector: '#x' }]);
     expect(resolveAnchor(anchorsOf(both)[1])).toBe(b);
+  });
+});
+
+describe('layers', () => {
+  test('an element in a dialog records the dialog and its title; a page element records none', () => {
+    document.body.innerHTML = `
+      <main><button id="page">Add</button></main>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="t"><h2 id="t">Unsaved   changes</h2>
+        <p>Leave the page?</p><button id="leave">Leave</button></div>
+      <div role="menu" aria-label="Status"><div role="menuitem" id="item">Open</div></div>
+      <dialog open><h3>Delete author</h3><button id="del">Delete</button></dialog>`;
+    for (const el of document.querySelectorAll('*')) rect(el, 10, 10, 100, 20);
+    expect(layerOf(document.getElementById('page')!)).toBeUndefined();
+    expect(buildAnchor(document.getElementById('page')!, { x: 20, y: 15 }).layer).toBeUndefined();
+    expect(buildAnchor(document.getElementById('leave')!, { x: 20, y: 15 }).layer).toEqual({
+      kind: 'dialog',
+      title: 'Unsaved changes',
+    });
+    expect(layerOf(document.getElementById('item')!)).toEqual({ kind: 'popup', title: 'Status' });
+    expect(layerOf(document.getElementById('del')!)).toEqual({ kind: 'dialog', title: 'Delete author' });
   });
 });

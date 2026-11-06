@@ -299,7 +299,7 @@ components:
         title: { type: string, maxLength: 300 }
         kind: { $ref: "#/components/schemas/Kind" }
         body: { type: string, maxLength: 10000 }
-        anchor: { type: object, description: "Selector, text, tag, offset, page point, viewport; more: the same for further elements with the same problem (≤16 KB)" }
+        anchor: { type: object, description: "Selector, text, tag, offset, page point, viewport; layer: the modal or popup the element was in (kind, title); more: the same for further elements with the same problem (≤16 KB)" }
         context: { type: object, description: "Browser, viewport, app version, console errors, failed requests (≤64 KB)" }
         authorName: { type: string, maxLength: 80, description: Anonymous visitors only }
     Thread:

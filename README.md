@@ -28,7 +28,8 @@ your app's own login.
 
 - **Pins on elements.** Comments stick to the element, not to coordinates: a stable selector, its
   text and the click point find it again after re-renders; a moved element is marked "not found"
-  instead of being pinned to a wrong place.
+  instead of being pinned to a wrong place. An element in a modal or popup keeps its pin while the
+  window is open, and the thread names the window when it is closed.
 - **Context for free.** A screenshot of the visible page with the element marked (or a real tab
   capture), browser and window size, app version, the last console errors and failed requests
   (with `X-Request-ID`; query values are dropped).
@@ -153,7 +154,7 @@ signed-in user and `401` otherwise:
 
 ```yaml
 bugspot:
-  image: ghcr.io/svyatoslavratov/bugspot:v0.3.1
+  image: ghcr.io/svyatoslavratov/bugspot:v0.3.2
   read_only: true
   volumes: [bugspot-data:/data]
   environment:
