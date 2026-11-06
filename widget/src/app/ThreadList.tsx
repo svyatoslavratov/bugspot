@@ -23,6 +23,11 @@ export function ThreadList({
             <span className="bugspot-number">#{thread.number}</span>
             <KindIcon kind={thread.kind} />
             <StatusTag status={thread.status} />
+            {thread.verified && (
+              <Tag minimal round intent="success" icon="tick">
+                {t.verifiedShort}
+              </Tag>
+            )}
             {thread.hasScreenshot && <Icon icon="media" size={12} className={Classes.TEXT_MUTED} />}
             <span className={`bugspot-item-time ${Classes.TEXT_MUTED}`}>
               {when(thread.updatedAt, t, settings.lang)}

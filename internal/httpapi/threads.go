@@ -20,10 +20,17 @@ import (
 
 // allowed is what the caller may do with one thread; the widget shows only these actions.
 type allowed struct {
-	Edit     bool            `json:"edit"`
-	Delete   bool            `json:"delete"`
-	Reply    bool            `json:"reply"`
+	Edit   bool `json:"edit"`
+	Delete bool `json:"delete"`
+	Reply  bool `json:"reply"`
+	// Verify: tick or untick "checked by a person"; people who may comment, never agents.
+	Verify   bool            `json:"verify"`
 	Statuses []domain.Status `json:"statuses"`
+}
+
+// canVerify: a person who may comment confirms the result; an agent cannot vouch for its own fix.
+func canVerify(c caller) bool {
+	return c.perms.Comment && c.id != nil && c.id.ID != "" && c.id.Provider != auth.ProviderAgent
 }
 
 type threadView struct {
@@ -75,6 +82,7 @@ func (s *Server) view(c caller, t domain.Thread) threadView {
 		Edit:     own,
 		Delete:   own || c.perms.Moderate,
 		Reply:    c.perms.Reply,
+		Verify:   canVerify(c),
 		Statuses: statusesFor(c, t),
 	}}
 }
@@ -272,9 +280,10 @@ func (s *Server) getThread(w http.ResponseWriter, r *http.Request, c caller) err
 }
 
 type threadPatch struct {
-	Status *domain.Status `json:"status"`
-	Body   *string        `json:"body"`
-	Kind   *domain.Kind   `json:"kind"`
+	Status   *domain.Status `json:"status"`
+	Body     *string        `json:"body"`
+	Kind     *domain.Kind   `json:"kind"`
+	Verified *bool          `json:"verified"`
 }
 
 func (s *Server) updateThread(w http.ResponseWriter, r *http.Request, c caller) error {
@@ -289,7 +298,7 @@ func (s *Server) updateThread(w http.ResponseWriter, r *http.Request, c caller) 
 	if err := decode(r, &p); err != nil {
 		return err
 	}
-	if p.Status == nil && p.Body == nil && p.Kind == nil {
+	if p.Status == nil && p.Body == nil && p.Kind == nil && p.Verified == nil {
 		return badRequest("nothing to change")
 	}
 	now := s.o.Now().UTC()
@@ -321,6 +330,20 @@ func (s *Server) updateThread(w http.ResponseWriter, r *http.Request, c caller) 
 			}
 			by := c.author()
 			t.Status, t.StatusBy, t.StatusAt = *p.Status, &by, &now
+			// A reopened thread needs a new check.
+			if *p.Status == domain.StatusOpen {
+				t.Verified, t.VerifiedBy, t.VerifiedAt = false, nil, nil
+			}
+		}
+		if p.Verified != nil && *p.Verified != t.Verified {
+			if !canVerify(c) {
+				return errForbidden
+			}
+			t.Verified, t.VerifiedBy, t.VerifiedAt = false, nil, nil
+			if *p.Verified {
+				by := c.author()
+				t.Verified, t.VerifiedBy, t.VerifiedAt = true, &by, &now
+			}
 		}
 		t.UpdatedAt = now
 		return nil

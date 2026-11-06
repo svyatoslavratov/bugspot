@@ -1,0 +1,53 @@
+name: Bug report
+description: Something works differently from the documentation.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. For a security problem, do not open an issue: see SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: bugspot version
+      description: "`bugspot version`, or the image tag."
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: part
+    attributes:
+      label: Where
+      options:
+        - widget (in the browser)
+        - service / API
+        - access (identity providers, policy)
+        - CLI or MCP server
+        - Docker image or deployment
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      description: What you did, step by step.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened
+      description: Include errors from the browser console or the service log (it logs JSON).
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: The BUGSPOT_* variables you set, without secrets.
+      render: shell
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and platform
+      placeholder: Chrome 141 on macOS, the image on linux/arm64

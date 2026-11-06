@@ -90,6 +90,7 @@ Keys are created with `bugspot key create --name "Customer" --roles customer --e
 | `bugspot threads reply N "text"` | answer as the agent |
 | `bugspot threads status N open\|in_progress\|fixed\|wontfix` | move a thread |
 | `bugspot threads screenshot N --out file` | download the screenshot |
+| `bugspot mcp` | an MCP server on stdio for agents (`BUGSPOT_URL`, `BUGSPOT_TOKEN`) |
 
 `token` and `key` work on the database directly, so run them where the service runs
 (`docker compose exec bugspot bugspot token create …`).

@@ -7,19 +7,25 @@ import { buttonPoint } from './layout';
 
 const DRAG = 4;
 
-/** The floating bug: click toggles the panel, drag moves it (the place is remembered). */
+/**
+ * The floating bug: a click toggles the panel, a drag moves it (the place is remembered), a right
+ * click (or Alt+click) starts picking an element at once, without opening the panel.
+ */
 export function BugButton({
   count,
   open,
   position,
   onMove,
   onClick,
+  onQuick,
 }: {
   count: number;
   open: boolean;
   position: Point | null;
   onMove: (p: Point) => void;
   onClick: () => void;
+  /** Absent when the user may not comment: the right click then does nothing special. */
+  onQuick?: () => void;
 }) {
   const { t, settings } = useWidget();
   const [, setViewport] = useState(0);
@@ -47,10 +53,12 @@ export function BugButton({
     s.moved = true;
     setDrag(buttonPoint({ x: s.origin.x + dx, y: s.origin.y + dy }, settings.position));
   };
-  const up = () => {
+  const up = (e: PointerEvent<HTMLDivElement>) => {
     const s = start.current;
     start.current = null;
-    if (s?.moved && drag) onMove(drag);
+    if (!s) return;
+    if (s.moved && drag) onMove(drag);
+    else if (e.altKey && onQuick) onQuick();
     else onClick();
     setDrag(null);
   };
@@ -62,12 +70,17 @@ export function BugButton({
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
+      onContextMenu={(e) => {
+        if (!onQuick) return;
+        e.preventDefault();
+        onQuick();
+      }}
       onPointerCancel={() => {
         start.current = null;
         setDrag(null);
       }}
     >
-      <Tooltip content={t.title} placement="left" disabled={open || drag !== null}>
+      <Tooltip content={onQuick ? t.bugHint : t.title} placement="left" disabled={open || drag !== null}>
         <Button
           icon="bug"
           intent={open ? 'none' : 'primary'}

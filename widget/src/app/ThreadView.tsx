@@ -3,44 +3,25 @@ import {
   Button,
   ButtonGroup,
   Callout,
+  Checkbox,
   Classes,
   Divider,
-  Menu,
-  MenuItem,
   NonIdealState,
-  Popover,
   Spinner,
   TextArea,
+  Tooltip,
 } from '@blueprintjs/core';
 import { useState } from 'react';
 
-import { pinPoint, resolveAnchor } from '../lib/anchor';
+import { resolveAnchor } from '../lib/anchor';
 import { when } from '../lib/i18n';
 import { ApiError } from '../shared/api';
-import type { Status, Thread } from '../shared/types';
+import type { Thread } from '../shared/types';
 import { ContextInfo } from './ContextInfo';
 import { useWidget } from './context';
-import { KindIcon, StatusTag, statusIntent } from './labels';
+import { KindPicker, StatusPicker } from './labels';
 import { Screenshot } from './Screenshot';
 import { useData } from './useData';
-
-/** Scrolls to the thread's element and flashes it. */
-function showOnPage(thread: Thread) {
-  const el = resolveAnchor(thread.anchor);
-  if (el) {
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    el.animate?.(
-      [
-        { outline: '3px solid #cd4246', outlineOffset: '2px' },
-        { outline: '3px solid transparent', outlineOffset: '6px' },
-      ],
-      { duration: 1200, iterations: 2 },
-    );
-    return;
-  }
-  const point = pinPoint(thread.anchor, null);
-  if (point) scrollTo({ top: Math.max(0, point.y + scrollY - innerHeight / 2), behavior: 'smooth' });
-}
 
 export function ThreadView({
   id,
@@ -49,6 +30,7 @@ export function ThreadView({
   onBack,
   onChanged,
   onGo,
+  onShow,
 }: {
   id: string;
   version: number;
@@ -56,6 +38,7 @@ export function ThreadView({
   onBack: () => void;
   onChanged: () => void;
   onGo: (thread: Thread) => void;
+  onShow: (thread: Thread) => void;
 }) {
   const { api, t, settings } = useWidget();
   const detail = useData(() => api.thread(id), [id, version]);
@@ -80,7 +63,11 @@ export function ThreadView({
     }
   };
 
-  const back = <Button icon="arrow-left" variant="minimal" text={t.back} onClick={onBack} />;
+  const back = (
+    <Tooltip content={t.back} placement="bottom">
+      <Button icon="arrow-left" variant="minimal" aria-label={t.back} onClick={onBack} />
+    </Tooltip>
+  );
   if (detail.error && !detail.data) {
     return (
       <>
@@ -94,17 +81,43 @@ export function ThreadView({
   const here = thread.route === currentRoute;
   const detached = here && !resolveAnchor(thread.anchor);
 
+  const save = (body: string) =>
+    void act(
+      () => api.update(thread.id, { body: body.trim() }),
+      () => setEditing(null),
+    );
+
   return (
     <div className="bugspot-thread">
       <div className="bugspot-thread-nav">
         {back}
         <span className="bugspot-number">#{thread.number}</span>
-        <KindIcon kind={thread.kind} />
-        <StatusTag status={thread.status} />
+        <KindPicker
+          kind={thread.kind}
+          editable={thread.allowed.edit}
+          onChange={(kind) => void act(() => api.update(thread.id, { kind }))}
+        />
+        <StatusPicker
+          status={thread.status}
+          options={thread.allowed.statuses}
+          busy={busy}
+          onChange={(status) => void act(() => api.update(thread.id, { status }))}
+        />
         {here ? (
-          <Button icon="map-marker" variant="minimal" text={t.showOnPage} onClick={() => showOnPage(thread)} />
+          <Button icon="map-marker" variant="minimal" text={t.showOnPage} onClick={() => onShow(thread)} />
         ) : (
           <Button icon="link" variant="minimal" text={t.openPage} onClick={() => onGo(thread)} />
+        )}
+        {thread.allowed.delete && (
+          <Tooltip content={t.delete} placement="bottom" className="bugspot-push-right">
+            <Button
+              icon="trash"
+              variant="minimal"
+              intent="danger"
+              aria-label={t.delete}
+              onClick={() => setConfirmDelete(true)}
+            />
+          </Tooltip>
         )}
       </div>
       {detached && (
@@ -123,67 +136,75 @@ export function ThreadView({
         {thread.author.name} · {when(thread.createdAt, t, settings.lang)} · {thread.route}
       </div>
       {editing === null ? (
-        <p className="bugspot-thread-body">{thread.body}</p>
+        thread.allowed.edit ? (
+          // The text itself is the edit button: a click turns it into a field.
+          <button
+            type="button"
+            className="bugspot-thread-body is-editable"
+            title={t.clickToEdit}
+            onClick={() => setEditing(thread.body)}
+          >
+            {thread.body}
+          </button>
+        ) : (
+          <p className="bugspot-thread-body">{thread.body}</p>
+        )
       ) : (
         <div className="bugspot-edit">
-          <TextArea fill autoResize value={editing} onChange={(e) => setEditing(e.currentTarget.value)} />
+          <TextArea
+            fill
+            autoResize
+            autoFocus
+            value={editing}
+            onChange={(e) => setEditing(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.stopPropagation();
+                setEditing(null);
+              }
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && editing.trim()) save(editing);
+            }}
+          />
           <ButtonGroup>
             <Button
               intent="primary"
               text={t.save}
               loading={busy}
               disabled={!editing.trim()}
-              onClick={() =>
-                void act(
-                  () => api.update(thread.id, { body: editing }),
-                  () => setEditing(null),
-                )
-              }
+              onClick={() => save(editing)}
             />
             <Button text={t.cancel} onClick={() => setEditing(null)} />
           </ButtonGroup>
         </div>
       )}
 
-      <div className="bugspot-actions">
-        {thread.allowed.statuses.length > 0 && (
-          <Popover
-            placement="bottom-start"
-            content={
-              <Menu>
-                {thread.allowed.statuses.map((s: Status) => (
-                  <MenuItem
-                    key={s}
-                    text={t.status[s]}
-                    intent={statusIntent[s]}
-                    onClick={() => void act(() => api.update(thread.id, { status: s }))}
-                  />
-                ))}
-              </Menu>
-            }
-          >
-            <Button endIcon="caret-down" text={t.setStatus} loading={busy} />
-          </Popover>
-        )}
-        {thread.allowed.edit && editing === null && (
-          <Button icon="edit" variant="minimal" text={t.edit} onClick={() => setEditing(thread.body)} />
-        )}
-        {thread.allowed.delete && (
-          <Button
-            icon="trash"
-            variant="minimal"
-            intent="danger"
-            text={t.delete}
-            onClick={() => setConfirmDelete(true)}
-          />
-        )}
-      </div>
       {thread.statusBy && thread.statusAt && (
         <div className={`bugspot-meta ${Classes.TEXT_MUTED}`}>
           {t.statusChanged}: {t.status[thread.status]} — {thread.statusBy.name}
           {thread.statusBy.kind === 'agent' ? ` (${t.agent})` : ''}, {when(thread.statusAt, t, settings.lang)}
         </div>
       )}
+
+      <Checkbox
+        className="bugspot-verified"
+        checked={thread.verified}
+        disabled={!thread.allowed.verify || busy}
+        onChange={(e) => {
+          const verified = e.currentTarget.checked;
+          void act(() => api.update(thread.id, { verified }));
+        }}
+        labelElement={
+          <>
+            {t.verified}
+            {thread.verifiedBy && thread.verifiedAt && (
+              <span className={`bugspot-meta ${Classes.TEXT_MUTED}`}>
+                {' '}
+                · {t.verifiedBy(thread.verifiedBy.name)}, {when(thread.verifiedAt, t, settings.lang)}
+              </span>
+            )}
+          </>
+        }
+      />
 
       {thread.hasScreenshot && <Screenshot threadId={thread.id} version={thread.updatedAt} />}
       <ContextInfo context={thread.context} anchor={thread.anchor} />
