@@ -26,6 +26,7 @@
 .bugspot-bug,
 .bugspot-panel,
 .bugspot-pin,
+.bugspot-quick,
 .bugspot-pick-bar {
   pointer-events: auto;
 }
@@ -49,6 +50,7 @@
 }
 .bugspot-highlight,
 .bugspot-picked,
+.bugspot-quick,
 .bugspot-pick-bar {
   z-index: 5;
 }
@@ -138,6 +140,21 @@
 }
 .bugspot-spinner {
   margin: 24px auto;
+}
+/* A quiet link to the project under the panel. */
+.bugspot-panel-footer {
+  padding: 2px 12px 4px;
+  text-align: right;
+  font-size: 11px;
+  line-height: 16px;
+}
+.bugspot-panel-footer a {
+  color: #8f99a8;
+  text-decoration: none;
+}
+.bugspot-panel-footer a:hover {
+  color: #2d72d2;
+  text-decoration: underline;
 }
 .bp6-dark .bugspot-panel-header,
 .bp6-dark .bugspot-toolbar {
@@ -359,6 +376,38 @@
 .bugspot-pick-bar .bp6-button {
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+/* The tiny box at the element (tiny mode) */
+.bugspot-quick.bp6-card {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px 8px;
+}
+.bugspot-quick-head,
+.bugspot-quick-foot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.bugspot-quick-count {
+  margin-left: 4px;
+  font-size: 12px;
+}
+.bugspot-quick-foot {
+  justify-content: space-between;
+  font-size: 11px;
+  line-height: 14px;
+}
+.bugspot-quick textarea.bp6-input {
+  min-height: 52px;
+  max-height: 200px;
+  resize: none;
+}
+.bugspot-menu {
+  min-width: 240px;
 }
 
 /* Pins */

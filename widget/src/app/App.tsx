@@ -2,18 +2,22 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 
 import { anchorsOf, buildAnchor, combineAnchors, pinPoint, resolveAnchor } from '../lib/anchor';
 import { pageContext } from '../lib/context';
+import { DEFAULT_HOTKEY, formatHotkey, matchesHotkey, parseHotkey } from '../lib/hotkey';
 import { loadPrefs, savePrefs, setPendingThread, takePendingThread, type Prefs } from '../lib/prefs';
 import { currentRoute, onRouteChange } from '../lib/route';
-import { ACTIVE_STATUSES, type Anchor, type PageContext, type Status, type Thread } from '../shared/types';
+import { ACTIVE_STATUSES, type ComposeMode, type Status, type Thread } from '../shared/types';
 import { BugButton } from './BugButton';
+import { BugMenu } from './BugMenu';
 import { useWidget } from './context';
 import { Flash, FLASH_MS } from './Flash';
 import { NewThread } from './NewThread';
 import { Panel, type StatusFilter, type Tab } from './Panel';
 import { Picker, type Pick } from './Picker';
 import { PinLayer } from './PinLayer';
+import { QuickComposer } from './QuickComposer';
 import { ThreadView } from './ThreadView';
 import { useData } from './useData';
+import type { Draft, Target } from './useDraft';
 
 export interface AppHandle {
   open(threadId?: string): void;
@@ -21,10 +25,7 @@ export interface AppHandle {
   refresh(): void;
 }
 
-export type View =
-  | { kind: 'list' }
-  | { kind: 'thread'; id: string }
-  | { kind: 'new'; picks: Pick[]; anchor: Anchor; context: PageContext };
+export type View = { kind: 'list' } | { kind: 'thread'; id: string } | ({ kind: 'new'; draft?: Draft } & Target);
 
 const POLL_MS = 30_000;
 
@@ -37,7 +38,17 @@ function statusesOf(filter: StatusFilter): Status[] | undefined {
 export const App = forwardRef<AppHandle>(function App(_, ref) {
   const { api, settings, capture, session, t } = useWidget();
   const canComment = session.can?.comment ?? false;
-  const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
+  const [prefs, setPrefs] = useState<Prefs>(() =>
+    loadPrefs({
+      mode: settings.mode,
+      // The site's shortcut is checked here (the loader stays small); a bad one falls back.
+      hotkey: settings.hotkey === '' || parseHotkey(settings.hotkey) ? settings.hotkey : DEFAULT_HOTKEY,
+    }),
+  );
+  const [menuOpen, setMenuOpen] = useState(false);
+  const recordingHotkey = useRef(false);
+  // The tiny box at the element (tiny mode) instead of the form in the panel.
+  const [quick, setQuick] = useState<Target | null>(null);
   const [route, setRoute] = useState(() => currentRoute(settings.route));
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -102,14 +113,48 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
 
   const startPicking = useCallback(() => {
     openBeforePicking.current = open;
+    setMenuOpen(false);
     setPickNotice(undefined);
     setPicking(true);
   }, [open]);
   const cancelPicking = useCallback(() => {
     setPicking(false);
     setPickNotice(undefined);
+    setQuick(null);
     setOpen(openBeforePicking.current);
   }, []);
+  /** After a comment is sent the next element can be picked at once; Esc finishes. */
+  const pickNext = useCallback(
+    (thread: Thread) => {
+      refresh();
+      setPickNotice(t.sentNumber(thread.number));
+      setPicking(true);
+    },
+    [refresh, t],
+  );
+
+  // The picking shortcut: starts picking, a second press cancels it. Not while a comment is being
+  // written or a new shortcut is being recorded.
+  const hotkey = useMemo(() => parseHotkey(prefs.hotkey), [prefs.hotkey]);
+  const composing = quick !== null || view.kind === 'new';
+  useEffect(() => {
+    if (!hotkey || !canComment) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || recordingHotkey.current || !matchesHotkey(e, hotkey)) return;
+      if (composing && !picking) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (picking) cancelPicking();
+      else startPicking();
+    };
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey, { capture: true });
+  }, [hotkey, canComment, composing, picking, startPicking, cancelPicking]);
+
+  const setMode = useCallback((mode: ComposeMode) => updatePrefs({ mode }), [updatePrefs]);
+  const setHotkey = useCallback((value: string) => updatePrefs({ hotkey: value }), [updatePrefs]);
+  const setPins = useCallback((on: boolean) => updatePrefs({ pins: on }), [updatePrefs]);
+  const setRecording = useCallback((on: boolean) => void (recordingHotkey.current = on), []);
 
   useEffect(() => {
     const pending = takePendingThread();
@@ -157,15 +202,19 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
       if (picks.length === 0) return;
       setPicking(false);
       setPickNotice(undefined);
-      setOpen(true);
-      setView({
-        kind: 'new',
+      const target: Target = {
         picks,
         anchor: combineAnchors(picks.map((p) => buildAnchor(p.el, p.point))),
         context: pageContext(capture, settings.appVersion, picks[0].el),
-      });
+      };
+      if (prefs.mode === 'tiny') {
+        setQuick(target);
+        return;
+      }
+      setOpen(true);
+      setView({ kind: 'new', ...target });
     },
-    [capture, settings.appVersion],
+    [capture, settings.appVersion, prefs.mode],
   );
 
   const counts = useMemo(() => {
@@ -188,10 +237,41 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
       )}
       {flash && !picking && <Flash key={flash.key} anchor={flash.thread.anchor} />}
       {picking && <Picker notice={pickNotice} onPick={onPick} onCancel={cancelPicking} />}
+      {quick && !picking && (
+        <QuickComposer
+          key={quick.picks.map((p) => p.point.x + ':' + p.point.y).join()}
+          target={quick}
+          route={route}
+          onCreated={(thread) => {
+            setQuick(null);
+            pickNext(thread);
+          }}
+          onCancel={cancelPicking}
+          onExpand={(draft) => {
+            setQuick(null);
+            setOpen(true);
+            setView({ kind: 'new', ...quick, draft });
+          }}
+        />
+      )}
       <BugButton
         count={counts.page}
         open={open}
         position={prefs.button}
+        hint={t.bugHint(formatHotkey(prefs.hotkey))}
+        menuOpen={menuOpen}
+        onMenu={setMenuOpen}
+        menu={
+          <BugMenu
+            prefs={prefs}
+            canComment={canComment}
+            onPick={startPicking}
+            onMode={setMode}
+            onHotkey={setHotkey}
+            onPins={setPins}
+            onRecording={setRecording}
+          />
+        }
         onMove={(button) => updatePrefs({ button })}
         onClick={() => setOpen((o) => !o)}
         onQuick={canComment ? startPicking : undefined}
@@ -210,7 +290,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
           onTab={setTab}
           onStatus={setStatus}
           onQuery={setQuery}
-          onPins={(on) => updatePrefs({ pins: on })}
+          onPins={setPins}
           onNew={startPicking}
           onClose={() => setOpen(false)}
           onSelect={goToThread}
@@ -232,11 +312,8 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
               route={route}
               onCancel={() => setView({ kind: 'list' })}
               onCreated={(thread) => {
-                refresh();
                 setView({ kind: 'thread', id: thread.id });
-                // The next element can be picked at once; Esc finishes.
-                setPickNotice(t.sentNumber(thread.number));
-                setPicking(true);
+                pickNext(thread);
               }}
             />
           )}

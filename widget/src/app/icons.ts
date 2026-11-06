@@ -22,6 +22,7 @@ import infoSign16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/info-sig
 import lightbulb16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/lightbulb';
 import link16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/link';
 import mapMarker16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/map-marker';
+import maximize16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/maximize';
 import media16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/media';
 import refresh16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/refresh';
 import robot16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/predictive-analysis';
@@ -53,6 +54,7 @@ const icons16: Partial<Record<IconName, string[]>> = {
   lightbulb: lightbulb16,
   link: link16,
   'map-marker': mapMarker16,
+  maximize: maximize16,
   media: media16,
   refresh: refresh16,
   'predictive-analysis': robot16,

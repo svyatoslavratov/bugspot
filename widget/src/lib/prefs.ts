@@ -1,20 +1,31 @@
-import type { Point } from '../shared/types';
+import type { ComposeMode, Point } from '../shared/types';
 
 /** Per-browser widget settings. */
 export interface Prefs {
   /** Bug button position (its top-left corner); null — the corner from settings. */
   button: Point | null;
   pins: boolean;
+  /** Where a new comment is written: the full form in the panel or a tiny box at the element. */
+  mode: ComposeMode;
+  /** The shortcut that starts picking ("Alt+KeyC"); empty — none. */
+  hotkey: string;
 }
 
 const KEY = 'bugspot:prefs';
 
-export function loadPrefs(): Prefs {
+/** The site's defaults (script attributes) apply until the person changes a setting. */
+export function loadPrefs(defaults: { mode: ComposeMode; hotkey: string }): Prefs {
+  const base: Prefs = { button: null, pins: true, ...defaults };
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Prefs>;
-    return { button: saved.button ?? null, pins: saved.pins ?? true };
+    return {
+      button: saved.button ?? null,
+      pins: saved.pins ?? true,
+      mode: saved.mode === 'tiny' || saved.mode === 'full' ? saved.mode : base.mode,
+      hotkey: typeof saved.hotkey === 'string' ? saved.hotkey : base.hotkey,
+    };
   } catch {
-    return { button: null, pins: true };
+    return base;
   }
 }
 

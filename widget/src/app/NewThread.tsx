@@ -9,16 +9,13 @@ import {
   Spinner,
   TextArea,
 } from '@blueprintjs/core';
-import { useEffect, useRef, useState } from 'react';
 
-import { captureTab, captureViewport, type Shot } from '../lib/screenshot';
-import { ApiError } from '../shared/api';
 import type { Kind, Thread } from '../shared/types';
 import type { View } from './App';
 import { useWidget } from './context';
+import { describeTarget, useDraft } from './useDraft';
 
-type ShotState = { kind: 'pending' } | { kind: 'ready'; shot: Shot } | { kind: 'failed'; message: string };
-
+/** The full form in the panel: kind, text, screenshot preview with retake. */
 export function NewThread({
   view,
   route,
@@ -30,93 +27,25 @@ export function NewThread({
   onCancel: () => void;
   onCreated: (t: Thread) => void;
 }) {
-  const { api, t, session, host } = useWidget();
-  const [body, setBody] = useState('');
-  const [kind, setKind] = useState<Kind>('issue');
-  const [name, setName] = useState('');
-  const [attach, setAttach] = useState(true);
-  const [shot, setShot] = useState<ShotState>({ kind: 'pending' });
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const maxBytes = session.limits?.screenshotMaxBytes ?? 3 << 20;
-  const anonymous = session.user?.provider === 'anonymous';
-  const shotUrl = useRef<string | null>(null);
-  // The capture in progress: sending waits for it, so a quick "Send" still attaches the screenshot.
-  const capturing = useRef<Promise<Shot | null> | null>(null);
+  const { t } = useWidget();
+  const d = useDraft(view, route, view.draft);
 
-  const take = (how: 'dom' | 'tab') => {
-    const run = capture(how);
-    capturing.current = run;
-    return run;
-  };
-  const capture = async (how: 'dom' | 'tab'): Promise<Shot | null> => {
-    setShot({ kind: 'pending' });
-    try {
-      // Let the panel finish rendering: the screenshot leaves the widget out anyway.
-      await new Promise((r) => requestAnimationFrame(() => r(null)));
-      const next = how === 'dom' ? await captureViewport(host, view.picks, maxBytes) : await captureTab(maxBytes);
-      if (shotUrl.current) URL.revokeObjectURL(shotUrl.current);
-      shotUrl.current = next.url;
-      setShot({ kind: 'ready', shot: next });
-      return next;
-    } catch (e) {
-      setShot({ kind: 'failed', message: e instanceof Error ? e.message : String(e) });
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    void take('dom');
-    return () => {
-      if (shotUrl.current) URL.revokeObjectURL(shotUrl.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view.picks]);
-
-  const submit = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const thread = await api.create({
-        route,
-        url: location.href,
-        title: document.title.slice(0, 300),
-        kind,
-        body: body.trim(),
-        anchor: view.anchor,
-        context: view.context,
-        authorName: anonymous && name.trim() ? name.trim() : undefined,
-      });
-      if (attach) {
-        const ready = shot.kind === 'ready' ? shot.shot : await capturing.current;
-        if (ready) await api.putScreenshot(thread.id, ready.blob).catch(() => undefined);
-      }
-      onCreated(thread);
-    } catch (e) {
-      setError(e instanceof ApiError || e instanceof Error ? e.message : String(e));
-      setBusy(false);
-    }
-  };
-
-  const first = view.anchor.text ? `${view.anchor.tag} «${view.anchor.text}»` : view.anchor.tag;
-  const more = view.anchor.more?.length ?? 0;
-  const element = more ? `${first} ${t.andMore(more)}` : first;
   return (
     <form
       className="bugspot-new"
       onSubmit={(e) => {
         e.preventDefault();
-        if (body.trim()) void submit();
+        void d.submit(onCreated);
       }}
     >
       <div className={`bugspot-meta ${Classes.TEXT_MUTED}`}>
-        {t.element}: <span className="bugspot-code">{element}</span>
+        {t.element}: <span className="bugspot-code">{describeTarget(view.anchor, t.andMore)}</span>
       </div>
       <SegmentedControl
         fill
         size="small"
-        value={kind}
-        onValueChange={(v) => setKind(v as Kind)}
+        value={d.kind}
+        onValueChange={(v) => d.setKind(v as Kind)}
         options={(['issue', 'question', 'idea'] as Kind[]).map((k) => ({ value: k, label: t.kind[k] }))}
       />
       <TextArea
@@ -124,44 +53,44 @@ export function NewThread({
         fill
         autoResize
         rows={4}
-        maxLength={session.limits?.bodyMaxLength}
+        maxLength={d.maxLength}
         placeholder={t.bodyPlaceholder}
-        value={body}
-        onChange={(e) => setBody(e.currentTarget.value)}
+        value={d.body}
+        onChange={(e) => d.setBody(e.currentTarget.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && body.trim()) void submit();
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void d.submit(onCreated);
         }}
       />
-      {anonymous && (
+      {d.anonymous && (
         <FormGroup label={t.yourName}>
-          <InputGroup value={name} maxLength={80} onValueChange={setName} />
+          <InputGroup value={d.name} maxLength={80} onValueChange={d.setName} />
         </FormGroup>
       )}
-      <Checkbox checked={attach} label={t.attachScreenshot} onChange={(e) => setAttach(e.currentTarget.checked)} />
-      {attach && (
+      <Checkbox checked={d.attach} label={t.attachScreenshot} onChange={(e) => d.setAttach(e.currentTarget.checked)} />
+      {d.attach && (
         <div className="bugspot-preview">
-          {shot.kind === 'pending' && (
+          {d.shot.kind === 'pending' && (
             <div className="bugspot-preview-wait">
               <Spinner size={20} /> {t.capturing}
             </div>
           )}
-          {shot.kind === 'ready' && <img src={shot.shot.url} alt={t.screenshot} />}
-          {shot.kind === 'failed' && (
+          {d.shot.kind === 'ready' && <img src={d.shot.shot.url} alt={t.screenshot} />}
+          {d.shot.kind === 'failed' && (
             <Callout intent="warning" compact>
-              {t.screenshotFailed}: {shot.message}
+              {t.screenshotFailed}: {d.shot.message}
             </Callout>
           )}
           <div className="bugspot-preview-actions">
-            <Button size="small" icon="refresh" text={t.retake} onClick={() => void take('dom')} />
+            <Button size="small" icon="refresh" text={t.retake} onClick={() => void d.take('dom')} />
             {'getDisplayMedia' in (navigator.mediaDevices ?? {}) && (
-              <Button size="small" icon="camera" text={t.captureTab} onClick={() => void take('tab')} />
+              <Button size="small" icon="camera" text={t.captureTab} onClick={() => void d.take('tab')} />
             )}
           </div>
         </div>
       )}
-      {error && (
+      {d.error && (
         <Callout intent="danger" compact>
-          {error}
+          {d.error}
         </Callout>
       )}
       <div className="bugspot-form-actions">
@@ -171,8 +100,8 @@ export function NewThread({
           intent="primary"
           icon="send-message"
           text={t.send}
-          loading={busy}
-          disabled={!body.trim()}
+          loading={d.busy}
+          disabled={!d.body.trim()}
         />
       </div>
     </form>

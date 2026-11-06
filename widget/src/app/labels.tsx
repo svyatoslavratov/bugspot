@@ -1,7 +1,7 @@
-import { Button, Icon, Menu, MenuItem, Popover, Tag, Tooltip, type Intent } from '@blueprintjs/core';
+import { Button, Icon, Menu, MenuDivider, MenuItem, Popover, Tag, Tooltip, type Intent } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 
-import type { Kind, Status } from '../shared/types';
+import { STATUSES, type Kind, type Status } from '../shared/types';
 import { useWidget } from './context';
 
 export const statusIntent: Record<Status, Intent> = {
@@ -12,7 +12,7 @@ export const statusIntent: Record<Status, Intent> = {
   wontfix: 'none',
 };
 
-const kindIcon: Record<Kind, IconName> = { issue: 'bug', question: 'help', idea: 'lightbulb' };
+export const kindIcon: Record<Kind, IconName> = { issue: 'bug', question: 'help', idea: 'lightbulb' };
 const kinds: Kind[] = ['issue', 'question', 'idea'];
 
 export function StatusTag({ status }: { status: Status }) {
@@ -98,6 +98,51 @@ export function KindPicker({
       }
     >
       <Button size="small" variant="minimal" icon={kindIcon[kind]} aria-label={`${t.changeKind}: ${t.kind[kind]}`} />
+    </Popover>
+  );
+}
+
+/** The list filter: active threads, all, or one status. */
+export type StatusFilter = 'active' | 'all' | Status;
+
+/** The status filter of the list, styled like the status tag of a thread and opening a menu. */
+export function StatusFilterPicker({ value, onChange }: { value: StatusFilter; onChange: (v: StatusFilter) => void }) {
+  const { t } = useWidget();
+  const label = (v: StatusFilter) => (v === 'active' ? t.active : v === 'all' ? t.allStatuses : t.status[v]);
+  const item = (v: StatusFilter) => (
+    <MenuItem
+      key={v}
+      roleStructure="listoption"
+      selected={value === v}
+      text={label(v)}
+      intent={v === 'active' || v === 'all' ? undefined : statusIntent[v]}
+      onClick={() => onChange(v)}
+    />
+  );
+  return (
+    <Popover
+      placement="bottom-end"
+      content={
+        <Menu>
+          {item('active')}
+          {item('all')}
+          <MenuDivider />
+          {STATUSES.map(item)}
+        </Menu>
+      }
+    >
+      <Tag
+        interactive
+        minimal
+        round
+        size="large"
+        intent={value === 'active' || value === 'all' ? 'none' : statusIntent[value]}
+        endIcon="caret-down"
+        className="bugspot-status-picker bugspot-status-filter"
+        aria-label={`${t.setStatus}: ${label(value)}`}
+      >
+        {label(value)}
+      </Tag>
     </Popover>
   );
 }

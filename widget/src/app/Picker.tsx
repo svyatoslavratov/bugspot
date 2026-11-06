@@ -112,18 +112,7 @@ export function Picker({
   const full = picked.length >= MAX_ELEMENTS;
   return (
     <>
-      {picked.map((p, i) => {
-        const r = p.el.getBoundingClientRect();
-        return (
-          <div
-            key={i}
-            className="bugspot-picked"
-            style={{ left: r.left - 2, top: r.top - 2, width: r.width + 4, height: r.height + 4 }}
-          >
-            <span className="bugspot-picked-number">{i + 1}</span>
-          </div>
-        );
-      })}
+      <PickedOutlines picks={picked} />
       {hover && (
         <div
           className="bugspot-highlight"
@@ -145,6 +134,29 @@ export function Picker({
         {picked.length > 0 && <Button size="small" intent="primary" text={t.pickDone} onClick={() => onPick(picked)} />}
         <Button size="small" text={notice ? t.pickFinish : t.pickCancel} onClick={onCancel} />
       </div>
+    </>
+  );
+}
+
+/**
+ * Numbered frames around picked elements. The caller re-renders on scroll (the picker and the tiny
+ * box both do), so the frames follow the elements.
+ */
+export function PickedOutlines({ picks }: { picks: Pick[] }) {
+  return (
+    <>
+      {picks.map((p, i) => {
+        const r = p.el.getBoundingClientRect();
+        return (
+          <div
+            key={i}
+            className="bugspot-picked"
+            style={{ left: r.left - 2, top: r.top - 2, width: r.width + 4, height: r.height + 4 }}
+          >
+            {picks.length > 1 && <span className="bugspot-picked-number">{i + 1}</span>}
+          </div>
+        );
+      })}
     </>
   );
 }

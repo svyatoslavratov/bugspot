@@ -5,9 +5,12 @@
 //
 // Attributes: data-api (service root; default: where widget.js came from), data-route
 // (auto | path | hash), data-version, data-theme (light | dark | auto), data-lang (ru | en),
-// data-position (bottom-right | bottom-left | top-right | top-left).
+// data-position (bottom-right | bottom-left | top-right | top-left), data-mode (full | tiny: where a
+// new comment is written by default), data-hotkey (the picking shortcut, "Alt+KeyC" by default;
+// "off" — none). People can change the mode and the shortcut in the bug's menu.
 // window.bugspotConfig = { token?: () => jwt, fetch?, appVersion? } is read when present.
 
+import { DEFAULT_HOTKEY } from './lib/hotkey';
 import { createApi, type Api } from './shared/api';
 import { installCapture, type Capture } from './shared/capture';
 import type { Session, Settings } from './shared/types';
@@ -94,6 +97,9 @@ async function start(script: HTMLScriptElement) {
       theme: pick(data.theme, ['light', 'dark', 'auto'] as const, 'light'),
       lang: pick(data.lang ?? navigator.language.slice(0, 2), ['ru', 'en'] as const, 'en'),
       position: pick(data.position, ['bottom-right', 'bottom-left', 'top-right', 'top-left'] as const, 'bottom-right'),
+      mode: pick(data.mode, ['full', 'tiny'] as const, 'full'),
+      // Checked by the app: the loader stays small.
+      hotkey: data.hotkey === 'off' ? '' : data.hotkey || DEFAULT_HOTKEY,
     };
     const app = (await import(/* @vite-ignore */ new URL(__APP_ENTRY__, scriptBase).href)) as {
       mount(o: MountOptions): BugspotHandle;
