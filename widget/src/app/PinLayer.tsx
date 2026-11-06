@@ -1,24 +1,28 @@
 import { Tooltip } from '@blueprintjs/core';
 import { useEffect, useMemo, useState } from 'react';
 
-import { pinPoint, resolveAnchor } from '../lib/anchor';
+import { anchorsOf, pinPoint, resolveAnchor } from '../lib/anchor';
 import type { Thread } from '../shared/types';
 import { statusIntent } from './labels';
 
 /**
- * Numbered pins for the active threads of the page. Positions follow scrolling (also inside
- * scrollable containers), resizing and DOM changes, recomputed at most once per frame.
+ * Numbered pins for the active threads of the page, one on each element of a thread. Positions
+ * follow scrolling (also inside scrollable containers), resizing and DOM changes, recomputed at
+ * most once per frame.
  */
 export function PinLayer({
   threads,
   selectedId,
   flashId,
+  passive = false,
   onOpen,
 }: {
   threads: Thread[];
   selectedId: string | null;
   /** A pin that pulses after "Show on the page". */
   flashId: string | null;
+  /** While an element is being picked: pins stay in sight but let clicks through. */
+  passive?: boolean;
   onOpen: (id: string) => void;
 }) {
   const [frame, setFrame] = useState(0);
@@ -46,10 +50,12 @@ export function PinLayer({
   const pins = useMemo(
     () =>
       threads
-        .map((thread) => {
-          const el = resolveAnchor(thread.anchor);
-          return { thread, point: pinPoint(thread.anchor, el), detached: !el };
-        })
+        .flatMap((thread) =>
+          anchorsOf(thread.anchor).map((anchor, index) => {
+            const el = resolveAnchor(anchor);
+            return { thread, index, point: pinPoint(anchor, el), detached: !el };
+          }),
+        )
         .filter(
           (p) =>
             p.point &&
@@ -63,12 +69,13 @@ export function PinLayer({
   );
 
   return (
-    <div className="bugspot-pins">
-      {pins.map(({ thread, point, detached }) => (
+    <div className={`bugspot-pins ${passive ? 'is-passive' : ''}`}>
+      {pins.map(({ thread, index, point, detached }) => (
         // The pin itself is the tooltip target: a wrapper around a fixed pin has no box of its
         // own and would anchor the tooltip to the top left corner of the page.
         <Tooltip
-          key={thread.id}
+          key={`${thread.id}-${index}`}
+          disabled={passive}
           content={thread.body.slice(0, 140)}
           placement="top"
           renderTarget={({ isOpen: _isOpen, ref, className, ...target }) => (

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -90,6 +91,30 @@ func (s *Store) migrate(ctx context.Context) error {
 
 // Close implements store.Store.
 func (s *Store) Close() error { return s.db.Close() }
+
+// Backup writes a consistent copy of the database to path while the service keeps running:
+// VACUUM INTO a temporary file next to it, then a rename, so path is never a half-written file.
+// The copy is a plain SQLite file (no WAL) that Open accepts as is.
+func (s *Store) Backup(ctx context.Context, path string) error {
+	tmp := path + ".part"
+	if err := os.Remove(tmp); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `VACUUM INTO ?`, tmp); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("backup: %w", err)
+	}
+	// The copy holds everything, screenshots included: readable by the service user only.
+	if err := os.Chmod(tmp, 0o600); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return nil
+}
 
 func ts(t time.Time) string { return t.UTC().Format(time.RFC3339Nano) }
 

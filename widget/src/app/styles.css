@@ -48,6 +48,7 @@
   z-index: 4;
 }
 .bugspot-highlight,
+.bugspot-picked,
 .bugspot-pick-bar {
   z-index: 5;
 }
@@ -302,6 +303,33 @@
   background: rgb(45 114 210 / 12%);
   pointer-events: none;
 }
+.bugspot-picked {
+  position: fixed;
+  border: 2px solid #cd4246;
+  border-radius: 3px;
+  background: rgb(205 66 70 / 10%);
+  pointer-events: none;
+}
+.bugspot-picked-number {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border: 2px solid #fff;
+  border-radius: 10px;
+  background: #cd4246;
+  color: #fff;
+  font: 600 11px/1 sans-serif;
+}
+.bugspot-pick-notice {
+  color: #72ca9b;
+  font-weight: 600;
+}
 .bugspot-highlight-label {
   position: absolute;
   top: -22px;
@@ -326,6 +354,11 @@
   color: #fff;
   box-shadow: 0 6px 20px rgb(17 20 24 / 30%);
   transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+}
+.bugspot-pick-bar .bp6-button {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Pins */
@@ -360,6 +393,10 @@
 }
 .bugspot-pin.intent-none {
   background: #5f6b7c;
+}
+.bugspot-pins.is-passive .bugspot-pin {
+  opacity: 0.55;
+  pointer-events: none;
 }
 .bugspot-pin.is-detached {
   opacity: 0.6;

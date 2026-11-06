@@ -13,7 +13,7 @@ import {
 } from '@blueprintjs/core';
 import { useState } from 'react';
 
-import { resolveAnchor } from '../lib/anchor';
+import { anchorsOf, resolveAnchor } from '../lib/anchor';
 import { when } from '../lib/i18n';
 import { ApiError } from '../shared/api';
 import type { Thread } from '../shared/types';
@@ -79,7 +79,8 @@ export function ThreadView({
   const thread = detail.data;
   if (!thread) return <Spinner size={24} className="bugspot-spinner" />;
   const here = thread.route === currentRoute;
-  const detached = here && !resolveAnchor(thread.anchor);
+  // Detached when none of the thread's elements is on the page any more.
+  const detached = here && anchorsOf(thread.anchor).every((a) => !resolveAnchor(a));
 
   const save = (body: string) =>
     void act(

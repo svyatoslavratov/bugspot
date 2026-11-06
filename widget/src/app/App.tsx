@@ -1,16 +1,16 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 
-import { buildAnchor, pinPoint, resolveAnchor } from '../lib/anchor';
+import { anchorsOf, buildAnchor, combineAnchors, pinPoint, resolveAnchor } from '../lib/anchor';
 import { pageContext } from '../lib/context';
 import { loadPrefs, savePrefs, setPendingThread, takePendingThread, type Prefs } from '../lib/prefs';
 import { currentRoute, onRouteChange } from '../lib/route';
-import { ACTIVE_STATUSES, type Anchor, type PageContext, type Point, type Status, type Thread } from '../shared/types';
+import { ACTIVE_STATUSES, type Anchor, type PageContext, type Status, type Thread } from '../shared/types';
 import { BugButton } from './BugButton';
 import { useWidget } from './context';
 import { Flash, FLASH_MS } from './Flash';
 import { NewThread } from './NewThread';
 import { Panel, type StatusFilter, type Tab } from './Panel';
-import { Picker } from './Picker';
+import { Picker, type Pick } from './Picker';
 import { PinLayer } from './PinLayer';
 import { ThreadView } from './ThreadView';
 import { useData } from './useData';
@@ -24,7 +24,7 @@ export interface AppHandle {
 export type View =
   | { kind: 'list' }
   | { kind: 'thread'; id: string }
-  | { kind: 'new'; target: Element; point: Point; anchor: Anchor; context: PageContext };
+  | { kind: 'new'; picks: Pick[]; anchor: Anchor; context: PageContext };
 
 const POLL_MS = 30_000;
 
@@ -35,12 +35,16 @@ function statusesOf(filter: StatusFilter): Status[] | undefined {
 }
 
 export const App = forwardRef<AppHandle>(function App(_, ref) {
-  const { api, settings, capture, session } = useWidget();
+  const { api, settings, capture, session, t } = useWidget();
   const canComment = session.can?.comment ?? false;
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
   const [route, setRoute] = useState(() => currentRoute(settings.route));
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
+  // After a comment is sent, picking goes on with a note about it; Esc then restores the panel as
+  // it was before picking began (closed after a right-click on the bug).
+  const [pickNotice, setPickNotice] = useState<string | undefined>();
+  const openBeforePicking = useRef(false);
   const [flash, setFlash] = useState<{ thread: Thread; key: number } | null>(null);
   const [view, setView] = useState<View>({ kind: 'list' });
   const [tab, setTab] = useState<Tab>('page');
@@ -92,7 +96,19 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
   const openThread = useCallback((id: string) => {
     setOpen(true);
     setPicking(false);
+    setPickNotice(undefined);
     setView({ kind: 'thread', id });
+  }, []);
+
+  const startPicking = useCallback(() => {
+    openBeforePicking.current = open;
+    setPickNotice(undefined);
+    setPicking(true);
+  }, [open]);
+  const cancelPicking = useCallback(() => {
+    setPicking(false);
+    setPickNotice(undefined);
+    setOpen(openBeforePicking.current);
   }, []);
 
   useEffect(() => {
@@ -108,7 +124,9 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
 
   /** Scrolls to the thread's element and highlights it and its pin for a moment. */
   const showOnPage = useCallback((thread: Thread) => {
-    const el = resolveAnchor(thread.anchor);
+    const el = anchorsOf(thread.anchor)
+      .map((a) => resolveAnchor(a))
+      .find((e) => e !== null);
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     else {
       const point = pinPoint(thread.anchor, null);
@@ -135,15 +153,16 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
   );
 
   const onPick = useCallback(
-    (target: Element, point: Point) => {
+    (picks: Pick[]) => {
+      if (picks.length === 0) return;
       setPicking(false);
+      setPickNotice(undefined);
       setOpen(true);
       setView({
         kind: 'new',
-        target,
-        point,
-        anchor: buildAnchor(target, point),
-        context: pageContext(capture, settings.appVersion, target),
+        picks,
+        anchor: combineAnchors(picks.map((p) => buildAnchor(p.el, p.point))),
+        context: pageContext(capture, settings.appVersion, picks[0].el),
       });
     },
     [capture, settings.appVersion],
@@ -158,23 +177,24 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
 
   return (
     <>
-      {prefs.pins && !picking && (
+      {prefs.pins && (
         <PinLayer
           threads={pins.data?.data ?? []}
           selectedId={selectedId}
           flashId={flash?.thread.id ?? null}
+          passive={picking}
           onOpen={openThread}
         />
       )}
       {flash && !picking && <Flash key={flash.key} anchor={flash.thread.anchor} />}
-      {picking && <Picker onPick={onPick} onCancel={() => setPicking(false)} />}
+      {picking && <Picker notice={pickNotice} onPick={onPick} onCancel={cancelPicking} />}
       <BugButton
         count={counts.page}
         open={open}
         position={prefs.button}
         onMove={(button) => updatePrefs({ button })}
         onClick={() => setOpen((o) => !o)}
-        onQuick={canComment ? () => setPicking(true) : undefined}
+        onQuick={canComment ? startPicking : undefined}
       />
       {open && !picking && (
         <Panel
@@ -191,7 +211,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
           onStatus={setStatus}
           onQuery={setQuery}
           onPins={(on) => updatePrefs({ pins: on })}
-          onNew={() => setPicking(true)}
+          onNew={startPicking}
           onClose={() => setOpen(false)}
           onSelect={goToThread}
         >
@@ -214,6 +234,9 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
               onCreated={(thread) => {
                 refresh();
                 setView({ kind: 'thread', id: thread.id });
+                // The next element can be picked at once; Esc finishes.
+                setPickNotice(t.sentNumber(thread.number));
+                setPicking(true);
               }}
             />
           )}

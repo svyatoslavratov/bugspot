@@ -26,6 +26,7 @@ Usage:
   bugspot threads list|show|reply|status|screenshot
                                       read and answer threads over the API (BUGSPOT_URL, BUGSPOT_TOKEN)
   bugspot mcp                         an MCP server on stdio for agents (BUGSPOT_URL, BUGSPOT_TOKEN)
+  bugspot backup [-o file]            a consistent copy of the database, also while the service runs
   bugspot version
 
 Run "bugspot <command> -h" for the flags of a command.
@@ -67,6 +68,8 @@ func (a *app) run(args []string) int {
 		err = a.threads(args)
 	case "mcp":
 		err = a.mcp(args)
+	case "backup":
+		err = a.backup(args)
 	case "version", "--version", "-v":
 		fmt.Fprintln(a.stdout, version)
 	case "help", "-h", "--help":

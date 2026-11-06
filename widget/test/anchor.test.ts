@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 
-import { buildAnchor, pinPoint, resolveAnchor, selectorOf, textOf } from '../src/lib/anchor';
+import { anchorsOf, buildAnchor, combineAnchors, pinPoint, resolveAnchor, selectorOf, textOf } from '../src/lib/anchor';
 
 function rect(el: Element, x: number, y: number, w: number, h: number) {
   el.getBoundingClientRect = () => ({
@@ -86,5 +86,20 @@ describe('anchors', () => {
 
   test('a broken selector from an old page does not throw', () => {
     expect(resolveAnchor({ selector: 'td:nth-of-type(', text: '', tag: 'td' })).toBeNull();
+  });
+});
+
+describe('several elements', () => {
+  test('combineAnchors keeps the first element on top and anchorsOf lists them all', () => {
+    const [a, b] = [document.querySelector('input')!, document.querySelector('[data-bugspot]')!];
+    const one = buildAnchor(a, { x: 20, y: 15 });
+    const two = buildAnchor(b, { x: 30, y: 15 });
+    expect(combineAnchors([one])).toEqual(one);
+    const both = combineAnchors([one, two]);
+    expect(both.selector).toBe(one.selector);
+    expect(both.more).toEqual([two]);
+    expect(anchorsOf(both).map((x) => x.selector)).toEqual([one.selector, two.selector]);
+    expect(anchorsOf({ selector: '#x', more: 'junk' as never })).toEqual([{ selector: '#x' }]);
+    expect(resolveAnchor(anchorsOf(both)[1])).toBe(b);
   });
 });

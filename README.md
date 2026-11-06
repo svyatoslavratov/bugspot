@@ -36,7 +36,9 @@ your app's own login.
   person* box. Replies, editing by clicking the text, search, this page / all pages, pins on and off,
   "show on the page" with a short highlight, a draggable button.
 - **One click to comment.** Right-click (or Alt+click) the bug and pick an element — the panel opens
-  with the form; a plain click still opens the panel.
+  with the form; a plain click still opens the panel. Shift+click picks several elements with the
+  same problem for one comment (a pin on each). After sending, the next element can be picked at
+  once; Esc finishes.
 - **Agents are first-class.** An MCP server (`bugspot mcp`), agent tokens with scopes, a CLI and a
   plain REST API. Agents move threads to *fixed*; only people check and resolve them.
 - **Flexible access.** Identity from your app's session (`forward`), a JWT, a trusted proxy header,
@@ -44,6 +46,8 @@ your app's own login.
   moderate rules by role or user.
 - **Light.** Visitors who may not see the widget download a 2.6 KB loader and make one request.
   The service is a 12 MB static binary (15 MB distroless image), SQLite inside.
+- **Backups.** With `BUGSPOT_BACKUP_DIR` the service keeps dated snapshots of its database (one at
+  start, then daily, kept 14 days); `bugspot backup` takes one at any time.
 - **Safe by default.** CSRF protection, CORS allowlist, rate limits, size limits, sniffed images
   only, hashed credentials, non-root read-only container. See [SECURITY.md](SECURITY.md).
 
@@ -143,7 +147,7 @@ signed-in user and `401` otherwise:
 
 ```yaml
 bugspot:
-  image: ghcr.io/svyatoslavratov/bugspot:v0.1.1
+  image: ghcr.io/svyatoslavratov/bugspot:v0.2.0
   read_only: true
   volumes: [bugspot-data:/data]
   environment:

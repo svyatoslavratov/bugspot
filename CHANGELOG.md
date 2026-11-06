@@ -5,6 +5,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-06
+
+### Added
+
+- Several elements in one comment: Shift+click picks them (Shift+click again drops one), a plain
+  click on the last one or Enter finishes. A pin with the same number goes on each element; "show
+  on the page" and the screenshot mark them all. They are stored in `anchor.more`.
+- After sending a comment, picking goes on at once with a note about the sent one; Esc finishes and
+  brings the panel back as it was.
+- Backups: `BUGSPOT_BACKUP_DIR`, `BUGSPOT_BACKUP_EVERY`, `BUGSPOT_BACKUP_KEEP_DAYS` keep dated
+  snapshots of the database; `bugspot backup` takes one at any time.
+
 ## [0.1.1] - 2026-11-06
 
 ### Fixed

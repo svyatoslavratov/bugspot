@@ -59,6 +59,12 @@ type Config struct {
 	// RateRead and RateWrite are requests per minute per identity or address.
 	RateRead, RateWrite int
 	LogLevel            slog.Level
+
+	// BackupDir turns on snapshots of the database: one at start, then every BackupEvery; those
+	// older than BackupKeepDays (0: never) are removed. Put it outside the data volume.
+	BackupDir      string
+	BackupEvery    time.Duration
+	BackupKeepDays int
 }
 
 var knownProviders = []string{auth.ProviderForward, auth.ProviderJWT, auth.ProviderHeader, auth.ProviderKey, auth.ProviderAnonymous}
@@ -189,6 +195,15 @@ func Load(getenv func(string) string) (Config, error) {
 		ScreenshotMaxBytes: r.integer("SCREENSHOT_MAX_BYTES", 3<<20),
 		RateRead:           int(r.integer("RATE_READ", 600)),
 		RateWrite:          int(r.integer("RATE_WRITE", 60)),
+
+		BackupDir:   r.str("BACKUP_DIR", ""),
+		BackupEvery: r.duration("BACKUP_EVERY", 24*time.Hour),
+	}
+	// Days fit an int only after a bound check (and a century is retention enough).
+	if keep := r.integer("BACKUP_KEEP_DAYS", 14); keep >= 0 && keep <= 36500 {
+		c.BackupKeepDays = int(keep)
+	} else {
+		r.errs = append(r.errs, fmt.Errorf("BUGSPOT_BACKUP_KEEP_DAYS=%d: from 0 to 36500", keep))
 	}
 	if pk := r.str("JWT_PUBLIC_KEY", ""); pk != "" {
 		key, err := parsePublicKey(pk)
@@ -247,6 +262,9 @@ func (c *Config) validate() []error {
 	}
 	if !slices.Contains([]string{"auto", "true", "false"}, c.CookieSecure) {
 		errs = append(errs, fmt.Errorf("BUGSPOT_COOKIE_SECURE=%q: want auto, true or false", c.CookieSecure))
+	}
+	if c.BackupDir != "" && c.BackupEvery < time.Minute {
+		errs = append(errs, fmt.Errorf("BUGSPOT_BACKUP_EVERY=%s: at least 1m", c.BackupEvery))
 	}
 	for _, o := range c.AllowedOrigins {
 		if !strings.HasPrefix(o, "https://") && !strings.HasPrefix(o, "http://") || strings.HasSuffix(o, "/") {

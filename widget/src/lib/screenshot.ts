@@ -9,16 +9,20 @@ function encode(canvas: HTMLCanvasElement, type: string, quality: number): Promi
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
-/** Draws a highlight around the chosen element and a dot at the click point. */
-function highlight(ctx: CanvasRenderingContext2D, scale: number, rect: DOMRect | null, point: Point | null) {
+/** An element to mark on the screenshot and the point it was clicked at. */
+export interface Mark {
+  el: Element;
+  point: Point;
+}
+
+/** Draws a frame around each chosen element and a dot at its click point. */
+function highlight(ctx: CanvasRenderingContext2D, scale: number, marks: { rect: DOMRect; point: Point }[]) {
   ctx.save();
   ctx.scale(scale, scale);
-  if (rect) {
+  for (const { rect, point } of marks) {
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#cd4246';
     ctx.strokeRect(rect.left - 3, rect.top - 3, rect.width + 6, rect.height + 6);
-  }
-  if (point) {
     ctx.fillStyle = '#cd4246';
     ctx.beginPath();
     ctx.arc(point.x, point.y, 7, 0, Math.PI * 2);
@@ -48,18 +52,13 @@ async function fit(source: HTMLCanvasElement, maxBytes: number): Promise<Blob> {
 }
 
 /**
- * Renders the visible part of the page (not the widget) to an image with the element marked.
+ * Renders the visible part of the page (not the widget) to an image with the elements marked.
  * DOM rendering cannot draw cross-origin images without CORS or closed shadow roots; those parts
  * come out blank, which is still useful.
  */
-export async function captureViewport(
-  exclude: Element,
-  target: Element | null,
-  point: Point | null,
-  maxBytes: number,
-): Promise<Shot> {
+export async function captureViewport(exclude: Element, marks: Mark[], maxBytes: number): Promise<Shot> {
   const { domToCanvas } = await import('modern-screenshot');
-  const rect = target?.getBoundingClientRect() ?? null;
+  const rects = marks.map((m) => ({ rect: m.el.getBoundingClientRect(), point: m.point }));
   const width = innerWidth;
   const height = innerHeight;
   const scale = Math.min(devicePixelRatio || 1, 1600 / width, 2);
@@ -74,7 +73,7 @@ export async function captureViewport(
     timeout: 8000,
     workerNumber: 0,
   });
-  highlight(canvas.getContext('2d')!, scale, rect, point);
+  highlight(canvas.getContext('2d')!, scale, rects);
   const blob = await fit(canvas, maxBytes);
   return { blob, url: URL.createObjectURL(blob) };
 }

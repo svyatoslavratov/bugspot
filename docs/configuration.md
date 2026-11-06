@@ -19,6 +19,9 @@ value and lists every problem at once.
 | `BUGSPOT_RATE_READ` | `600` | reads per minute per user (or address) |
 | `BUGSPOT_RATE_WRITE` | `60` | writes per minute per user (or address) |
 | `BUGSPOT_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `BUGSPOT_BACKUP_DIR` | — | turns on snapshots of the database into this directory; keep it outside the data volume |
+| `BUGSPOT_BACKUP_EVERY` | `24h` | how often to take a snapshot (at least `1m`); one is also taken at start |
+| `BUGSPOT_BACKUP_KEEP_DAYS` | `14` | snapshots older than this are removed (the newest always stays); `0` keeps all |
 
 ## Access policy
 
@@ -91,6 +94,18 @@ Keys are created with `bugspot key create --name "Customer" --roles customer --e
 | `bugspot threads status N open\|in_progress\|fixed\|wontfix` | move a thread |
 | `bugspot threads screenshot N --out file` | download the screenshot |
 | `bugspot mcp` | an MCP server on stdio for agents (`BUGSPOT_URL`, `BUGSPOT_TOKEN`) |
+| `bugspot backup [-o file]` | a consistent copy of the database, also while the service runs |
 
 `token` and `key` work on the database directly, so run them where the service runs
 (`docker compose exec bugspot bugspot token create …`).
+
+## Backups
+
+A snapshot is a plain SQLite file with everything in it: threads, replies, screenshots and hashed
+credentials. It is written with `VACUUM INTO` to a temporary file and renamed, so it is never half
+written, and it is readable by the service user only. A snapshot is taken at start, so every
+upgrade leaves a copy of the data it started from; a container that restarts in a loop skips it
+while the newest snapshot is under 10 minutes old.
+
+To restore, stop the service, put the snapshot in place of `bugspot.db` in `BUGSPOT_DATA_DIR`,
+delete `bugspot.db-wal` and `bugspot.db-shm` there, and start the service.

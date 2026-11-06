@@ -234,3 +234,26 @@ func TestServeAndClient(t *testing.T) {
 		t.Fatalf("healthcheck of a wrong URL = %+v", r)
 	}
 }
+
+func TestBackupCommand(t *testing.T) {
+	data, backups := t.TempDir(), t.TempDir()
+	env := map[string]string{"BUGSPOT_DATA_DIR": data, "BUGSPOT_BACKUP_DIR": backups}
+	r := run(t, env, "backup")
+	path := strings.TrimSpace(r.stdout)
+	if r.code != 0 || filepath.Dir(path) != backups || !strings.HasPrefix(filepath.Base(path), "bugspot-") {
+		t.Fatalf("backup = %+v", r)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(t.TempDir(), "manual.db")
+	if r := run(t, env, "backup", "-o", out); r.code != 0 || strings.TrimSpace(r.stdout) != out {
+		t.Fatalf("backup -o = %+v", r)
+	}
+	if _, err := os.Stat(out); err != nil {
+		t.Fatal(err)
+	}
+	if r := run(t, map[string]string{"BUGSPOT_DATA_DIR": data, "BUGSPOT_AUTH": "ldap"}, "backup"); r.code != 1 {
+		t.Fatalf("bad configuration = %+v", r)
+	}
+}

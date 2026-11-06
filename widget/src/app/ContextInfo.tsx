@@ -1,6 +1,7 @@
 import { Button, Classes, Collapse, HTMLTable } from '@blueprintjs/core';
 import { useState } from 'react';
 
+import { anchorsOf } from '../lib/anchor';
 import { browserLabel } from '../lib/context';
 import type { Anchor, PageContext } from '../shared/types';
 import { useWidget } from './context';
@@ -45,12 +46,14 @@ export function ContextInfo({ context, anchor }: { context: Partial<PageContext>
                 <td>{context.appVersion}</td>
               </tr>
             )}
-            {(anchor.selector || anchor.source) && (
-              <tr>
-                <th>{t.element}</th>
-                <td className="bugspot-code">{anchor.source ?? anchor.selector}</td>
-              </tr>
-            )}
+            {anchorsOf(anchor)
+              .filter((a) => a.selector || a.source)
+              .map((a, i, all) => (
+                <tr key={i}>
+                  <th>{all.length > 1 ? `${t.element} ${i + 1}` : t.element}</th>
+                  <td className="bugspot-code">{a.source ?? a.selector}</td>
+                </tr>
+              ))}
           </tbody>
         </HTMLTable>
         {errors.length > 0 && (
