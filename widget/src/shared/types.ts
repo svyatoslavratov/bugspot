@@ -323,6 +323,8 @@ export interface CrawlConfig {
   auto?: boolean;
   buttons?: boolean;
   maxScreens?: number;
+  /** The widget the command adds to pages that do not load it (--widget). */
+  widget?: { src: string; route: string };
 }
 
 /** What applying a manifest changed. */

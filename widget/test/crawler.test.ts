@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { DANGER, guard, startCrawl, type CrawlStatus, type CrawlTarget } from '../src/app/crawler';
 import type { Api } from '../src/shared/api';
@@ -114,6 +114,10 @@ const session = {
 } as Session;
 const settings = { route: 'path', routeParams: [] } as unknown as Settings;
 
+// A test that fails must not leave its crawl walking: every crawl stops when its test ends.
+const running: { stop(): void }[] = [];
+afterEach(() => running.splice(0).forEach((r) => r.stop()));
+
 async function crawl(buttons: boolean) {
   const events: string[] = [];
   const loaded: string[] = [];
@@ -126,10 +130,11 @@ async function crawl(buttons: boolean) {
     session,
     settings,
     target: fakeApp(events, loaded),
-    options: { start: `${ORIGIN}/`, buttons, maxScreens: 20 },
+    options: { start: `${ORIGIN}/`, buttons, maxScreens: 20, maxMinutes: 0.5 },
     onStatus: (s) => statuses.push(s),
     quietMs: 30,
   });
+  running.push(run);
   const status = await run.done;
   return { status, events, loaded, visits, edges, looks, statuses };
 }
@@ -190,10 +195,11 @@ describe('crawler', () => {
       session,
       settings,
       target: fakeApp([], []),
-      options: { start: `${ORIGIN}/`, buttons: false, maxScreens: 20 },
+      options: { start: `${ORIGIN}/`, buttons: false, maxScreens: 20, maxMinutes: 0.5 },
       onStatus: (s) => statuses.push(s),
       quietMs: 30,
     });
+    running.push(run);
     setTimeout(run.stop, 400);
     const status = await run.done;
     expect(status.phase).toBe('stopped');

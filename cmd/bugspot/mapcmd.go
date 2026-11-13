@@ -104,10 +104,11 @@ func (l *listFlag) Set(v string) error {
 
 // crawlOptions are what the widget's crawler gets from the command.
 type crawlOptions struct {
-	Token      string `json:"token"`
-	Auto       bool   `json:"auto"`
-	Buttons    bool   `json:"buttons"`
-	MaxScreens int    `json:"maxScreens"`
+	Token      string          `json:"token"`
+	Auto       bool            `json:"auto"`
+	Buttons    bool            `json:"buttons"`
+	MaxScreens int             `json:"maxScreens"`
+	Widget     *injectedWidget `json:"widget,omitempty"`
 }
 
 // crawlStatus is what the widget reports while it crawls (window.__bugspotCrawlStatus).
@@ -206,7 +207,15 @@ func (a *app) mapCrawl(args []string) error {
 	if err != nil {
 		return err
 	}
-	options, _ := json.Marshal(crawlOptions{Token: token, Auto: true, Buttons: *buttons, MaxScreens: *maxScreens})
+	options, err := json.Marshal(crawlOptions{Token: token, Auto: true, Buttons: *buttons, MaxScreens: *maxScreens, Widget: inject})
+	if err != nil {
+		return err
+	}
+	bootstrap := "if (window === window.top) { window.__bugspotCrawl = " + string(options) + ";"
+	if inject != nil {
+		bootstrap += " " + widgetLoader
+	}
+	bootstrap += " }"
 	// Under the widget's own guard, a second one in the browser: a request of the page that is not
 	// a read fails, unless it is the widget reporting to bugspot (it carries the token).
 	var stopped atomic.Int64
@@ -222,8 +231,7 @@ func (a *app) mapCrawl(args []string) error {
 		{"Page.enable", nil},
 		{"Fetch.enable", map[string]any{"patterns": []map[string]any{{"urlPattern": "*", "requestStage": "Request"}}}},
 		// Only the top page crawls; the app inside the crawler's frame must not start another.
-		{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": "if (window === window.top) { window.__bugspotCrawl = " +
-			string(options) + ";" + inject + " }"}},
+		{"Page.addScriptToEvaluateOnNewDocument", map[string]any{"source": bootstrap}},
 		{"Page.navigate", map[string]any{"url": target.String()}},
 	}
 	for _, step := range setup {
@@ -278,32 +286,37 @@ func readOrReport(method string, headers map[string]string) bool {
 	return false
 }
 
-// injectWidget is a script that adds the widget to a page that has not loaded it a moment after
-// the page did: for apps that load it only in some environments, or not at all.
-func injectWidget(base, route string) (string, error) {
+// injectedWidget is the widget to add to pages that do not load it.
+type injectedWidget struct {
+	Src   string `json:"src"`
+	Route string `json:"route"`
+}
+
+// widgetLoader adds the widget a moment after the page loaded, when the page has not loaded it
+// itself: for apps that load it only in some environments, or not at all. It reads what to load
+// from the crawl options, so nothing is spliced into it.
+const widgetLoader = `addEventListener("load", () => setTimeout(() => {
+	const w = window.__bugspotCrawl && window.__bugspotCrawl.widget;
+	if (!w || window.bugspot || window.__bugspotRun) return;
+	const s = document.createElement("script");
+	s.src = w.src;
+	s.dataset.route = w.route;
+	document.head.append(s);
+}, 1500));`
+
+// injectWidget checks --widget and --route; nil when no widget is to be added.
+func injectWidget(base, route string) (*injectedWidget, error) {
 	if base == "" {
-		return "", nil
+		return nil, nil
 	}
 	u, err := url.Parse(strings.TrimSuffix(base, "/") + "/widget.js")
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return "", fmt.Errorf("--widget must be the http(s) address of bugspot, got %q", base)
+		return nil, fmt.Errorf("--widget must be the http(s) address of bugspot, got %q", base)
 	}
 	if route != "auto" && route != "path" && route != "hash" {
-		return "", fmt.Errorf("--route must be auto, path or hash, got %q", route)
+		return nil, fmt.Errorf("--route must be auto, path or hash, got %q", route)
 	}
-	// One JSON object carries the values: nothing is spliced into quotes by hand.
-	widget, err := json.Marshal(map[string]string{"src": u.String(), "route": route})
-	if err != nil {
-		return "", err
-	}
-	return `addEventListener('load', () => setTimeout(() => {
-		if (window.bugspot || window.__bugspotRun) return;
-		const w = ` + string(widget) + `;
-		const s = document.createElement('script');
-		s.src = w.src;
-		s.dataset.route = w.route;
-		document.head.append(s);
-	}, 1500));`, nil
+	return &injectedWidget{Src: u.String(), Route: route}, nil
 }
 
 func parseViewport(v string) (int, int, error) {
