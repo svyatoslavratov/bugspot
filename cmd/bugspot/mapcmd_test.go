@@ -80,8 +80,8 @@ func TestMapCrawlArguments(t *testing.T) {
 	if w, h, err := parseViewport("1280x720"); err != nil || w != 1280 || h != 720 {
 		t.Fatalf("viewport = %d %d %v", w, h, err)
 	}
-	if js, err := injectWidget("https://app.test/bugspot/", "hash"); err != nil || !strings.Contains(js, `"https://app.test/bugspot/widget.js"`) ||
-		!strings.Contains(js, "dataset.route = 'hash'") {
+	if js, err := injectWidget("https://app.test/bugspot/", "hash"); err != nil ||
+		!strings.Contains(js, `{"route":"hash","src":"https://app.test/bugspot/widget.js"}`) {
 		t.Fatalf("inject = %s %v", js, err)
 	}
 	if js, _ := injectWidget("", "auto"); js != "" {

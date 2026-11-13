@@ -131,9 +131,10 @@ export const DANGER = new RegExp(
 );
 /** Names of links that end the session. */
 const LEAVE = /выйти|выход|\b(log ?out|sign ?out|log ?off)\b/i;
-/** Addresses that end the session or are files. */
-const SKIP_PATH =
-  /log-?out|sign-?out|logoff|exit|выход|\.(pdf|zip|csv|xlsx?|docx?|pptx?|png|jpe?g|gif|svg|webp|mp4|mp3|json|xml|txt)$/i;
+/** Addresses that end the session, anywhere in the path. */
+const LEAVE_PATH = /(log-?out|sign-?out|logoff|exit|выход)/i;
+/** Addresses of files, by their extension. */
+const FILE_PATH = /\.(pdf|zip|csv|xlsx?|docx?|pptx?|png|jpe?g|gif|svg|webp|mp4|mp3|json|xml|txt)$/i;
 const CLOSE_NAME = /^(закрыть|отмена|отменить|close|cancel|dismiss|×|✕|✖|x)$/i;
 
 class Stopped extends Error {}
@@ -408,7 +409,7 @@ export function startCrawl({ api, session, settings, target, options, onStatus, 
     } catch {
       return null;
     }
-    if (url.origin !== start.origin || SKIP_PATH.test(url.pathname)) return null;
+    if (url.origin !== start.origin || LEAVE_PATH.test(url.pathname) || FILE_PATH.test(url.pathname)) return null;
     // The service itself may live on the app's origin (/bugspot/): it is not the app.
     if (url.origin === apiBase.origin && url.pathname.startsWith(apiBase.pathname)) return null;
     return routeKey(screenOptions, url);

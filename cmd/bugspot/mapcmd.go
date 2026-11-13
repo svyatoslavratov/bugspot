@@ -291,12 +291,17 @@ func injectWidget(base, route string) (string, error) {
 	if route != "auto" && route != "path" && route != "hash" {
 		return "", fmt.Errorf("--route must be auto, path or hash, got %q", route)
 	}
-	src, _ := json.Marshal(u.String())
+	// One JSON object carries the values: nothing is spliced into quotes by hand.
+	widget, err := json.Marshal(map[string]string{"src": u.String(), "route": route})
+	if err != nil {
+		return "", err
+	}
 	return `addEventListener('load', () => setTimeout(() => {
 		if (window.bugspot || window.__bugspotRun) return;
+		const w = ` + string(widget) + `;
 		const s = document.createElement('script');
-		s.src = ` + string(src) + `;
-		s.dataset.route = '` + route + `';
+		s.src = w.src;
+		s.dataset.route = w.route;
 		document.head.append(s);
 	}, 1500));`, nil
 }
