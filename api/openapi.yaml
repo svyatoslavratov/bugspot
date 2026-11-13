@@ -19,6 +19,14 @@ info:
 
     **Threads by number.** Wherever a path takes `{id}`, the thread number (`12`, or `#12` URL-encoded)
     works as well.
+
+    **The screen map.** The widget of those allowed by `BUGSPOT_MAP_COLLECT` reports the screens of the
+    app (the route with ids folded into `{id}`, or the value of `data-bugspot-screen`), their states
+    (`""` the page itself, `tab:<names>` a selected tab, `dialog:<title>` an open dialog), the
+    transitions between them and the look of each state: a thumbnail and a DOM snapshot without
+    scripts whose stylesheets are stored once as assets. Those allowed by `BUGSPOT_MAP` (and agents
+    with the `map` scope) read the map and name, group, describe and merge screens. Map paths take a
+    state by `?screen=…&state=…`.
 servers:
   - url: /
 security:
@@ -41,6 +49,15 @@ paths:
       responses:
         "200": { description: JavaScript, content: { text/javascript: {} } }
         "304": { description: Not modified }
+  /map:
+    get:
+      operationId: mapPage
+      summary: The screen map page
+      description: The page reads the session and the map through the API; who may open the map is `BUGSPOT_MAP`.
+      security: []
+      responses:
+        "200": { description: HTML, content: { text/html: {} } }
+        "404": { $ref: "#/components/responses/Error" }
   /api/v1/session:
     get:
       operationId: getSession
@@ -81,6 +98,7 @@ paths:
       summary: Threads, newest activity first
       parameters:
         - { name: route, in: query, schema: { type: string }, description: Only this page route }
+        - { name: screen, in: query, schema: { type: string }, description: "Only this screen; with route: the route or the screen" }
         - name: status
           in: query
           description: Comma-separated statuses
@@ -119,9 +137,10 @@ paths:
   /api/v1/threads/summary:
     get:
       operationId: summary
-      summary: Thread counts by status, in the project and on one route
+      summary: Thread counts by status, in the project and on one page (its route or its screen)
       parameters:
         - { name: route, in: query, schema: { type: string } }
+        - { name: screen, in: query, schema: { type: string } }
       responses:
         "200":
           description: Counts
@@ -217,6 +236,307 @@ paths:
       responses:
         "200": { description: Image, content: { image/webp: {}, image/png: {}, image/jpeg: {} } }
         "404": { $ref: "#/components/responses/Error" }
+  /api/v1/map:
+    get:
+      operationId: getMap
+      summary: The screen map (BUGSPOT_MAP or the map scope)
+      responses:
+        "200":
+          description: Screens with their states, transitions, aliases of merged screens, and active threads by screen
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [screens, edges, aliases, threads]
+                properties:
+                  screens: { type: array, items: { $ref: "#/components/schemas/Screen" } }
+                  edges: { type: array, items: { $ref: "#/components/schemas/Edge" } }
+                  aliases: { type: object, additionalProperties: { type: string }, description: merged key → screen }
+                  threads:
+                    type: object
+                    description: "screen key → status → count of threads that still need work"
+                    additionalProperties: { type: object, additionalProperties: { type: integer } }
+        "403": { $ref: "#/components/responses/Error" }
+  /api/v1/map/captures:
+    get:
+      operationId: mapCaptures
+      summary: What the map knows about the look of each state (BUGSPOT_MAP_COLLECT)
+      description: The widget takes a new look of a state when there is none or its DOM structure changed.
+      responses:
+        "200":
+          description: States and aliases
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  states:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        screen: { type: string }
+                        state: { type: string }
+                        hash: { type: string }
+                        hasShot: { type: boolean }
+                        capturedAt: { type: string, format: date-time }
+                  aliases: { type: object, additionalProperties: { type: string } }
+        "403": { $ref: "#/components/responses/Error" }
+  /api/v1/map/visits:
+    post:
+      operationId: reportVisits
+      summary: Report states seen and transitions (BUGSPOT_MAP_COLLECT)
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visits:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [screen]
+                    properties:
+                      screen: { type: string, maxLength: 512 }
+                      state: { type: string, maxLength: 300 }
+                      kind: { $ref: "#/components/schemas/StateKind" }
+                      name: { type: string }
+                      title: { type: string, maxLength: 300 }
+                      url: { type: string }
+                      route: { type: string }
+                edges:
+                  type: array
+                  maxItems: 100
+                  items: { $ref: "#/components/schemas/EdgeInput" }
+      responses:
+        "204": { description: Saved }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /api/v1/map/assets/missing:
+    post:
+      operationId: missingAssets
+      summary: Which stylesheets of a snapshot the service does not have yet (BUGSPOT_MAP_COLLECT)
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { hashes: { type: array, maxItems: 200, items: { type: string, pattern: "^[0-9a-f]{64}$" } } }
+      responses:
+        "200":
+          description: Missing hashes
+          content: { application/json: { schema: { type: object, properties: { missing: { type: array, items: { type: string } } } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /api/v1/map/assets/{hash}:
+    put:
+      operationId: putAsset
+      summary: Upload a stylesheet of snapshots under its SHA-256 (BUGSPOT_MAP_COLLECT)
+      parameters:
+        - { $ref: "#/components/parameters/RequestHeader" }
+        - { name: hash, in: path, required: true, schema: { type: string, pattern: "^[0-9a-f]{64}$" } }
+      requestBody:
+        required: true
+        content: { text/css: {} }
+      responses:
+        "204": { description: Saved }
+        "400": { $ref: "#/components/responses/Error" }
+        "413": { $ref: "#/components/responses/Error" }
+  /api/v1/map/shot:
+    parameters:
+      - { $ref: "#/components/parameters/Screen" }
+      - { $ref: "#/components/parameters/State" }
+    put:
+      operationId: putStateShot
+      summary: Replace the thumbnail of a state (BUGSPOT_MAP_COLLECT)
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content: { image/webp: {}, image/png: {}, image/jpeg: {} }
+      responses:
+        "204": { description: Saved }
+        "400": { $ref: "#/components/responses/Error" }
+        "413": { $ref: "#/components/responses/Error" }
+    get:
+      operationId: getStateShot
+      summary: The thumbnail of a state (BUGSPOT_MAP)
+      responses:
+        "200": { description: Image, content: { image/webp: {}, image/png: {}, image/jpeg: {} } }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/v1/map/snapshot:
+    parameters:
+      - { $ref: "#/components/parameters/Screen" }
+      - { $ref: "#/components/parameters/State" }
+    put:
+      operationId: putStateSnapshot
+      summary: Replace the DOM snapshot of a state (BUGSPOT_MAP_COLLECT)
+      description: Upload its stylesheets first (`/api/v1/map/assets/missing`, then `PUT /api/v1/map/assets/{hash}`); up to 8 MB.
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [html, viewport]
+              properties:
+                html: { type: string, description: "The document without scripts; stylesheets are <style data-bugspot-asset=HASH> placeholders" }
+                css: { type: array, items: { type: string } }
+                outline: { type: object, description: "Title, headings, actions, fields and tables of the page, for agents (≤64 KB)" }
+                viewport: { $ref: "#/components/schemas/Size" }
+                hash: { type: string, description: Fingerprint of the DOM structure }
+      responses:
+        "204": { description: Saved }
+        "400": { $ref: "#/components/responses/Error" }
+        "413": { $ref: "#/components/responses/Error" }
+    get:
+      operationId: getStateSnapshot
+      summary: The DOM snapshot of a state with its stylesheets (BUGSPOT_MAP)
+      parameters:
+        - { name: fields, in: query, schema: { type: string, enum: [outline] }, description: "outline: only the outline, viewport and time — what agents read" }
+      responses:
+        "200":
+          description: Snapshot
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  screen: { type: string }
+                  state: { type: string }
+                  html: { type: string }
+                  css: { type: object, additionalProperties: { type: string }, description: hash → stylesheet }
+                  outline: { type: object }
+                  viewport: { $ref: "#/components/schemas/Size" }
+                  hash: { type: string }
+                  capturedAt: { type: string, format: date-time }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/v1/map/screens:
+    post:
+      operationId: addScreen
+      summary: Declare a planned screen (BUGSPOT_MAP or the map scope)
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key]
+              properties:
+                key: { type: string, maxLength: 512 }
+                name: { type: string, maxLength: 120 }
+                section: { type: string, maxLength: 120 }
+                description: { type: string, maxLength: 4000 }
+                order: { type: integer }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Screen" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+    patch:
+      operationId: patchScreens
+      summary: Name, group, describe, hide, place or merge screens, all at once (BUGSPOT_MAP or the map scope)
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 200
+              items:
+                type: object
+                required: [key]
+                properties:
+                  key: { type: string }
+                  name: { type: string, maxLength: 120 }
+                  section: { type: string, maxLength: 120 }
+                  description: { type: string, maxLength: 4000 }
+                  order: { type: integer }
+                  hidden: { type: boolean }
+                  position: { $ref: "#/components/schemas/Point" }
+                  mergeInto: { type: string, description: "Move states, transitions and threads into this screen; the key stays as its alias" }
+      responses:
+        "204": { description: Saved }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /api/v1/map/states:
+    patch:
+      operationId: patchStates
+      summary: Name and describe states, all at once (BUGSPOT_MAP or the map scope)
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 200
+              items:
+                type: object
+                required: [screen, state]
+                properties:
+                  screen: { type: string }
+                  state: { type: string }
+                  name: { type: string, maxLength: 120 }
+                  description: { type: string, maxLength: 4000 }
+      responses:
+        "204": { description: Saved }
+        "400": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/v1/map/edges:
+    post:
+      operationId: addEdge
+      summary: Declare a transition the widget cannot see, e.g. one after a successful save (BUGSPOT_MAP or the map scope)
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/EdgeInput" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Edge" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+  /api/v1/map/manifest:
+    get:
+      operationId: exportMap
+      summary: >-
+        The part of the map people and agents wrote, as a manifest file: screens with names, sections,
+        descriptions, order and hidden flags, described states, declared transitions (BUGSPOT_MAP or the map scope)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Manifest" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+    post:
+      operationId: importMap
+      summary: >-
+        Apply a manifest: screens it names are updated with the fields it gives, unknown ones become planned,
+        states are created or described, transitions declared. Importing the same file again changes nothing new.
+      parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Manifest" } } }
+      responses:
+        "200":
+          description: What changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created: { type: integer, description: Planned screens added }
+                  updated: { type: integer, description: Screens whose fields changed }
+                  states: { type: integer, description: States named or described }
+                  edges: { type: integer, description: Transitions declared }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "413": { $ref: "#/components/responses/Error" }
 components:
   securitySchemes:
     agentToken:
@@ -237,6 +557,17 @@ components:
       required: false
       schema: { type: string, example: "1" }
       description: Required on browser requests that change state (CSRF protection).
+    Screen:
+      name: screen
+      in: query
+      required: true
+      schema: { type: string, maxLength: 512 }
+      description: Screen key, e.g. /author/{id}
+    State:
+      name: state
+      in: query
+      schema: { type: string, maxLength: 300 }
+      description: "State key: empty for the page, tab:<names>, dialog:<title>"
   responses:
     Error:
       description: Error
@@ -249,7 +580,7 @@ components:
               error: { type: string }
               code:
                 type: string
-                enum: [bad_request, forbidden, not_found, too_large, rate_limited, csrf, invalid_key, invalid_token, internal, unhealthy, no_widget]
+                enum: [bad_request, forbidden, not_found, conflict, too_large, rate_limited, csrf, invalid_key, invalid_token, internal, unhealthy, no_widget]
   schemas:
     Status:
       type: string
@@ -266,12 +597,14 @@ components:
         kind: { type: string, enum: [user, agent] }
     Permissions:
       type: object
-      required: [view, comment, reply, moderate]
+      required: [view, comment, reply, moderate, map, collect]
       properties:
         view: { type: boolean }
         comment: { type: boolean }
         reply: { type: boolean }
         moderate: { type: boolean }
+        map: { type: boolean, description: Open the screen map and edit it }
+        collect: { type: boolean, description: Report screens and their look to the map (agents with the map scope crawl the app) }
     Session:
       type: object
       required: [visible]
@@ -290,11 +623,18 @@ components:
           properties:
             screenshotMaxBytes: { type: integer }
             bodyMaxLength: { type: integer }
+        map:
+          type: object
+          description: For those who build the screen map
+          properties:
+            mask: { type: string, enum: [none, inputs, text] }
+            snapshotMaxBytes: { type: integer }
     ThreadInput:
       type: object
       required: [route, url, body]
       properties:
         route: { type: string, maxLength: 2048, example: /campaigns }
+        screen: { type: string, maxLength: 512, description: "The screen of the map; by default the route with ids folded into {id}" }
         url: { type: string, maxLength: 2048 }
         title: { type: string, maxLength: 300 }
         kind: { $ref: "#/components/schemas/Kind" }
@@ -310,6 +650,7 @@ components:
         number: { type: integer }
         project: { type: string }
         route: { type: string }
+        screen: { type: string }
         url: { type: string }
         title: { type: string }
         kind: { $ref: "#/components/schemas/Kind" }
@@ -364,3 +705,118 @@ components:
         page: { type: integer }
         limit: { type: integer }
         total: { type: integer }
+    Point:
+      type: object
+      properties: { x: { type: number }, y: { type: number } }
+    Size:
+      type: object
+      required: [w, h]
+      properties: { w: { type: integer }, h: { type: integer } }
+    StateKind:
+      type: string
+      enum: [page, tab, dialog]
+    StateRef:
+      type: object
+      required: [screen]
+      properties:
+        screen: { type: string }
+        state: { type: string }
+    Via:
+      type: object
+      properties:
+        name: { type: string, description: Accessible name of the element }
+        kind: { type: string, enum: [link, button, tab, nav, auto] }
+        selector: { type: string, description: Finds the element in the snapshot of the state it is on }
+    EdgeInput:
+      type: object
+      required: [from, to]
+      properties:
+        from: { $ref: "#/components/schemas/StateRef" }
+        to: { $ref: "#/components/schemas/StateRef" }
+        via: { $ref: "#/components/schemas/Via" }
+        source: { type: string, enum: [observed, link, declared] }
+    Edge:
+      allOf:
+        - $ref: "#/components/schemas/EdgeInput"
+        - type: object
+          properties:
+            count: { type: integer, description: Reports of the transition (once per page load) }
+            lastSeen: { type: string, format: date-time }
+    Manifest:
+      type: object
+      required: [screens]
+      properties:
+        version: { type: integer, enum: [1] }
+        screens:
+          type: array
+          maxItems: 2000
+          items:
+            type: object
+            required: [key]
+            properties:
+              key:
+                type: string
+                maxLength: 512
+                description: A screen key or a route pattern; :id, [id], {id}, <id> and * fold into {id}
+              name: { type: string, maxLength: 120 }
+              section: { type: string, maxLength: 120 }
+              description: { type: string, maxLength: 4000 }
+              order: { type: integer }
+              hidden: { type: boolean }
+              states:
+                type: array
+                maxItems: 200
+                items:
+                  type: object
+                  required: [key]
+                  properties:
+                    key: { type: string, maxLength: 300, description: '"" the page, "tab:<names>", "dialog:<title>"' }
+                    name: { type: string, maxLength: 120 }
+                    description: { type: string, maxLength: 4000 }
+              to:
+                type: array
+                maxItems: 200
+                description: Declared transitions; an item may be just the target key
+                items:
+                  oneOf:
+                    - type: string
+                    - type: object
+                      required: [screen]
+                      properties:
+                        screen: { type: string, maxLength: 512 }
+                        state: { type: string, maxLength: 300 }
+                        from: { type: string, maxLength: 300, description: The state of this screen it leaves from }
+                        via: { type: string, maxLength: 200, description: The name of the button or link }
+                        kind: { type: string, enum: [link, button, tab, nav, auto] }
+    ScreenState:
+      type: object
+      properties:
+        key: { type: string }
+        kind: { $ref: "#/components/schemas/StateKind" }
+        name: { type: string }
+        description: { type: string }
+        hasShot: { type: boolean }
+        hasSnapshot: { type: boolean }
+        hash: { type: string }
+        viewport: { $ref: "#/components/schemas/Size" }
+        capturedAt: { type: string, format: date-time }
+        lastSeen: { type: string, format: date-time }
+    Screen:
+      type: object
+      properties:
+        key: { type: string }
+        name: { type: string }
+        section: { type: string }
+        description: { type: string }
+        title: { type: string, description: What the page called itself }
+        order: { type: integer }
+        exampleUrl: { type: string }
+        exampleRoute: { type: string }
+        roles: { type: array, items: { type: string } }
+        hidden: { type: boolean }
+        planned: { type: boolean, description: Declared, not seen yet }
+        position: { $ref: "#/components/schemas/Point" }
+        states: { type: array, items: { $ref: "#/components/schemas/ScreenState" } }
+        firstSeen: { type: string, format: date-time }
+        lastSeen: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }

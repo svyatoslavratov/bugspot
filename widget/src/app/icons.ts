@@ -16,6 +16,9 @@ import cross20 from '@blueprintjs/icons/lib/esm/generated/20px/paths/cross';
 import doubleCaret16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/double-caret-vertical';
 import edit16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/edit';
 import error16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/error';
+import gitMerge16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/git-merge';
+import layers16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/layers';
+import share16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/share';
 import eyeOff16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/eye-off';
 import eyeOpen16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/eye-open';
 import help16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/help';
@@ -25,6 +28,15 @@ import link16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/link';
 import mapMarker16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/map-marker';
 import maximize16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/maximize';
 import media16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/media';
+import map16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/map';
+import play16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/play';
+import pathSearch16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/path-search';
+import stop16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/stop';
+import import16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/import';
+import export16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/export';
+import more16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/more';
+import globeNetwork16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/globe-network';
+import desktop16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/desktop';
 import refresh16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/refresh';
 import robot16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/predictive-analysis';
 import search16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/search';
@@ -49,6 +61,9 @@ const icons16: Partial<Record<IconName, string[]>> = {
   'double-caret-vertical': doubleCaret16,
   edit: edit16,
   error: error16,
+  'git-merge': gitMerge16,
+  layers: layers16,
+  share: share16,
   'eye-off': eyeOff16,
   'eye-open': eyeOpen16,
   help: help16,
@@ -58,6 +73,15 @@ const icons16: Partial<Record<IconName, string[]>> = {
   'map-marker': mapMarker16,
   maximize: maximize16,
   media: media16,
+  map: map16,
+  play: play16,
+  'path-search': pathSearch16,
+  stop: stop16,
+  import: import16,
+  export: export16,
+  more: more16,
+  'globe-network': globeNetwork16,
+  desktop: desktop16,
   refresh: refresh16,
   'predictive-analysis': robot16,
   search: search16,

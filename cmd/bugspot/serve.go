@@ -55,7 +55,7 @@ func (a *app) serve(args []string) error {
 	api := httpapi.New(httpapi.Options{
 		Project: cfg.Project, Enabled: cfg.Enabled, Store: st, Chain: chain, Keys: keys, Policy: cfg.Policy,
 		AllowedOrigins: cfg.AllowedOrigins, TrustedProxies: cfg.TrustedProxies, CookieSecure: cfg.CookieSecure,
-		KeyTTL: cfg.KeyTTL, ScreenshotMaxBytes: cfg.ScreenshotMaxBytes, RateRead: cfg.RateRead, RateWrite: cfg.RateWrite,
+		KeyTTL: cfg.KeyTTL, ScreenshotMaxBytes: cfg.ScreenshotMaxBytes, MapMask: cfg.MapMask, RateRead: cfg.RateRead, RateWrite: cfg.RateWrite,
 		Widget: widgetfs.FS(), Version: version, Logger: logger,
 	})
 	srv := &http.Server{
@@ -72,7 +72,8 @@ func (a *app) serve(args []string) error {
 	go func() { errs <- srv.ListenAndServe() }()
 	logger.Info("bugspot started", "addr", cfg.Addr, "version", version, "project", cfg.Project,
 		"providers", cfg.Providers, "view", cfg.Policy.View.String(), "comment", cfg.Policy.Comment.String(),
-		"moderate", cfg.Policy.Moderate.String(), "backups", backup.Describe(backups))
+		"moderate", cfg.Policy.Moderate.String(), "map", cfg.Policy.Map.String(), "map_collect", cfg.Policy.Collect.String(),
+		"map_mask", cfg.MapMask, "backups", backup.Describe(backups))
 	if cfg.BackupDir != "" {
 		go backup.Run(ctx, backups)
 	}

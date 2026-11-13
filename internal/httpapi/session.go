@@ -18,6 +18,13 @@ type sessionLimits struct {
 	BodyMaxLength      int   `json:"bodyMaxLength"`
 }
 
+// sessionMap tells the widget how to report screens to the map; only for those who build it.
+type sessionMap struct {
+	// Mask is what DOM snapshots hide: inputs, text or none.
+	Mask             string `json:"mask"`
+	SnapshotMaxBytes int64  `json:"snapshotMaxBytes"`
+}
+
 // sessionBody tells the loader whether to show the widget; hidden answers carry nothing else.
 type sessionBody struct {
 	Visible bool              `json:"visible"`
@@ -25,6 +32,7 @@ type sessionBody struct {
 	User    *sessionUser      `json:"user,omitempty"`
 	Can     *auth.Permissions `json:"can,omitempty"`
 	Limits  *sessionLimits    `json:"limits,omitempty"`
+	Map     *sessionMap       `json:"map,omitempty"`
 }
 
 func (s *Server) sessionOf(c caller) sessionBody {
@@ -32,13 +40,17 @@ func (s *Server) sessionOf(c caller) sessionBody {
 		return sessionBody{Visible: false}
 	}
 	perms := c.perms
-	return sessionBody{
+	body := sessionBody{
 		Visible: true,
 		Project: s.o.Project,
 		User:    &sessionUser{ID: c.id.ID, Name: c.id.Name, Provider: c.id.Provider},
 		Can:     &perms,
 		Limits:  &sessionLimits{ScreenshotMaxBytes: s.o.ScreenshotMaxBytes, BodyMaxLength: maxBody},
 	}
+	if perms.Collect {
+		body.Map = &sessionMap{Mask: s.mapMask(), SnapshotMaxBytes: maxSnapshot}
+	}
+	return body
 }
 
 func (s *Server) session(w http.ResponseWriter, r *http.Request, c caller) error {

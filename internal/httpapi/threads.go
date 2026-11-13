@@ -110,7 +110,8 @@ func (s *Server) listThreads(w http.ResponseWriter, r *http.Request, c caller) e
 		return errForbidden
 	}
 	q := r.URL.Query()
-	f := domain.ThreadFilter{Project: s.o.Project, Route: q.Get("route"), Kind: domain.Kind(q.Get("kind")), Query: strings.TrimSpace(q.Get("q"))}
+	f := domain.ThreadFilter{Project: s.o.Project, Route: q.Get("route"), Screen: q.Get("screen"),
+		Kind: domain.Kind(q.Get("kind")), Query: strings.TrimSpace(q.Get("q"))}
 	for _, st := range strings.Split(q.Get("status"), ",") {
 		if st == "" {
 			continue
@@ -142,7 +143,8 @@ func (s *Server) summary(w http.ResponseWriter, r *http.Request, c caller) error
 	if !c.perms.View {
 		return errForbidden
 	}
-	sum, err := s.o.Store.Summary(r.Context(), s.o.Project, r.URL.Query().Get("route"))
+	q := r.URL.Query()
+	sum, err := s.o.Store.Summary(r.Context(), s.o.Project, q.Get("route"), q.Get("screen"))
 	if err != nil {
 		return err
 	}
@@ -151,7 +153,9 @@ func (s *Server) summary(w http.ResponseWriter, r *http.Request, c caller) error
 }
 
 type threadInput struct {
-	Route      string          `json:"route"`
+	Route string `json:"route"`
+	// Screen is the screen of the map the thread belongs to; by default the route with ids folded.
+	Screen     string          `json:"screen"`
 	URL        string          `json:"url"`
 	Title      string          `json:"title"`
 	Kind       domain.Kind     `json:"kind"`
@@ -203,6 +207,12 @@ func (in *threadInput) check() error {
 	if !strings.HasPrefix(in.Route, "/") {
 		return badRequest("route must start with /")
 	}
+	if in.Screen, err = checkText("screen", in.Screen, maxScreenKey, false); err != nil {
+		return err
+	}
+	if in.Screen == "" {
+		in.Screen = domain.ScreenKey(in.Route)
+	}
 	if in.URL, err = checkText("url", in.URL, maxRoute, true); err != nil {
 		return err
 	}
@@ -248,7 +258,7 @@ func (s *Server) createThread(w http.ResponseWriter, r *http.Request, c caller) 
 	}
 	now := s.o.Now().UTC()
 	t := domain.Thread{
-		ID: secret.ID(), Project: s.o.Project, Route: in.Route, URL: in.URL, Title: in.Title,
+		ID: secret.ID(), Project: s.o.Project, Route: in.Route, Screen: in.Screen, URL: in.URL, Title: in.Title,
 		Kind: in.Kind, Status: domain.StatusOpen, Body: in.Body, Anchor: in.Anchor, Context: in.Context,
 		Author: author, CreatedAt: now, UpdatedAt: now,
 	}

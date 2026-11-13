@@ -41,6 +41,8 @@ export interface Anchor {
    * level, so readers that know one element keep working.
    */
   more?: ElementAnchor[];
+  /** The state of the screen (a tab or a dialog) a comment left on the screen map was made in. */
+  state?: string;
 }
 
 /** A window that comes and goes over the page: a dialog (modal, alert) or a popup (menu, list). */
@@ -97,6 +99,8 @@ export interface Thread {
   number: number;
   project: string;
   route: string;
+  /** The screen of the map; a comment left on the map shows on every page of it. */
+  screen?: string;
   url: string;
   title: string;
   kind: Kind;
@@ -134,6 +138,10 @@ export interface Permissions {
   comment: boolean;
   reply: boolean;
   moderate: boolean;
+  /** Open the screen map and edit it. */
+  map?: boolean;
+  /** Report screens and their look to the map while browsing. */
+  collect?: boolean;
 }
 
 export interface Session {
@@ -142,6 +150,8 @@ export interface Session {
   user?: { id: string; name: string; provider: string };
   can?: Permissions;
   limits?: { screenshotMaxBytes: number; bodyMaxLength: number };
+  /** For those who build the screen map: what snapshots hide and how big they may be. */
+  map?: { mask: 'none' | 'inputs' | 'text'; snapshotMaxBytes: number };
 }
 
 export interface Summary {
@@ -156,6 +166,7 @@ export interface Page<T> {
 
 export interface ThreadInput {
   route: string;
+  screen?: string;
   url: string;
   title: string;
   kind: Kind;
@@ -167,6 +178,8 @@ export interface ThreadInput {
 
 export interface ThreadQuery {
   route?: string;
+  /** With route: threads of the route or of the screen. */
+  screen?: string;
   status?: Status[];
   kind?: Kind;
   q?: string;
@@ -185,8 +198,137 @@ export interface Settings {
   hotkey: string;
   /** Route mode: path, the hash path of a hash router, or auto (hash when the hash starts with #/). */
   route: 'auto' | 'path' | 'hash';
+  /** Query parameters that make different screens on the map (data-route-params), e.g. ["tab"]. */
+  routeParams: string[];
   appVersion?: string;
   theme: 'light' | 'dark' | 'auto';
   lang: 'ru' | 'en';
   position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+}
+
+// The screen map.
+
+export type StateKind = 'page' | 'tab' | 'dialog';
+export type EdgeSource = 'observed' | 'link' | 'declared';
+
+export interface StateRef {
+  screen: string;
+  state: string;
+}
+
+export interface ScreenState {
+  key: string;
+  kind: StateKind;
+  name: string;
+  description: string;
+  hasShot: boolean;
+  hasSnapshot: boolean;
+  hash?: string;
+  viewport?: { w: number; h: number };
+  capturedAt?: string;
+  lastSeen?: string;
+}
+
+export interface Screen {
+  key: string;
+  name: string;
+  section: string;
+  description: string;
+  title: string;
+  order: number;
+  exampleUrl?: string;
+  exampleRoute?: string;
+  roles: string[];
+  hidden: boolean;
+  planned: boolean;
+  position?: { x: number; y: number };
+  states: ScreenState[];
+  firstSeen?: string;
+  lastSeen?: string;
+  updatedAt: string;
+}
+
+export interface Edge {
+  from: StateRef;
+  to: StateRef;
+  via: { name: string; kind: 'link' | 'button' | 'tab' | 'nav' | 'auto'; selector: string };
+  source: EdgeSource;
+  count: number;
+  lastSeen: string;
+}
+
+export interface ScreenMap {
+  screens: Screen[];
+  edges: Edge[];
+  aliases: Record<string, string>;
+  /** Threads that still need work, by screen and status. */
+  threads: Record<string, Partial<Record<Status, number>>>;
+}
+
+export interface VisitInput {
+  screen: string;
+  state: string;
+  kind: StateKind;
+  name: string;
+  title?: string;
+  url?: string;
+  route?: string;
+}
+
+export interface EdgeInput {
+  from: StateRef;
+  to: StateRef;
+  via: { name: string; kind: Edge['via']['kind']; selector: string };
+  source: EdgeSource;
+}
+
+export interface CaptureInfo extends StateRef {
+  hash?: string;
+  hasShot: boolean;
+  capturedAt?: string;
+}
+
+export interface SnapshotInput {
+  html: string;
+  css: string[];
+  outline: object;
+  viewport: { w: number; h: number };
+  hash: string;
+}
+
+export interface SnapshotData extends StateRef {
+  html: string;
+  css: Record<string, string>;
+  outline: object;
+  viewport: { w: number; h: number };
+  capturedAt: string;
+}
+
+export interface ScreenPatch {
+  key: string;
+  name?: string;
+  section?: string;
+  description?: string;
+  order?: number;
+  hidden?: boolean;
+  position?: { x: number; y: number };
+  mergeInto?: string;
+}
+
+/** What `bugspot map crawl` puts on the page before it loads (window.__bugspotCrawl). */
+export interface CrawlConfig {
+  /** An agent token with the read and map scopes: the crawl acts with it. */
+  token?: string;
+  /** Crawl at once, without asking. */
+  auto?: boolean;
+  buttons?: boolean;
+  maxScreens?: number;
+}
+
+/** What applying a manifest changed. */
+export interface ImportResult {
+  created: number;
+  updated: number;
+  states: number;
+  edges: number;
 }

@@ -35,7 +35,8 @@
 .bugspot-panel,
 .bugspot-pin,
 .bugspot-quick,
-.bugspot-pick-bar {
+.bugspot-pick-bar,
+.bugspot-crawl {
   pointer-events: auto;
 }
 
@@ -551,4 +552,98 @@ button.bugspot-thread-body.is-editable:hover,
 button.bugspot-thread-body.is-editable:focus-visible {
   border-color: rgb(45 114 210 / 45%);
   background: rgb(45 114 210 / 5%);
+}
+
+/* Building the map: the app walked in a frame, shown smaller, over the page. */
+.bugspot-crawl {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4vh 16px;
+  background: rgba(17, 20, 24, 0.45);
+  overflow: auto;
+}
+.bugspot-crawl-card.bp6-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(86vw, 100%);
+  padding: 16px;
+}
+.bugspot-crawl-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.bugspot-crawl-head h5 {
+  margin: 0;
+}
+.bugspot-crawl-options p {
+  margin: 0 0 8px;
+}
+.bugspot-crawl-field,
+.bugspot-crawl-max {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bugspot-crawl-field > span,
+.bugspot-crawl-max > span {
+  white-space: nowrap;
+}
+.bugspot-crawl-max .bp6-input-group {
+  width: 90px;
+}
+.bugspot-crawl-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  margin-top: 10px;
+}
+.bugspot-crawl-row .bp6-checkbox {
+  margin: 0;
+}
+.bugspot-crawl-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bugspot-crawl-status .bp6-callout {
+  box-sizing: border-box;
+}
+.bugspot-crawl-current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #5f6b7c;
+}
+.bugspot-crawl-actions {
+  display: flex;
+  gap: 8px;
+}
+.bugspot-crawl-actions:empty {
+  display: none;
+}
+.bugspot-crawl-view {
+  position: relative;
+  overflow: hidden;
+  align-self: center;
+  border: 1px solid #d3d8de;
+  border-radius: 4px;
+  background: #f6f7f9;
+}
+.bugspot-crawl-view iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 0;
+  transform-origin: 0 0;
+  background: #fff;
+  /* A preview: the crawler presses, people watch. */
+  pointer-events: none;
 }

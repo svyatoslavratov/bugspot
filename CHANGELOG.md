@@ -5,6 +5,44 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [Unreleased]
 
+### Added
+
+- A map of the screens at `/map`. While people use the app, the widget records its screens (routes
+  with ids folded to `{id}`), their tabs and windows, which button or link leads where, and how each
+  state really looks: a thumbnail and a DOM snapshot without scripts, taken again when the layout
+  changes. The map lays screens out in sections along their transitions; a snapshot opens as a
+  clickable page whose known controls follow the transitions, and a comment on it pins to the real
+  page too. Screens are named, grouped, described, hidden and merged on the map or by an agent.
+  `BUGSPOT_MAP` (default: who moderates) opens it, `BUGSPOT_MAP_COLLECT` (default: who sees the
+  widget) builds it, `BUGSPOT_MAP_MASK` sets what snapshots hide. Optional hints:
+  `data-bugspot-screen`, `data-route-params`, `data-bugspot-to`, `data-bugspot-nav`,
+  `data-bugspot-mask`, `data-bugspot-ignore`.
+- MCP tools for the map, behind the new `map` token scope: `get_map`, `get_screen`,
+  `get_screen_image`, `update_screens`, `update_states`, `add_screen`, `add_edge`.
+- Threads remember their screen (`screen`), and lists and summaries filter by it, so a comment left
+  on `/author/1` shows on `/author/2` when it is about the screen.
+- Building the map at once: *Screen map → Build the map…* in the widget walks the app in a frame of
+  its origin (or a window when frames are refused) — links, tabs, windows that buttons promise, the
+  first clickable row of each table — and records every state with its look. Only reads leave the
+  walked app (other requests fail; the headless crawl stops them in the browser too), it never
+  presses buttons named like deleting, sending, saving, paying or signing out, forms do not submit,
+  and `confirm()` answers no; more buttons only when asked or marked with `data-bugspot-crawl`.
+  `bugspot map crawl <url>` runs the same crawl in headless Chrome with an agent token (read and
+  map scopes), with `--cookie`, `--header`, `--profile`, `--buttons` and `--widget`; agents with the
+  map scope may now report to the map.
+- The live app on the map: a screen opens as its snapshot or as the real app in a frame, and the
+  map follows the screen the app's widget reports. The map page lets the allowed origins into its
+  frames.
+- A manifest of the map (`GET`/`POST /api/v1/map/manifest`, `bugspot map export|import`, and the map's
+  menu): names, sections, descriptions, state descriptions and declared transitions as a JSON file;
+  route patterns (`/authors/:id`) fold into screen keys, unknown screens become planned.
+- The widget's panel opens the map at the current screen.
+
+### Fixed
+
+- Widget chunks served to an app on another origin failed to load as modules: `/assets/` now sends
+  `Access-Control-Allow-Origin: *`.
+
 ## [0.3.2] - 2026-11-07
 
 ### Fixed
