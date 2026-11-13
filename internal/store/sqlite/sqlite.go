@@ -152,7 +152,7 @@ func authorJSON(a *domain.Author) any {
 
 const threadColumns = `id, number, project, route, url, title, kind, status, status_by, status_at, body,
 	anchor, context, author_id, author_name, author_kind, has_screenshot, reply_count, created_at, updated_at,
-	verified_by, verified_at`
+	verified_by, verified_at, screen`
 
 type scanner interface{ Scan(dest ...any) error }
 
@@ -167,7 +167,7 @@ func scanThread(row scanner) (domain.Thread, error) {
 	)
 	err := row.Scan(&t.ID, &t.Number, &t.Project, &t.Route, &t.URL, &t.Title, &kind, &status,
 		&statusBy, &statusAt, &t.Body, &anchor, &context, &t.Author.ID, &t.Author.Name, &author,
-		&t.HasScreenshot, &t.ReplyCount, &created, &updated, &verifiedBy, &verified)
+		&t.HasScreenshot, &t.ReplyCount, &created, &updated, &verifiedBy, &verified, &t.Screen)
 	if errors.Is(err, sql.ErrNoRows) {
 		return t, domain.ErrNotFound
 	}
@@ -213,11 +213,11 @@ func (s *Store) CreateThread(ctx context.Context, t *domain.Thread) error {
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO threads (`+threadColumns+`, search)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		t.ID, t.Number, t.Project, t.Route, t.URL, t.Title, string(t.Kind), string(t.Status),
 		authorJSON(t.StatusBy), optTS(t.StatusAt), t.Body, rawOrEmpty(t.Anchor), rawOrEmpty(t.Context),
 		t.Author.ID, t.Author.Name, string(t.Author.Kind), t.HasScreenshot, t.ReplyCount,
-		ts(t.CreatedAt), ts(t.UpdatedAt), authorJSON(t.VerifiedBy), optTS(t.VerifiedAt), searchText(t))
+		ts(t.CreatedAt), ts(t.UpdatedAt), authorJSON(t.VerifiedBy), optTS(t.VerifiedAt), t.Screen, searchText(t))
 	if err != nil {
 		return err
 	}
@@ -227,9 +227,16 @@ func (s *Store) CreateThread(ctx context.Context, t *domain.Thread) error {
 func where(f domain.ThreadFilter) (string, []any) {
 	clauses := []string{"project = ?", "deleted_at IS NULL"}
 	args := []any{f.Project}
-	if f.Route != "" {
+	switch {
+	case f.Route != "" && f.Screen != "":
+		clauses = append(clauses, "(route = ? OR screen = ?)")
+		args = append(args, f.Route, f.Screen)
+	case f.Route != "":
 		clauses = append(clauses, "route = ?")
 		args = append(args, f.Route)
+	case f.Screen != "":
+		clauses = append(clauses, "screen = ?")
+		args = append(args, f.Screen)
 	}
 	if len(f.Statuses) > 0 {
 		marks := strings.TrimSuffix(strings.Repeat("?, ", len(f.Statuses)), ", ")
@@ -280,10 +287,10 @@ func (s *Store) ListThreads(ctx context.Context, f domain.ThreadFilter) ([]domai
 }
 
 // Summary implements store.Store.
-func (s *Store) Summary(ctx context.Context, project, route string) (domain.Summary, error) {
+func (s *Store) Summary(ctx context.Context, project, route, screen string) (domain.Summary, error) {
 	sum := store.EmptySummary()
-	rows, err := s.db.QueryContext(ctx, `SELECT status, count(*), sum(route = ?) FROM threads
-		WHERE project = ? AND deleted_at IS NULL GROUP BY status`, route, project)
+	rows, err := s.db.QueryContext(ctx, `SELECT status, count(*), sum(route = ? OR (screen <> '' AND screen = ?)) FROM threads
+		WHERE project = ? AND deleted_at IS NULL GROUP BY status`, route, screen, project)
 	if err != nil {
 		return sum, err
 	}
@@ -297,7 +304,7 @@ func (s *Store) Summary(ctx context.Context, project, route string) (domain.Summ
 			return sum, err
 		}
 		sum.Total[domain.Status(status)] = total
-		if route != "" {
+		if route != "" || screen != "" {
 			sum.Route[domain.Status(status)] = onPage
 		}
 	}

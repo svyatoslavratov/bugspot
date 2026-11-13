@@ -1,4 +1,13 @@
 import type {
+  CaptureInfo,
+  ImportResult,
+  EdgeInput,
+  ScreenMap,
+  ScreenPatch,
+  SnapshotData,
+  SnapshotInput,
+  StateRef,
+  VisitInput,
   Page,
   Session,
   Status,
@@ -32,11 +41,19 @@ export class ApiError extends Error {
 
 export type Api = ReturnType<typeof createApi>;
 
+const stateQuery = (ref: StateRef) => new URLSearchParams({ screen: ref.screen, state: ref.state }).toString();
+
 export function createApi(options: ApiOptions) {
   const base = options.base.endsWith('/') ? options.base : `${options.base}/`;
   const doFetch = options.fetch ?? window.fetch.bind(window);
 
-  async function request(method: string, path: string, body?: BodyInit, json = true): Promise<Response> {
+  async function request(
+    method: string,
+    path: string,
+    body?: BodyInit,
+    json = true,
+    keepalive = false,
+  ): Promise<Response> {
     const headers: Record<string, string> = {};
     if (method !== 'GET') headers['X-Bugspot-Request'] = '1';
     if (body !== undefined && json) headers['Content-Type'] = 'application/json';
@@ -44,7 +61,7 @@ export function createApi(options: ApiOptions) {
     if (token) headers['X-Bugspot-Token'] = token;
     let res: Response;
     try {
-      res = await doFetch(base + path, { method, headers, body, credentials: 'include' });
+      res = await doFetch(base + path, { method, headers, body, credentials: 'include', keepalive });
     } catch (cause) {
       throw new ApiError(0, 'network', cause instanceof Error ? cause.message : 'Network error');
     }
@@ -63,6 +80,7 @@ export function createApi(options: ApiOptions) {
   const query = (q: ThreadQuery) => {
     const params = new URLSearchParams();
     if (q.route) params.set('route', q.route);
+    if (q.screen) params.set('screen', q.screen);
     if (q.status?.length) params.set('status', q.status.join(','));
     if (q.kind) params.set('kind', q.kind);
     if (q.q) params.set('q', q.q);
@@ -78,7 +96,8 @@ export function createApi(options: ApiOptions) {
     openKey: (key: string) => send<Session>('POST', 'api/v1/session/key', { key }),
     closeKey: () => send<void>('DELETE', 'api/v1/session/key'),
     threads: (q: ThreadQuery) => send<Page<Thread>>('GET', `api/v1/threads${query(q)}`),
-    summary: (route: string) => send<Summary>('GET', `api/v1/threads/summary${query({ route })}`),
+    summary: (route: string, screen?: string) =>
+      send<Summary>('GET', `api/v1/threads/summary${query({ route, screen })}`),
     thread: (id: string) => send<ThreadDetail>('GET', `api/v1/threads/${encodeURIComponent(id)}`),
     create: (input: ThreadInput) => send<Thread>('POST', 'api/v1/threads', input),
     update: (id: string, patch: { status?: Status; body?: string; kind?: Kind; verified?: boolean }) =>
@@ -91,5 +110,33 @@ export function createApi(options: ApiOptions) {
     },
     screenshot: async (id: string) =>
       (await request('GET', `api/v1/threads/${encodeURIComponent(id)}/screenshot`)).blob(),
+
+    // The screen map.
+    map: () => send<ScreenMap>('GET', 'api/v1/map'),
+    captures: () => send<{ states: CaptureInfo[]; aliases: Record<string, string> }>('GET', 'api/v1/map/captures'),
+    visits: async (visits: VisitInput[], edges: EdgeInput[], keepalive = false) => {
+      await request('POST', 'api/v1/map/visits', JSON.stringify({ visits, edges }), true, keepalive);
+    },
+    missingAssets: (hashes: string[]) => send<{ missing: string[] }>('POST', 'api/v1/map/assets/missing', { hashes }),
+    putAsset: async (hash: string, css: string) => {
+      await request('PUT', `api/v1/map/assets/${hash}`, new Blob([css], { type: 'text/css' }), false);
+    },
+    putShot: async (ref: StateRef, image: Blob) => {
+      await request('PUT', `api/v1/map/shot?${stateQuery(ref)}`, image, false);
+    },
+    shot: async (ref: StateRef) => (await request('GET', `api/v1/map/shot?${stateQuery(ref)}`)).blob(),
+    putSnapshot: async (ref: StateRef, snapshot: SnapshotInput) => {
+      await request('PUT', `api/v1/map/snapshot?${stateQuery(ref)}`, JSON.stringify(snapshot));
+    },
+    snapshot: (ref: StateRef) => send<SnapshotData>('GET', `api/v1/map/snapshot?${stateQuery(ref)}`),
+    patchScreens: (patches: ScreenPatch[]) => send<void>('PATCH', 'api/v1/map/screens', patches),
+    patchStates: (patches: { screen: string; state: string; name?: string; description?: string }[]) =>
+      send<void>('PATCH', 'api/v1/map/states', patches),
+    /** The manifest of the map as the service writes it (pretty JSON text). */
+    exportManifest: async () => JSON.stringify(await send<unknown>('GET', 'api/v1/map/manifest'), null, 2),
+    importManifest: async (text: string) => {
+      const res = await request('POST', 'api/v1/map/manifest', text);
+      return (await res.json()) as ImportResult;
+    },
   };
 }

@@ -35,7 +35,7 @@ function highlight(ctx: CanvasRenderingContext2D, scale: number, marks: { rect: 
 }
 
 /** Fits the image under maxBytes: WebP (or JPEG), lowering quality, then size. */
-async function fit(source: HTMLCanvasElement, maxBytes: number): Promise<Blob> {
+export async function fit(source: HTMLCanvasElement, maxBytes: number): Promise<Blob> {
   let canvas = source;
   for (let attempt = 0; attempt < 6; attempt++) {
     for (const quality of [0.85, 0.7, 0.55]) {
@@ -104,4 +104,31 @@ export async function captureTab(maxBytes: number): Promise<Shot> {
   } finally {
     stream.getTracks().forEach((t) => t.stop());
   }
+}
+
+/**
+ * A real thumbnail of the page for the screen map: the top of the document as the window shows
+ * it, rendered from the DOM about width pixels wide, without the widget. doc may be the document of
+ * a same-origin frame: the crawler takes looks of the app it walks in one.
+ */
+export async function captureThumbnail(
+  exclude: Element | null,
+  width: number,
+  maxBytes: number,
+  doc: Document = document,
+): Promise<Blob> {
+  const { domToCanvas } = await import('modern-screenshot');
+  const win = doc.defaultView ?? window;
+  const scale = Math.min(1, width / win.innerWidth);
+  const canvas = await domToCanvas(doc.documentElement, {
+    width: win.innerWidth,
+    height: win.innerHeight,
+    scale,
+    backgroundColor: (doc.body && win.getComputedStyle(doc.body).backgroundColor) || '#ffffff',
+    filter: (node) => node !== exclude,
+    features: { restoreScrollPosition: true },
+    timeout: 8000,
+    workerNumber: 0,
+  });
+  return fit(canvas, maxBytes);
 }

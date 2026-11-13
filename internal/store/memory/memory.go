@@ -30,6 +30,8 @@ type state struct {
 	Replies     []domain.Reply        `json:"replies"`
 	Screenshots map[string]screenshot `json:"screenshots"`
 	Credentials []credential          `json:"credentials"`
+	// Maps are the screen maps by project.
+	Maps map[string]*screenMap `json:"maps,omitempty"`
 }
 
 // credential keeps the hash in the export, which domain.Credential hides from JSON.
@@ -65,6 +67,9 @@ func (m *Store) Import(data []byte) error {
 	if s.Screenshots == nil {
 		s.Screenshots = map[string]screenshot{}
 	}
+	for _, sm := range s.Maps {
+		sm.afterImport()
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.s = s
@@ -95,8 +100,13 @@ func (m *Store) CreateThread(_ context.Context, t *domain.Thread) error {
 	return nil
 }
 
+// onPage reports whether t belongs to the page of a route or a screen (either, when both given).
+func onPage(t domain.Thread, route, screen string) bool {
+	return (route != "" && t.Route == route) || (screen != "" && t.Screen == screen)
+}
+
 func matches(t domain.Thread, f domain.ThreadFilter) bool {
-	if t.Project != f.Project || (f.Route != "" && t.Route != f.Route) {
+	if t.Project != f.Project || ((f.Route != "" || f.Screen != "") && !onPage(t, f.Route, f.Screen)) {
 		return false
 	}
 	if len(f.Statuses) > 0 && !slices.Contains(f.Statuses, t.Status) {
@@ -133,7 +143,7 @@ func (m *Store) ListThreads(_ context.Context, f domain.ThreadFilter) ([]domain.
 }
 
 // Summary implements store.Store.
-func (m *Store) Summary(_ context.Context, project, route string) (domain.Summary, error) {
+func (m *Store) Summary(_ context.Context, project, route, screen string) (domain.Summary, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	s := store.EmptySummary()
@@ -142,7 +152,7 @@ func (m *Store) Summary(_ context.Context, project, route string) (domain.Summar
 			continue
 		}
 		s.Total[t.Status]++
-		if route != "" && t.Route == route {
+		if onPage(t.Thread, route, screen) {
 			s.Route[t.Status]++
 		}
 	}

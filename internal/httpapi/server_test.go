@@ -390,7 +390,8 @@ func TestWidgetFiles(t *testing.T) {
 	}
 	asset := e.do(call{method: "GET", path: "/assets/app-1.js"})
 	if asset.Code != 200 || !strings.Contains(asset.Header().Get("Cache-Control"), "immutable") ||
-		!strings.HasPrefix(asset.Header().Get("Content-Type"), "text/javascript") {
+		!strings.HasPrefix(asset.Header().Get("Content-Type"), "text/javascript") ||
+		asset.Header().Get("Access-Control-Allow-Origin") != "*" {
 		t.Fatalf("asset: %d %v", asset.Code, asset.Header())
 	}
 	for _, p := range []string{"/assets/..%2fwidget.js", "/assets/missing.js"} {

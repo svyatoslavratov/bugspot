@@ -64,6 +64,45 @@ labels:
 - Source locations: if your dev build adds `data-bugspot-src="src/pages/Campaigns.tsx:42"` to
   elements, threads keep it, so an agent opens the right file at once.
 
+## The screen map
+
+Nothing to set up: once someone allowed by `BUGSPOT_MAP_COLLECT` uses the app, the map at
+`<bugspot>/map` fills with its screens, tabs and windows, the transitions between them and their
+real looks. It only reads addresses, the DOM and ARIA, so it does not care about the framework.
+Hints for what it cannot see, all optional:
+
+- `data-bugspot-screen="author-card"` on any element names the screen when the address does not
+  tell screens apart (one route for several pages, a wizard on one address).
+- `data-route-params="tab,view"` on the script tag lists the query parameters that make different
+  screens. Others are dropped from the key, so `?tab=` stays a state of one screen.
+- `data-bugspot-to="/reports"` on a button or link declares where it leads, for transitions that
+  happen only after a save or a confirmation.
+- `data-bugspot-nav` marks the app's own menu, so its links do not tie every screen to every other
+  one (`nav`, `aside` and `header` count already).
+- `data-bugspot-mask` hides an element's text and values in DOM snapshots; `BUGSPOT_MAP_MASK`
+  sets what is hidden everywhere (`inputs` by default).
+- `data-bugspot-ignore` keeps an element out of snapshots and out of the map.
+
+Real tabs (`role="tab"` with `aria-selected`) and windows (`role="dialog"` with a title or
+`aria-modal`, `<dialog open>`) become states of the screen by themselves; popups that call
+themselves dialogs without either (date pickers, sort menus) do not.
+
+**Building the map at once.** The crawl (*Build the map* in the widget, or `bugspot map crawl`)
+lets only reads out of the app it walks: `fetch`, `XMLHttpRequest` and `sendBeacon` refuse anything
+else, and the headless crawl fails such requests in the browser as well, so pressing a button that
+saves at once (a rating, a toggle) changes nothing. It opens the app in a frame of its own origin, so `X-Frame-Options: SAMEORIGIN` is fine; with `DENY`
+or `frame-ancestors 'none'` the widget offers a separate window instead. The widget does not start
+inside the crawler's frame (its name begins with `bugspot-crawl`). Mark buttons that open windows
+with `aria-haspopup="dialog"` or `data-bugspot-crawl` so the crawl presses them by default, and
+`data-bugspot-crawl="skip"` on any it must leave alone.
+
+**The live app on the map** is the app in a frame of the map page: allow the bugspot origin in your
+app's `frame-ancestors` (nothing to do when bugspot is under the app's domain, `/bugspot/`), and keep
+the app in `BUGSPOT_ALLOWED_ORIGINS` — the map lets those origins into its frames. Cookies of the
+app reach the frame when the map is on the same site (same registrable domain); the widget inside
+tells the map which screen it is on. Snapshots keep the page's styles, so stylesheets on another
+origin need CORS to be read; without it the snapshot falls back to the stylesheet's address.
+
 ## forward: your app's session
 
 Your app needs an endpoint that answers who the current user is, by the session cookie:

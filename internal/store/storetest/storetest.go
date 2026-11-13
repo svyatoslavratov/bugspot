@@ -31,6 +31,11 @@ func Run(t *testing.T, open func(t *testing.T) store.Store) {
 	t.Run("threads", func(t *testing.T) { threads(t, open(t)) })
 	t.Run("replies and screenshots", func(t *testing.T) { replies(t, open(t)) })
 	t.Run("credentials", func(t *testing.T) { credentials(t, open(t)) })
+	t.Run("threads of a screen", func(t *testing.T) { screenThreads(t, open(t)) })
+	t.Run("screen map", func(t *testing.T) { screenMap(t, open(t)) })
+	t.Run("merging screens", func(t *testing.T) { mergeScreens(t, open(t)) })
+	t.Run("looks of states", func(t *testing.T) { looks(t, open(t)) })
+	t.Run("importing a manifest", func(t *testing.T) { importMap(t, open(t)) })
 }
 
 func threads(t *testing.T, s store.Store) {
@@ -100,7 +105,7 @@ func threads(t *testing.T, s store.Store) {
 	if len(list) != 1 || list[0].ID != "t1" {
 		t.Fatalf("status filter = %v", ids(list))
 	}
-	sum, err := s.Summary(ctx, "p", "/a")
+	sum, err := s.Summary(ctx, "p", "/a", "")
 	if err != nil || sum.Total[domain.StatusOpen] != 2 || sum.Total[domain.StatusFixed] != 1 ||
 		sum.Route[domain.StatusOpen] != 1 || sum.Route[domain.StatusWontfix] != 0 {
 		t.Fatalf("summary = %+v, %v", sum, err)

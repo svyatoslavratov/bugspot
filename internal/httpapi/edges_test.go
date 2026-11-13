@@ -20,7 +20,7 @@ import (
 // brokenStore fails the health check and panics on lists.
 type brokenStore struct{ *memory.Store }
 
-func (brokenStore) Summary(context.Context, string, string) (domain.Summary, error) {
+func (brokenStore) Summary(context.Context, string, string, string) (domain.Summary, error) {
 	return domain.Summary{}, errors.New("disk on fire")
 }
 

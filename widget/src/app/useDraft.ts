@@ -9,6 +9,8 @@ import type { Pick } from './Picker';
 /** The picked elements a new comment is about. */
 export interface Target {
   picks: Pick[];
+  /** The screen of the map the page belongs to. */
+  screen?: string;
   anchor: Anchor;
   context: PageContext;
 }
@@ -76,6 +78,7 @@ export function useDraft(target: Target, route: string, initial?: Draft) {
     try {
       const thread = await api.create({
         route,
+        screen: target.screen,
         url: location.href,
         title: document.title.slice(0, 300),
         kind,

@@ -21,11 +21,15 @@ const usage = `bugspot — pinned page comments for your team and your agents.
 Usage:
   bugspot [serve]                     run the service (settings: BUGSPOT_* variables)
   bugspot healthcheck                 exit 0 when the local service answers /healthz
-  bugspot token create|list|revoke    API tokens for agents (scopes read, reply, status)
+  bugspot token create|list|revoke    API tokens for agents (scopes read, reply, status, map)
   bugspot key create|list|revoke      access keys for people without an account in your app
   bugspot threads list|show|reply|status|screenshot
                                       read and answer threads over the API (BUGSPOT_URL, BUGSPOT_TOKEN)
   bugspot mcp                         an MCP server on stdio for agents (BUGSPOT_URL, BUGSPOT_TOKEN)
+  bugspot map crawl <app address>     walk the app in Chrome without a window and build the screen map
+                                      (BUGSPOT_TOKEN with the read and map scopes)
+  bugspot map export|import           the manifest of the map: names, sections, descriptions, transitions
+                                      (BUGSPOT_URL, BUGSPOT_TOKEN)
   bugspot backup [-o file]            a consistent copy of the database, also while the service runs
   bugspot version
 
@@ -68,6 +72,8 @@ func (a *app) run(args []string) int {
 		err = a.threads(args)
 	case "mcp":
 		err = a.mcp(args)
+	case "map":
+		err = a.mapCommand(args)
 	case "backup":
 		err = a.backup(args)
 	case "version", "--version", "-v":
