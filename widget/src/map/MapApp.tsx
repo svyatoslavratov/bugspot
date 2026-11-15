@@ -36,14 +36,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 
 import { useWidget } from '../app/context';
 import { buildAnchor } from '../lib/anchor';
-import { DEFAULT_HOTKEY, matchesHotkey, parseHotkey } from '../lib/hotkey';
+import { DEFAULT_HOTKEY, isMac, matchesHotkey, parseHotkey } from '../lib/hotkey';
 import { LANG_NAMES, type LangChoice } from '../lib/i18n';
 import { loadPrefs } from '../lib/prefs';
 import { useData } from '../app/useData';
-import type { ScreenMap, StateRef } from '../shared/types';
+import type { ScreenMap, ScreenPatch, StateRef } from '../shared/types';
 import { CanvasContext, type Canvas, type CanvasPick } from './canvas';
 import { useMap } from './context';
 import { edgeTypes, focusCss, type RoutedEdgeData } from './edges';
+import { historyKey, screenBack, useHistory } from './history';
 import {
   coverOf,
   crawlAddress,
@@ -123,13 +124,35 @@ function MapCanvas() {
   const [openThread, setOpenThread] = useState<string | null>(null);
   const [pinsVersion, setPinsVersion] = useState(0);
   const [manifest, setManifest] = useState(false);
-  const [message, setMessage] = useState<{ intent: 'success' | 'danger'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ intent: 'success' | 'danger' | 'primary'; text: string } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
-  const say = useCallback((intent: 'success' | 'danger', text: string) => {
+  const messageTimer = useRef(0);
+  const say = useCallback((intent: 'success' | 'danger' | 'primary', text: string, ms = 8000) => {
     setMessage({ intent, text });
-    setTimeout(() => setMessage(null), 8000);
+    clearTimeout(messageTimer.current);
+    messageTimer.current = window.setTimeout(() => setMessage(null), ms);
   }, []);
+  const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+  // Undo and redo of what was changed on the map: each change below is a step of this history.
+  const history = useHistory(
+    (way, step) => say('primary', (way === 'undo' ? t.undone : t.redone)(step.label), 4000),
+    (e) => say('danger', t.historyError(errorText(e))),
+  );
+  const { push: remember, clear: forget } = history;
+  /** Makes a change on the map and remembers how to take it back. */
+  const edit = useCallback(
+    async (label: string, apply: () => Promise<unknown>, revert: () => Promise<unknown>) => {
+      try {
+        await apply();
+      } finally {
+        reload();
+      }
+      remember({ label, undo: () => revert().finally(reload), redo: () => apply().finally(reload) });
+    },
+    [remember, reload],
+  );
 
   useEffect(() => writeHash(selected, view), [selected, view]);
   // A link to another screen opened in this tab (only the hash changes): follow it.
@@ -145,6 +168,8 @@ function MapCanvas() {
 
   // Tabs that have addresses of their own are told apart by their tabs' names.
   const data: ScreenMap | undefined = useMemo(() => map.data && withTabs(map.data), [map.data]);
+  const dataRef = useRef(data);
+  dataRef.current = data;
   // A crawled app has links from every page to many: they start hidden there, the clicks show.
   const linksDecided = useRef(false);
   useEffect(() => {
@@ -327,14 +352,19 @@ function MapCanvas() {
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
         if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 6) return;
-        void api
-          .patchScreens([{ key: id, position: { x: Math.round(at.x), y: Math.round(at.y) } }])
-          .then(reload, () => undefined);
+        const screen = dataRef.current?.screens.find((s) => s.key === id);
+        const to = { x: Math.round(at.x), y: Math.round(at.y) };
+        const back = screen ? screenBack(screen, { position: to }) : { resetPosition: true };
+        edit(
+          t.stepMove(screen ? screenLabel(screen) : id),
+          () => api.patchScreens([{ key: id, position: to }]),
+          () => api.patchScreens([{ key: id, ...back }]),
+        ).catch((err: unknown) => say('danger', errorText(err)));
       };
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
     },
-    [flow, setNodes, api, reload],
+    [flow, setNodes, api, edit, t, say],
   );
 
   // Comments right on the canvas: a close screen shows its live snapshot, and an element picked in
@@ -383,6 +413,13 @@ function MapCanvas() {
     const hotkey = parseHotkey(loadPrefs(prefDefaults).hotkey);
     const onKey = (e: KeyboardEvent) => {
       if (view || manifest || typing(e.target)) return;
+      // In a field Ctrl/⌘+Z undoes the typing there; elsewhere a change of the map.
+      const way = historyKey(e);
+      if (way) {
+        e.preventDefault();
+        if (canEdit) history[way]();
+        return;
+      }
       const plain = !e.ctrlKey && !e.metaKey && !e.altKey;
       const step = e.shiftKey ? 480 : 160;
       const move: Record<string, [number, number]> = {
@@ -425,22 +462,27 @@ function MapCanvas() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [view, manifest, canComment, commenting, stopCommenting, flow, selected, zoomTo]);
+  }, [view, manifest, canComment, canEdit, history, commenting, stopCommenting, flow, selected, zoomTo]);
 
   const screen = data?.screens.find((s) => s.key === selected) ?? null;
   const pickScreen = pick ? (data?.screens.find((s) => s.key === pick.screen) ?? null) : null;
   const set = <K extends keyof MapFilters>(key: K, value: MapFilters[K]) => setFilters((f) => ({ ...f, [key]: value }));
   const moved = data?.screens.filter((s) => s.position) ?? [];
   const resetLayout = async () => {
+    const inBatches = (patches: ScreenPatch[]) => async () => {
+      for (let i = 0; i < patches.length; i += 200) await api.patchScreens(patches.slice(i, i + 200));
+    };
     try {
-      for (let i = 0; i < moved.length; i += 200) {
-        await api.patchScreens(moved.slice(i, i + 200).map((s) => ({ key: s.key, resetPosition: true })));
-      }
-      reload();
+      await edit(
+        t.stepReset(moved.length),
+        inBatches(moved.map((s) => ({ key: s.key, resetPosition: true }))),
+        inBatches(moved.map((s) => ({ key: s.key, position: s.position }))),
+      );
     } catch (e) {
-      say('danger', e instanceof Error ? e.message : String(e));
+      say('danger', errorText(e));
     }
   };
+  const mac = isMac();
   const crawlUrl = data ? crawlAddress(data) : null;
   const shown = [filters.showLinks, filters.showNav, filters.showHidden].filter(Boolean).length;
 
@@ -564,6 +606,28 @@ function MapCanvas() {
           </Tooltip>
         )}
         <Button icon="document" text={t.manifest} onClick={() => setManifest(true)} />
+        {canEdit && (
+          <>
+            <Tooltip content={`${t.undo} · ${mac ? '⌘Z' : 'Ctrl+Z'}`} placement="bottom">
+              <Button
+                icon="undo"
+                variant="minimal"
+                aria-label={t.undo}
+                disabled={!history.canUndo}
+                onClick={history.undo}
+              />
+            </Tooltip>
+            <Tooltip content={`${t.redo} · ${mac ? '⇧⌘Z' : 'Ctrl+Y'}`} placement="bottom">
+              <Button
+                icon="redo"
+                variant="minimal"
+                aria-label={t.redo}
+                disabled={!history.canRedo}
+                onClick={history.redo}
+              />
+            </Tooltip>
+          </>
+        )}
         <Button
           icon="refresh"
           variant="minimal"
@@ -715,6 +779,14 @@ function MapCanvas() {
                 setPinsVersion((v) => v + 1);
                 reload();
               }}
+              onEdit={edit}
+              onMerged={(target) => {
+                // A merge is not undone: the steps before it may name a screen that is gone.
+                forget();
+                setPinsVersion((v) => v + 1);
+                reload();
+                goTo(target);
+              }}
             />
           )
         )}
@@ -736,7 +808,15 @@ function MapCanvas() {
           onChanged={reload}
         />
       )}
-      {manifest && <ManifestDialog onClose={() => setManifest(false)} onImported={reload} />}
+      {manifest && (
+        <ManifestDialog
+          onClose={() => setManifest(false)}
+          onImported={() => {
+            forget();
+            reload();
+          }}
+        />
+      )}
     </div>
   );
 }

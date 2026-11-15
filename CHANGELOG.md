@@ -5,6 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-15
+
+### Added
+
+- Undo and redo on the map: Ctrl/⌘+Z undoes a change made there — a screen moved, the layout
+  reset, a name, a section or a description of a screen or a state, a screen hidden or shown —
+  and Ctrl/⌘+Shift+Z or Ctrl+Y redoes it; so do the arrows on the toolbar, and a message says what
+  was undone. In a field the keys undo the typing as usual. Merging screens and uploading a
+  manifest clear the history, as they cannot be taken back.
+
 ## [0.6.0] - 2026-11-15
 
 ### Added

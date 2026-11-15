@@ -215,8 +215,10 @@ or a screen moves around, and so do the wheel, two fingers on a trackpad, the ar
 Ctrl/⌘ with the wheel or a pinch zooms, as do `+` and `−`; Shift+1 shows the whole map and Shift+2
 the selected screen. A screen moves when you drag its name. Zoom in and a screen turns from a
 picture into its live snapshot — sharp at any zoom, with the pins of its threads; `C` (or the
-widget's shortcut) turns on comments, and you click any element right on the canvas. `?` on the
-toolbar lists the keys.
+widget's shortcut) turns on comments, and you click any element right on the canvas. Ctrl/⌘+Z
+undoes a change made on the map — a screen moved, the layout reset, a name, a section, a
+description, a screen hidden — and Ctrl/⌘+Shift+Z or Ctrl+Y redoes it, as do the arrows on the
+toolbar; merging screens and uploading a manifest are not undone. `?` on the toolbar lists the keys.
 
 Inside a frame the screens are laid out in layers along their transitions with as few crossings as
 possible, and the arrows go around the screens; a screen that leads to many screens that lead

@@ -31,6 +31,7 @@ import {
   type Edge,
 } from '../shared/types';
 import { useMap } from './context';
+import { screenBack } from './history';
 import { coverOf, screenLabel } from './layout';
 import { Thumbnail } from './nodes';
 
@@ -79,6 +80,8 @@ export function ScreenPanel({
   onSelect,
   onOpen,
   onChanged,
+  onEdit,
+  onMerged,
 }: {
   map: ScreenMap;
   screen: Screen;
@@ -92,6 +95,10 @@ export function ScreenPanel({
   onSelect: (key: string) => void;
   onOpen: (state: string) => void;
   onChanged: () => void;
+  /** Makes a change and remembers how to take it back (Ctrl/⌘+Z). */
+  onEdit: (label: string, apply: () => Promise<unknown>, revert: () => Promise<unknown>) => Promise<void>;
+  /** The screen was merged into another one. */
+  onMerged: (target: string) => void;
 }) {
   const { api, session } = useWidget();
   const { t } = useMap();
@@ -118,17 +125,24 @@ export function ScreenPanel({
   const byKey = useMemo(() => new Map(map.screens.map((s) => [s.key, s])), [map]);
 
   const fail = (e: unknown) => setError(e instanceof ApiError || e instanceof Error ? e.message : String(e));
-  const save = (patch: Omit<ScreenPatch, 'key'>) => {
+  const label = screenLabel(screen);
+  const save = (what: string, patch: Omit<ScreenPatch, 'key'>) => {
     setError(null);
-    api.patchScreens([{ key: screen.key, ...patch }]).then(onChanged, fail);
+    const back = screenBack(screen, patch);
+    onEdit(
+      what,
+      () => api.patchScreens([{ key: screen.key, ...patch }]),
+      () => api.patchScreens([{ key: screen.key, ...back }]),
+    ).catch(fail);
   };
   const saveState = (state: ScreenState, description: string) => {
     if (description === state.description) return;
     setError(null);
-    api.patchStates([{ screen: screen.key, state: state.key, description }]).then(onChanged, fail);
+    const put = (d: string) => () => api.patchStates([{ screen: screen.key, state: state.key, description: d }]);
+    onEdit(t.stepState(state.name || kindLabel[state.kind]), put(description), put(state.description)).catch(fail);
   };
-  const section = useDraft(screen.section, (v) => save({ section: v }));
-  const description = useDraft(screen.description, (v) => save({ description: v }));
+  const section = useDraft(screen.section, (v) => save(t.stepSection(label), { section: v }));
+  const description = useDraft(screen.description, (v) => save(t.stepDescription(label), { description: v }));
   const snapshotState = coverOf(screen, 'hasSnapshot');
   const kindLabel = { page: t.page, tab: t.tab, dialog: t.dialog };
 
@@ -157,10 +171,11 @@ export function ScreenPanel({
         <H4 className="map-panel-name">
           {canEdit ? (
             <EditableText
+              key={screen.name}
               defaultValue={screen.name}
               placeholder={screen.title || t.namePlaceholder}
               maxLength={120}
-              onConfirm={(name) => name.trim() !== screen.name && save({ name: name.trim() })}
+              onConfirm={(name) => name.trim() !== screen.name && save(t.stepName(label), { name: name.trim() })}
             />
           ) : (
             screenLabel(screen)
@@ -269,6 +284,7 @@ export function ScreenPanel({
               </div>
               {canEdit ? (
                 <EditableText
+                  key={state.description}
                   multiline
                   defaultValue={state.description}
                   placeholder={t.stateDescription}
@@ -303,7 +319,7 @@ export function ScreenPanel({
             icon={screen.hidden ? 'eye-open' : 'eye-off'}
             variant="minimal"
             text={screen.hidden ? t.unhide : t.hide}
-            onClick={() => save({ hidden: !screen.hidden })}
+            onClick={() => save((screen.hidden ? t.stepUnhide : t.stepHide)(label), { hidden: !screen.hidden })}
           />
           <Popover
             placement="top-start"
@@ -326,10 +342,7 @@ export function ScreenPanel({
                   text={t.merge}
                   onClick={() => {
                     const target = mergeTarget;
-                    api.patchScreens([{ key: screen.key, mergeInto: target }]).then(() => {
-                      onChanged();
-                      onSelect(target);
-                    }, fail);
+                    api.patchScreens([{ key: screen.key, mergeInto: target }]).then(() => onMerged(target), fail);
                   }}
                 />
               </div>

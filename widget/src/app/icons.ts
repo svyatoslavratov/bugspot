@@ -44,6 +44,8 @@ import more16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/more';
 import globeNetwork16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/globe-network';
 import desktop16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/desktop';
 import refresh16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/refresh';
+import redo16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/redo';
+import undo16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/undo';
 import robot16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/predictive-analysis';
 import search16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/search';
 import send16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/send-message';
@@ -95,6 +97,8 @@ const icons16: Partial<Record<IconName, string[]>> = {
   'globe-network': globeNetwork16,
   desktop: desktop16,
   refresh: refresh16,
+  redo: redo16,
+  undo: undo16,
   'predictive-analysis': robot16,
   search: search16,
   'send-message': send16,
