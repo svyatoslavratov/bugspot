@@ -8,9 +8,10 @@ import { serializeDocument } from '../lib/snapshot';
 import type { Api } from '../shared/api';
 import type { Session, StateRef } from '../shared/types';
 
-// Twice the size a node takes at a normal zoom: sharp on high-density screens and when zoomed in.
-const THUMBNAIL_WIDTH = 1280;
-const THUMBNAIL_MAX_BYTES = 900 << 10;
+// The overview of the map shows pictures; up close a screen is its live snapshot, so a picture
+// this wide is sharp wherever it shows, and quick to take.
+const THUMBNAIL_WIDTH = 800;
+const THUMBNAIL_MAX_BYTES = 400 << 10;
 
 export interface LookOptions {
   mask: 'inputs' | 'text' | 'none';
@@ -29,6 +30,9 @@ export function lookOptions(session: Session, exclude?: Element | null): LookOpt
   };
 }
 
+/** Lets the page render between long tasks (a timer, not a frame: a crawl in a hidden tab goes on). */
+const breathe = () => new Promise<void>((r) => setTimeout(r, 0));
+
 /** Only the screen and the state: the API takes nothing else in a reference. */
 export const refOf = (s: StateRef): StateRef => ({ screen: s.screen, state: s.state });
 
@@ -46,9 +50,14 @@ export async function takeLook(
 ): Promise<{ hash: string; hasShot: boolean } | null> {
   const hash = structureHash(doc);
   const outline = outlineOf(doc, options.exclude ?? undefined);
-  const [thumb, snap] = await Promise.allSettled([
-    captureThumbnail(options.exclude ?? null, THUMBNAIL_WIDTH, options.shotMaxBytes, doc),
+  // One heavy step at a time, and the page gets a turn between them: what it shows (the progress
+  // of a crawl) keeps moving.
+  const [snap] = await Promise.allSettled([
     serializeDocument(doc, { mask: options.mask, exclude: options.exclude ?? undefined }),
+  ]);
+  await breathe();
+  const [thumb] = await Promise.allSettled([
+    captureThumbnail(options.exclude ?? null, THUMBNAIL_WIDTH, options.shotMaxBytes, doc),
   ]);
   if (!still()) return null;
   await before?.();

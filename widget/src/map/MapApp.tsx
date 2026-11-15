@@ -1,16 +1,23 @@
+// The screen map page: the canvas of screens, the toolbar, the panel of a screen, the full view of
+// a state. The canvas works like a design tool: screens at their real size, names and arrows the
+// same size on screen at any zoom, panning by dragging, the wheel or the keyboard, zoom with
+// Ctrl/⌘ or a pinch, and comments right on the screens.
+
 import {
   Button,
   Callout,
   Card,
+  Checkbox,
+  Divider,
   HTMLSelect,
+  Icon,
   InputGroup,
   Menu,
-  MenuDivider,
   MenuItem,
   NonIdealState,
   Popover,
   Spinner,
-  Switch,
+  Tooltip,
 } from '@blueprintjs/core';
 import {
   Background,
@@ -25,37 +32,45 @@ import {
   type Edge as FlowEdge,
   type Node,
 } from '@xyflow/react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
 import { useWidget } from '../app/context';
 import { buildAnchor } from '../lib/anchor';
+import { DEFAULT_HOTKEY, matchesHotkey, parseHotkey } from '../lib/hotkey';
+import { LANG_NAMES, type LangChoice } from '../lib/i18n';
+import { loadPrefs } from '../lib/prefs';
 import { useData } from '../app/useData';
 import type { ScreenMap, StateRef } from '../shared/types';
 import { CanvasContext, type Canvas, type CanvasPick } from './canvas';
 import { useMap } from './context';
+import { edgeTypes, focusCss, type RoutedEdgeData } from './edges';
 import {
+  coverOf,
   crawlAddress,
   defaultFilters,
   layoutMap,
   linksByDefault,
-  NODE_H,
-  NODE_W,
+  screenLabel,
+  withTabs,
   type EdgeKind,
   type Layout,
   type MapFilters,
 } from './layout';
-import { edgeTypes, type RoutedEdgeData } from './edges';
-import { LIVE_ZOOM, nodeTypes, type ScreenNodeData, type SectionNodeData } from './nodes';
-import { SnapshotComposer } from './SnapshotComposer';
+import { ManifestDialog } from './ManifestDialog';
+import { LIVE_WIDTH, nodeTypes, type ScreenNodeData, type SectionNodeData, type TabsNodeData } from './nodes';
 import { ScreenPanel } from './ScreenPanel';
+import { SnapshotComposer } from './SnapshotComposer';
 import { SnapshotView } from './SnapshotView';
 
-const edgeStyle: Record<EdgeKind, { stroke: string; strokeDasharray?: string }> = {
-  observed: { stroke: '#2d72d2' },
-  declared: { stroke: '#7961db', strokeDasharray: '6 4' },
-  link: { stroke: '#8f99a8', strokeDasharray: '4 4' },
-  nav: { stroke: '#c5cbd3', strokeDasharray: '2 4' },
+const edgeColor: Record<EdgeKind, string> = {
+  observed: '#2d72d2',
+  declared: '#7961db',
+  link: '#8f99a8',
+  nav: '#abb3bf',
+  tab: '#4c90f0',
 };
+
+const miniColor: Record<string, string> = { section: '#eef0f3', tabs: '#dce6f5', screen: '#abb3bf' };
 
 /** The selection lives in the hash, so a link to the map can open a screen: #screen=/campaigns. */
 function readHash(): { screen: string | null; view: StateRef | null } {
@@ -63,15 +78,6 @@ function readHash(): { screen: string | null; view: StateRef | null } {
   const screen = params.get('screen');
   const state = params.get('state');
   return { screen, view: screen && state !== null ? { screen, state } : null };
-}
-
-function download(name: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function writeHash(screen: string | null, view: StateRef | null) {
@@ -82,6 +88,16 @@ function writeHash(screen: string | null, view: StateRef | null) {
   history.replaceState(history.state, '', hash ? `#${hash}` : location.pathname + location.search);
 }
 
+/** Keys typed into a field are not shortcuts. */
+function typing(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  return !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+}
+
+const prefDefaults = { mode: 'full' as const, hotkey: DEFAULT_HOTKEY };
+const MIN_ZOOM = 0.02;
+const MAX_ZOOM = 4;
+
 export function MapApp() {
   return (
     <ReactFlowProvider>
@@ -91,8 +107,8 @@ export function MapApp() {
 }
 
 function MapCanvas() {
-  const { api, session } = useWidget();
-  const { t } = useMap();
+  const { api, session, t: wt } = useWidget();
+  const { t, choice, setChoice } = useMap();
   const flow = useReactFlow();
   const canEdit = session.can?.map ?? false;
   const canComment = session.can?.comment ?? false;
@@ -106,7 +122,14 @@ function MapCanvas() {
   const [pick, setPick] = useState<CanvasPick | null>(null);
   const [openThread, setOpenThread] = useState<string | null>(null);
   const [pinsVersion, setPinsVersion] = useState(0);
+  const [manifest, setManifest] = useState(false);
+  const [message, setMessage] = useState<{ intent: 'success' | 'danger'; text: string } | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
+  const say = useCallback((intent: 'success' | 'danger', text: string) => {
+    setMessage({ intent, text });
+    setTimeout(() => setMessage(null), 8000);
+  }, []);
 
   useEffect(() => writeHash(selected, view), [selected, view]);
   // A link to another screen opened in this tab (only the hash changes): follow it.
@@ -120,7 +143,8 @@ function MapCanvas() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const data: ScreenMap | undefined = map.data;
+  // Tabs that have addresses of their own are told apart by their tabs' names.
+  const data: ScreenMap | undefined = useMemo(() => map.data && withTabs(map.data), [map.data]);
   // A crawled app has links from every page to many: they start hidden there, the clicks show.
   const linksDecided = useRef(false);
   useEffect(() => {
@@ -129,23 +153,34 @@ function MapCanvas() {
     if (!linksByDefault(data)) setFilters((f) => ({ ...f, showLinks: false }));
   }, [data]);
 
-  // The layout is computed by ELK in the background; the old one stays on screen meanwhile.
+  // The layout is computed by ELK in a worker; the old one stays on screen meanwhile.
   const [layout, setLayout] = useState<Layout | null>(null);
+  const [laying, setLaying] = useState(false);
   useEffect(() => {
     if (!data) return;
     let alive = true;
+    setLaying(true);
     layoutMap(data, filters, t.noSection).then(
-      (l) => alive && setLayout(l),
-      () => undefined,
+      (l) => {
+        if (!alive) return;
+        setLayout(l);
+        setLaying(false);
+      },
+      () => alive && setLaying(false),
     );
     return () => {
       alive = false;
     };
   }, [data, filters, t.noSection]);
   const roles = useMemo(() => [...new Set(data?.screens.flatMap((s) => s.roles) ?? [])].sort(), [data]);
+  // Short ids for the class names of edges: the focus stylesheet picks them by these.
+  const ids = useMemo(() => new Map((layout?.screens ?? []).map((p, i) => [p.screen.key, `n${i}`])), [layout]);
+  const placedOf = useMemo(() => new Map((layout?.screens ?? []).map((p) => [p.screen.key, p])), [layout]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const fitted = useRef(false);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
   useEffect(() => {
     if (!layout) return;
     const sectionNodes: Node<SectionNodeData>[] = layout.sections.map((s) => ({
@@ -156,55 +191,151 @@ function MapCanvas() {
       style: { width: s.w, height: s.h },
       draggable: false,
       selectable: false,
+      focusable: false,
+      zIndex: -1,
+    }));
+    const groupNodes: Node<TabsNodeData>[] = layout.groups.map((g) => ({
+      id: g.id,
+      type: 'tabs',
+      position: { x: g.x, y: g.y },
+      data: { title: g.title, count: g.count },
+      style: { width: g.w, height: g.h },
+      draggable: false,
+      selectable: false,
+      focusable: false,
       zIndex: -1,
     }));
     const screenNodes: Node<ScreenNodeData>[] = layout.screens.map((p) => ({
       id: p.screen.key,
       type: 'screen',
       position: { x: p.x, y: p.y },
-      data: { screen: p.screen, threads: p.threads, dim: p.dim, selected: p.screen.key === selected },
-      style: { width: NODE_W, height: NODE_H },
+      data: {
+        screen: p.screen,
+        // In a group the box tells the page: a tab goes by its tab's name.
+        label: p.inGroup ? p.screen.name || p.screen.tab || screenLabel(p.screen) : screenLabel(p.screen),
+        threads: p.threads,
+        dim: p.dim,
+        w: p.w,
+        h: p.h,
+      },
+      style: { width: p.w, height: p.h },
+      selected: p.screen.key === selectedRef.current,
+      draggable: false,
     }));
-    setNodes([...sectionNodes, ...screenNodes]);
+    setNodes([...sectionNodes, ...groupNodes, ...screenNodes]);
     if (!fitted.current) {
       fitted.current = true;
-      const focus = selected && layout.screens.some((p) => p.screen.key === selected) ? [{ id: selected }] : undefined;
-      requestAnimationFrame(() => void flow.fitView({ padding: 0.08, nodes: focus, maxZoom: focus ? 1 : undefined }));
+      const focus =
+        selectedRef.current && placedOf.has(selectedRef.current) ? [{ id: selectedRef.current }] : undefined;
+      requestAnimationFrame(() => void flow.fitView({ padding: 0.06, nodes: focus, maxZoom: focus ? 0.6 : 1 }));
     }
-  }, [layout, selected, setNodes, flow]);
+  }, [layout, setNodes, flow, placedOf]);
+  // The selection changes only the two nodes it concerns.
+  useEffect(() => {
+    setNodes((ns) =>
+      ns.map((n) =>
+        n.type !== 'screen' || !!n.selected === (n.id === selected) ? n : { ...n, selected: n.id === selected },
+      ),
+    );
+  }, [selected, setNodes]);
 
-  // The transitions of the screen in focus (selected or under the pointer) stand out with their
-  // names; the rest stay thin, so a dense map still shows its shape.
-  const focus = hovered ?? selected;
-  const edges = useMemo<FlowEdge<RoutedEdgeData>[]>(() => {
-    const list = layout?.edges ?? [];
-    const dense = list.length > 40;
-    // A transition between frames crosses the whole map: it shows for the screen in focus only.
-    return list.flatMap((e) => {
-      const style = edgeStyle[e.kind];
-      const touches = focus !== null && (e.from === focus || e.to === focus);
-      if (!e.points && !touches) return [];
-      const opacity = focus === null ? (dense ? 0.35 : 1) : touches ? 1 : 0.1;
-      return [
-        {
+  // Edges do not depend on the focus: the stylesheet below makes the focused ones stand out.
+  const edges = useMemo<FlowEdge<RoutedEdgeData>[]>(
+    () =>
+      (layout?.edges ?? []).map((e) => {
+        const ends = `f-${ids.get(e.from)} t-${ids.get(e.to)}`;
+        return {
           id: e.id,
           type: 'routed' as const,
           source: e.from,
           target: e.to,
           label: e.label || undefined,
-          data: { points: e.points, labelAt: e.labelAt, showLabel: touches || (focus === null && !dense) },
-          markerEnd: { type: MarkerType.ArrowClosed, color: style.stroke },
-          style: {
-            ...style,
-            strokeWidth:
-              (e.kind === 'observed' ? 1.5 + Math.min(2.5, Math.log2(1 + e.count)) : 1.2) + (touches ? 1 : 0),
-            opacity,
+          className: `kind-${e.kind} ${ends} ${e.points ? '' : 'is-cross'}`,
+          data: {
+            points: e.points,
+            labelAt: e.labelAt,
+            ends,
+            width: e.kind === 'observed' ? 1.5 + Math.min(1.5, Math.log2(1 + e.count) / 2) : 1.25,
           },
-          zIndex: touches ? 2 : 0,
-        },
-      ];
-    });
-  }, [layout, focus]);
+          markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor[e.kind], width: 10, height: 10 },
+          style: { stroke: edgeColor[e.kind] },
+          focusable: false,
+        };
+      }),
+    [layout, ids],
+  );
+  const focus = hovered ?? selected;
+  const dense = (layout?.edges.length ?? 0) > 40;
+
+  // Names, counters and arrows stay the same size on screen: CSS divides by the zoom. Far out the
+  // names of arrows would cover the screens: they show from a quarter of the real size.
+  const setZoom = useCallback((zoom: number) => {
+    const el = canvasRef.current;
+    if (!el) return;
+    el.style.setProperty('--z', String(zoom));
+    el.dataset.far = zoom < 0.25 ? 'true' : 'false';
+  }, []);
+
+  // Ctrl/⌘ with the wheel or a pinch zooms around the pointer at a steady pace: a notch of a mouse
+  // wheel about a quarter, not the fourfold jump the canvas makes of it as of a pinch.
+  const ready = !!data;
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!ready || !el) return;
+    const onWheel = (e: WheelEvent) => {
+      const pane = el.querySelector('.react-flow');
+      if ((!e.ctrlKey && !e.metaKey) || !pane?.contains(e.target as globalThis.Node)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+      const step = Math.max(-0.35, Math.min(0.35, -e.deltaY * unit * 0.015));
+      const vp = flow.getViewport();
+      const zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, vp.zoom * 2 ** step));
+      const box = pane.getBoundingClientRect();
+      const px = e.clientX - box.left;
+      const py = e.clientY - box.top;
+      void flow.setViewport({
+        x: px - ((px - vp.x) * zoom) / vp.zoom,
+        y: py - ((py - vp.y) * zoom) / vp.zoom,
+        zoom,
+      });
+    };
+    el.addEventListener('wheel', onWheel, { capture: true, passive: false });
+    return () => el.removeEventListener('wheel', onWheel, { capture: true });
+  }, [ready, flow]);
+
+  // A screen moves when its name is dragged (the rest of it pans the canvas); a click that shakes
+  // it a little does not count.
+  const startMove = useCallback(
+    (e: ReactPointerEvent, id: string) => {
+      const node = flow.getNode(id);
+      if (e.button !== 0 || !node) return;
+      e.stopPropagation();
+      const start = { x: e.clientX, y: e.clientY };
+      const origin = { ...node.position };
+      let at = origin;
+      let frame = 0;
+      const onMove = (ev: PointerEvent) => {
+        const zoom = flow.getZoom();
+        at = { x: origin.x + (ev.clientX - start.x) / zoom, y: origin.y + (ev.clientY - start.y) / zoom };
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() =>
+          setNodes((ns) => ns.map((n) => (n.id === id ? { ...n, position: at } : n))),
+        );
+      };
+      const onUp = (ev: PointerEvent) => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 6) return;
+        void api
+          .patchScreens([{ key: id, position: { x: Math.round(at.x), y: Math.round(at.y) } }])
+          .then(reload, () => undefined);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    },
+    [flow, setNodes, api, reload],
+  );
 
   // Comments right on the canvas: a close screen shows its live snapshot, and an element picked in
   // it gets a thread — the same thread the real page pins.
@@ -212,12 +343,6 @@ function MapCanvas() {
     setCommenting(false);
     setPick(null);
   }, []);
-  useEffect(() => {
-    if (!commenting) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && stopCommenting();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [commenting, stopCommenting]);
   const canvas = useMemo<Canvas>(
     () => ({
       commenting,
@@ -232,33 +357,79 @@ function MapCanvas() {
         setOpenThread(id);
       },
       onEscape: stopCommenting,
+      onMoveStart: canEdit && !commenting ? startMove : undefined,
     }),
-    [commenting, pinsVersion, stopCommenting],
+    [commenting, pinsVersion, stopCommenting, canEdit, startMove],
   );
-  const zoomTo = (id: string) => void flow.fitView({ nodes: [{ id }], duration: 400, padding: 0.25, maxZoom: 2.6 });
+  /** Brings a screen close enough to be live: it fills most of the window. */
+  const zoomTo = useCallback(
+    (id: string) => void flow.fitView({ nodes: [{ id }], duration: 400, padding: 0.12, maxZoom: 1.5 }),
+    [flow],
+  );
+  /** Goes to a screen at the current zoom. */
+  const goTo = useCallback(
+    (id: string) => {
+      setSelected(id);
+      setOpenThread(null);
+      const p = placedOf.get(id);
+      if (p) void flow.setCenter(p.x + p.w / 2, p.y + p.h / 2, { zoom: flow.getZoom(), duration: 400 });
+    },
+    [flow, placedOf],
+  );
+
+  // The keyboard: arrows or WASD move around, + and − zoom, Shift+1 shows the map, Shift+2 the
+  // selected screen, C (or the widget's shortcut) toggles comments, Esc leaves.
+  useEffect(() => {
+    const hotkey = parseHotkey(loadPrefs(prefDefaults).hotkey);
+    const onKey = (e: KeyboardEvent) => {
+      if (view || manifest || typing(e.target)) return;
+      const plain = !e.ctrlKey && !e.metaKey && !e.altKey;
+      const step = e.shiftKey ? 480 : 160;
+      const move: Record<string, [number, number]> = {
+        ArrowLeft: [step, 0],
+        KeyA: [step, 0],
+        ArrowRight: [-step, 0],
+        KeyD: [-step, 0],
+        ArrowUp: [0, step],
+        KeyW: [0, step],
+        ArrowDown: [0, -step],
+        KeyS: [0, -step],
+      };
+      if (canComment && ((hotkey && matchesHotkey(e, hotkey)) || (plain && !e.shiftKey && e.code === 'KeyC'))) {
+        e.preventDefault();
+        setCommenting((c) => !c);
+        setPick(null);
+      } else if (e.key === 'Escape') {
+        if (commenting) stopCommenting();
+        else setSelected(null);
+      } else if (plain && move[e.code]) {
+        e.preventDefault();
+        const vp = flow.getViewport();
+        void flow.setViewport(
+          { x: vp.x + move[e.code][0], y: vp.y + move[e.code][1], zoom: vp.zoom },
+          { duration: 120 },
+        );
+      } else if (plain && (e.code === 'Equal' || e.code === 'NumpadAdd')) {
+        e.preventDefault();
+        void flow.zoomIn({ duration: 150 });
+      } else if (plain && (e.code === 'Minus' || e.code === 'NumpadSubtract')) {
+        e.preventDefault();
+        void flow.zoomOut({ duration: 150 });
+      } else if (e.shiftKey && plain && e.code === 'Digit1') {
+        e.preventDefault();
+        void flow.fitView({ padding: 0.06, duration: 300 });
+      } else if (e.shiftKey && plain && e.code === 'Digit2' && selected) {
+        e.preventDefault();
+        zoomTo(selected);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [view, manifest, canComment, commenting, stopCommenting, flow, selected, zoomTo]);
 
   const screen = data?.screens.find((s) => s.key === selected) ?? null;
   const pickScreen = pick ? (data?.screens.find((s) => s.key === pick.screen) ?? null) : null;
   const set = <K extends keyof MapFilters>(key: K, value: MapFilters[K]) => setFilters((f) => ({ ...f, [key]: value }));
-  const file = useRef<HTMLInputElement>(null);
-  const [message, setMessage] = useState<{ intent: 'success' | 'danger'; text: string } | null>(null);
-  const say = (intent: 'success' | 'danger', text: string) => {
-    setMessage({ intent, text });
-    setTimeout(() => setMessage(null), 8000);
-  };
-  const exportManifest = () =>
-    api.exportManifest().then(
-      (text) => download('pinpath-map.json', text + '\n'),
-      (e: unknown) => say('danger', e instanceof Error ? e.message : String(e)),
-    );
-  const importManifest = async (f: File) => {
-    try {
-      say('success', t.imported(await api.importManifest(await f.text())));
-      reload();
-    } catch (e) {
-      say('danger', `${t.importError}: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  };
   const moved = data?.screens.filter((s) => s.position) ?? [];
   const resetLayout = async () => {
     try {
@@ -271,6 +442,7 @@ function MapCanvas() {
     }
   };
   const crawlUrl = data ? crawlAddress(data) : null;
+  const shown = [filters.showLinks, filters.showNav, filters.showHidden].filter(Boolean).length;
 
   if (map.error && !data) {
     return (
@@ -296,40 +468,102 @@ function MapCanvas() {
           onValueChange={(v) => set('search', v)}
         />
         {roles.length > 0 && (
-          <HTMLSelect value={filters.role} onChange={(e) => set('role', e.currentTarget.value)}>
-            <option value="">{t.allRoles}</option>
-            {roles.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </HTMLSelect>
+          <Tooltip content={t.rolesHint} placement="bottom" className="map-roles">
+            <HTMLSelect value={filters.role} onChange={(e) => set('role', e.currentTarget.value)}>
+              <option value="">{t.allRoles}</option>
+              {roles.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </HTMLSelect>
+          </Tooltip>
         )}
-        <Switch
-          label={t.links}
-          checked={filters.showLinks}
-          onChange={(e) => set('showLinks', e.currentTarget.checked)}
-        />
-        <Switch
-          label={t.navigation}
-          checked={filters.showNav}
-          onChange={(e) => set('showNav', e.currentTarget.checked)}
-        />
-        <Switch
-          label={t.hidden}
-          checked={filters.showHidden}
-          onChange={(e) => set('showHidden', e.currentTarget.checked)}
-        />
+        <Popover
+          placement="bottom-start"
+          content={
+            <div className="map-show">
+              {(
+                [
+                  ['showLinks', t.showLinks, t.showLinksHint],
+                  ['showNav', t.showNav, t.showNavHint],
+                  ['showHidden', t.showHidden, t.showHiddenHint],
+                ] as const
+              ).map(([key, label, hint]) => (
+                <Checkbox
+                  key={key}
+                  checked={filters[key]}
+                  onChange={(e) => set(key, e.currentTarget.checked)}
+                  labelElement={
+                    <span className="map-show-item">
+                      <strong>{label}</strong>
+                      <span>{hint}</span>
+                    </span>
+                  }
+                />
+              ))}
+              <Divider />
+              <div className="map-label">{t.legend}</div>
+              <ul className="map-legend">
+                {(
+                  [
+                    ['observed', t.legendObserved],
+                    ['declared', t.legendDeclared],
+                    ['link', t.legendLink],
+                    ['nav', t.legendNav],
+                  ] as const
+                ).map(([kind, text]) => (
+                  <li key={kind}>
+                    <svg width="36" height="8" aria-hidden="true">
+                      <line
+                        x1="0"
+                        y1="4"
+                        x2="36"
+                        y2="4"
+                        className={`map-legend-line kind-${kind}`}
+                        stroke={edgeColor[kind]}
+                      />
+                    </svg>
+                    {text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          }
+        >
+          <Button icon="filter" endIcon="caret-down" text={shown ? `${t.show} · ${shown}` : t.show} />
+        </Popover>
+        {laying && layout && (
+          <span className="map-busy">
+            <Spinner size={14} /> {t.layingOut}
+          </span>
+        )}
         <span className="map-push" />
         {canComment && (
-          <Button
-            icon="comment"
-            intent={commenting ? 'primary' : 'none'}
-            text={t.comment}
-            title={t.commentCanvasHint}
-            onClick={() => (commenting ? stopCommenting() : setCommenting(true))}
-          />
+          <Tooltip content={t.commentCanvasHint} placement="bottom">
+            <Button
+              icon="comment"
+              intent={commenting ? 'primary' : 'none'}
+              text={t.comment}
+              active={commenting}
+              onClick={() => (commenting ? stopCommenting() : setCommenting(true))}
+            />
+          </Tooltip>
         )}
+        <Tooltip content={crawlUrl ? t.crawl : t.crawlNoApp} placement="bottom">
+          <Button
+            icon="path-search"
+            text={t.buildMap}
+            disabled={!crawlUrl}
+            onClick={() => crawlUrl && window.open(crawlUrl, '_blank', 'noopener')}
+          />
+        </Tooltip>
+        {canEdit && moved.length > 0 && (
+          <Tooltip content={t.resetLayoutHint} placement="bottom">
+            <Button icon="layout-auto" text={t.resetLayout} onClick={() => void resetLayout()} />
+          </Tooltip>
+        )}
+        <Button icon="document" text={t.manifest} onClick={() => setManifest(true)} />
         <Button
           icon="refresh"
           variant="minimal"
@@ -341,87 +575,97 @@ function MapCanvas() {
         <Popover
           placement="bottom-end"
           content={
+            <table className="map-keys">
+              <tbody>
+                {t.keysList.map(([keys, what]) => (
+                  <tr key={keys}>
+                    <th>{keys}</th>
+                    <td>{what}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          }
+        >
+          <Button icon="help" variant="minimal" aria-label={t.keys} title={t.keys} />
+        </Popover>
+        <Popover
+          placement="bottom-end"
+          content={
             <Menu>
-              <MenuItem
-                icon="path-search"
-                text={t.crawl}
-                disabled={!crawlUrl}
-                title={crawlUrl ? undefined : t.crawlNoApp}
-                onClick={() => crawlUrl && window.open(crawlUrl, '_blank', 'noopener')}
-              />
-              {canEdit && (
+              <MenuItem icon="translate" text={wt.language} disabled />
+              {(['auto', 'ru', 'en'] as LangChoice[]).map((c) => (
                 <MenuItem
-                  icon="layout-auto"
-                  text={t.resetLayout}
-                  title={t.resetLayoutHint}
-                  disabled={moved.length === 0}
-                  onClick={() => void resetLayout()}
+                  key={c}
+                  roleStructure="listoption"
+                  selected={choice === c}
+                  text={c === 'auto' ? wt.languageAuto : LANG_NAMES[c]}
+                  onClick={() => setChoice(c)}
                 />
-              )}
-              <MenuDivider />
-              <MenuItem icon="export" text={t.exportManifest} onClick={() => void exportManifest()} />
-              {canEdit && <MenuItem icon="import" text={t.importManifest} onClick={() => file.current?.click()} />}
+              ))}
             </Menu>
           }
         >
-          <Button icon="more" variant="minimal" aria-label={t.more} title={t.more} />
+          <Button icon="cog" variant="minimal" aria-label={t.settings} title={t.settings} />
         </Popover>
-        <input
-          ref={file}
-          type="file"
-          accept="application/json,.json"
-          hidden
-          onChange={(e) => {
-            const f = e.currentTarget.files?.[0];
-            e.currentTarget.value = '';
-            if (f) void importManifest(f);
-          }}
-        />
       </header>
-      {commenting && !pick && <div className="map-hint">{t.commentCanvasHint}</div>}
+      {commenting && !pick && (
+        <div className="map-hint">
+          <Icon icon="comment" size={12} /> {t.commentCanvasHint}
+        </div>
+      )}
       {message && (
         <Callout intent={message.intent} compact className="map-notice map-message">
           {message.text}
         </Callout>
       )}
-      <div className={`map-body ${commenting ? 'is-commenting' : ''}`}>
+      <div ref={canvasRef} className={`map-body ${commenting ? 'is-commenting' : ''}`} style={{ ['--z' as string]: 1 }}>
         {data.screens.length === 0 ? (
           <NonIdealState icon="layers" title={t.empty} description={t.emptyHint} />
+        ) : !layout ? (
+          <NonIdealState icon={<Spinner />} title={t.layingOut} />
         ) : (
           <CanvasContext.Provider value={canvas}>
+            <style>{focusCss(focus ? (ids.get(focus) ?? null) : null)}</style>
             <ReactFlow
+              className={`map-flow ${dense ? 'is-dense' : ''} ${!focus && !dense ? 'show-labels' : ''}`}
               nodes={nodes}
               edges={edges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               onNodesChange={onNodesChange}
-              nodesDraggable={canEdit && !commenting}
+              nodesDraggable={false}
               nodesConnectable={false}
-              elementsSelectable
+              nodesFocusable={false}
+              edgesFocusable={false}
+              elementsSelectable={false}
+              disableKeyboardA11y
+              deleteKeyCode={null}
+              selectionKeyCode={null}
+              multiSelectionKeyCode={null}
               onlyRenderVisibleElements
-              minZoom={0.05}
-              maxZoom={6}
+              panOnScroll
+              zoomOnScroll={false}
+              zoomOnPinch
+              zoomOnDoubleClick={false}
+              minZoom={MIN_ZOOM}
+              maxZoom={MAX_ZOOM}
+              onInit={(instance) => setZoom(instance.getZoom())}
+              onMove={(_, vp) => setZoom(vp.zoom)}
               onNodeClick={(_, node) => {
                 if (node.type !== 'screen') return;
                 setSelected(node.id);
+                setOpenThread(null);
                 // In the comment mode a screen too far to pick from comes close.
-                if (commenting && flow.getZoom() < LIVE_ZOOM) zoomTo(node.id);
+                const p = placedOf.get(node.id);
+                if (commenting && p && flow.getZoom() * p.w < LIVE_WIDTH) zoomTo(node.id);
               }}
               onNodeMouseEnter={(_, node) => node.type === 'screen' && setHovered(node.id)}
               onNodeMouseLeave={() => setHovered(null)}
               onNodeDoubleClick={(_, node) => {
                 const sc = data.screens.find((s) => s.key === node.id);
-                const state =
-                  sc?.states.find((s) => s.key === '' && s.hasSnapshot) ?? sc?.states.find((s) => s.hasSnapshot);
+                const state = sc && coverOf(sc, 'hasSnapshot');
                 if (sc && state) setView({ screen: sc.key, state: state.key });
-              }}
-              onNodeDragStop={(_, node) => {
-                if (node.type !== 'screen' || !canEdit) return;
-                void api
-                  .patchScreens([
-                    { key: node.id, position: { x: Math.round(node.position.x), y: Math.round(node.position.y) } },
-                  ])
-                  .then(reload, () => undefined);
               }}
               onPaneClick={() => {
                 setSelected(null);
@@ -430,7 +674,7 @@ function MapCanvas() {
             >
               <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
               <Controls showInteractive={false} />
-              <MiniMap pannable zoomable nodeColor={(n) => (n.type === 'section' ? '#f6f7f9' : '#abb3bf')} />
+              <MiniMap pannable zoomable nodeColor={(n) => miniColor[n.type ?? 'screen'] ?? '#abb3bf'} />
             </ReactFlow>
           </CanvasContext.Provider>
         )}
@@ -465,10 +709,7 @@ function MapCanvas() {
                 setSelected(null);
                 setOpenThread(null);
               }}
-              onSelect={(key) => {
-                setOpenThread(null);
-                setSelected(key);
-              }}
+              onSelect={goTo}
               onOpen={(state) => setView({ screen: screen.key, state })}
               onChanged={() => {
                 setPinsVersion((v) => v + 1);
@@ -495,6 +736,7 @@ function MapCanvas() {
           onChanged={reload}
         />
       )}
+      {manifest && <ManifestDialog onClose={() => setManifest(false)} onImported={reload} />}
     </div>
   );
 }

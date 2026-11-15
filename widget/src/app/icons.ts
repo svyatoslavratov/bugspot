@@ -28,6 +28,11 @@ import link16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/link';
 import mapMarker16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/map-marker';
 import maximize16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/maximize';
 import media16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/media';
+import menu16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/menu';
+import document16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/document';
+import arrowRight16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/arrow-right';
+import filter16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/filter';
+import translate16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/translate';
 import map16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/map';
 import layoutAuto16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/layout-auto';
 import play16 from '@blueprintjs/icons/lib/esm/generated/16px/paths/play';
@@ -74,6 +79,11 @@ const icons16: Partial<Record<IconName, string[]>> = {
   'map-marker': mapMarker16,
   maximize: maximize16,
   media: media16,
+  menu: menu16,
+  document: document16,
+  'arrow-right': arrowRight16,
+  filter: filter16,
+  translate: translate16,
   map: map16,
   'layout-auto': layoutAuto16,
   play: play16,

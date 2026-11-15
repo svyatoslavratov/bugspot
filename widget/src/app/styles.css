@@ -647,3 +647,36 @@ button.pinpath-thread-body.is-editable:focus-visible {
   /* A preview: the crawler presses, people watch. */
   pointer-events: none;
 }
+
+/* Progress of a crawl: transforms only, so it moves even while the page is busy. */
+.pinpath-progress {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #e5e8eb;
+}
+.pinpath-progress-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  background: #2d72d2;
+  transition: transform 0.4s ease-out;
+}
+.pinpath-progress-shine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 55%), transparent);
+  animation: pinpath-shine 1.2s linear infinite;
+  will-change: transform;
+}
+@keyframes pinpath-shine {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}

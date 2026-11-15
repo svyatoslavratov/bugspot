@@ -1,3 +1,4 @@
+import type { LangChoice } from './i18n';
 import type { ComposeMode, Point } from '../shared/types';
 
 /** Per-browser widget settings. */
@@ -9,6 +10,8 @@ export interface Prefs {
   mode: ComposeMode;
   /** The shortcut that starts picking ("Alt+KeyC"); empty — none. */
   hotkey: string;
+  /** The language of the widget and the map; "auto" — the browser's. */
+  lang: LangChoice;
 }
 
 const KEY = 'pinpath:prefs';
@@ -17,7 +20,7 @@ const LEGACY_KEY = 'bugspot:prefs';
 
 /** The site's defaults (script attributes) apply until the person changes a setting. */
 export function loadPrefs(defaults: { mode: ComposeMode; hotkey: string }): Prefs {
-  const base: Prefs = { button: null, pins: true, ...defaults };
+  const base: Prefs = { button: null, pins: true, lang: 'auto', ...defaults };
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY) ?? '{}') as Partial<Prefs>;
     return {
@@ -25,10 +28,21 @@ export function loadPrefs(defaults: { mode: ComposeMode; hotkey: string }): Pref
       pins: saved.pins ?? true,
       mode: saved.mode === 'tiny' || saved.mode === 'full' ? saved.mode : base.mode,
       hotkey: typeof saved.hotkey === 'string' ? saved.hotkey : base.hotkey,
+      lang: saved.lang === 'ru' || saved.lang === 'en' ? saved.lang : 'auto',
     };
   } catch {
     return base;
   }
+}
+
+/**
+ * Changes some settings in place: the map page shares the language and the picking shortcut with
+ * the widget when both live on one origin.
+ */
+export function updatePrefs(patch: Partial<Prefs>, defaults: { mode: ComposeMode; hotkey: string }): Prefs {
+  const next = { ...loadPrefs(defaults), ...patch };
+  savePrefs(next);
+  return next;
 }
 
 export function savePrefs(prefs: Prefs) {

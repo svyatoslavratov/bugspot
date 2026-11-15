@@ -110,13 +110,14 @@ describe('QuickComposer', () => {
 });
 
 describe('SettingsMenu', () => {
-  const prefs: Prefs = { button: null, pins: true, mode: 'full', hotkey: 'Alt+KeyC' };
+  const prefs: Prefs = { button: null, pins: true, mode: 'full', hotkey: 'Alt+KeyC', lang: 'auto' };
 
   test('switches the mode and records a new shortcut', () => {
     const onMode = vi.fn();
     const onHotkey = vi.fn();
     const onRecording = vi.fn();
-    render(createElement(SettingsMenu, { prefs, onMode, onHotkey, onRecording }));
+    const onLang = vi.fn();
+    render(createElement(SettingsMenu, { prefs, onMode, onHotkey, onRecording, onLang, canComment: true }));
     const item = (text: string) =>
       [...container.querySelectorAll<HTMLElement>('.bp6-menu-item')].find((el) => el.textContent?.includes(text))!;
     expect(item('Full — in the panel').closest('[aria-selected]')?.getAttribute('aria-selected')).toBe('true');
@@ -139,11 +140,40 @@ describe('SettingsMenu', () => {
 
     act(() => item('Turn off').click());
     expect(onHotkey).toHaveBeenLastCalledWith('');
+
+    expect(item('As in the browser').closest('[aria-selected]')?.getAttribute('aria-selected')).toBe('true');
+    act(() => item('Русский').click());
+    expect(onLang).toHaveBeenCalledWith('ru');
+  });
+
+  test('people who may not comment get the language only', () => {
+    render(
+      createElement(SettingsMenu, {
+        prefs,
+        onMode: vi.fn(),
+        onHotkey: vi.fn(),
+        onRecording: vi.fn(),
+        onLang: vi.fn(),
+        canComment: false,
+      }),
+    );
+    expect(container.textContent).toContain('English');
+    expect(container.textContent).not.toContain('Comment form');
+    expect(container.textContent).not.toContain('change');
   });
 
   test('Esc stops recording and keeps the shortcut', () => {
     const onHotkey = vi.fn();
-    render(createElement(SettingsMenu, { prefs, onMode: vi.fn(), onHotkey, onRecording: vi.fn() }));
+    render(
+      createElement(SettingsMenu, {
+        prefs,
+        onMode: vi.fn(),
+        onHotkey,
+        onRecording: vi.fn(),
+        onLang: vi.fn(),
+        canComment: true,
+      }),
+    );
     const change = [...container.querySelectorAll<HTMLElement>('.bp6-menu-item')].find((el) =>
       el.textContent?.includes('change'),
     )!;

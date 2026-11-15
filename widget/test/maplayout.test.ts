@@ -6,11 +6,12 @@ import {
   framesOf,
   layoutMap,
   linksByDefault,
-  NODE_H,
-  NODE_W,
   screenEdges,
+  screenLabel,
+  tabGroupsOf,
   threadsOf,
   visibleScreens,
+  withTabs,
 } from '../src/map/layout';
 import type { Edge, Screen, ScreenMap } from '../src/shared/types';
 
@@ -92,25 +93,27 @@ test('filters: hidden screens and other roles stay out, planned ones stay in', (
   expect(threadsOf(map, '/campaigns')).toBe(3);
 });
 
-const overlaps = (a: { x: number; y: number }, b: { x: number; y: number }) =>
-  a.x < b.x + NODE_W && b.x < a.x + NODE_W && a.y < b.y + NODE_H && b.y < a.y + NODE_H;
+type Box = { x: number; y: number; w: number; h: number };
+const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
 test('layout: a frame per section, linked screens left to right, routes around them, moved screens keep their place', async () => {
   const layout = await layoutMap(map, { ...defaultFilters, search: 'brand' }, 'Без раздела');
   expect(layout.sections.map((s) => s.name)).toEqual(['CRM', 'Аналитика']);
   const at = (key: string) => layout.screens.find((p) => p.screen.key === key)!;
-  expect(at('/brand/{id}').x).toBeGreaterThanOrEqual(at('/campaigns').x + NODE_W);
+  expect(at('/brand/{id}').x).toBeGreaterThanOrEqual(at('/campaigns').x + at('/campaigns').w);
+  // A screen is as large as the window it was seen in; without a look, a laptop's.
+  expect([at('/campaigns').w, at('/campaigns').h]).toEqual([1440, 900]);
   for (const p of layout.screens) {
     const frame = layout.sections.find((s) => s.name === (p.screen.section || 'Без раздела'))!;
     expect(p.x).toBeGreaterThanOrEqual(frame.x);
     expect(p.y).toBeGreaterThanOrEqual(frame.y);
-    expect(p.x + NODE_W).toBeLessThanOrEqual(frame.x + frame.w);
-    expect(p.y + NODE_H).toBeLessThanOrEqual(frame.y + frame.h);
+    expect(p.x + p.w).toBeLessThanOrEqual(frame.x + frame.w);
+    expect(p.y + p.h).toBeLessThanOrEqual(frame.y + frame.h);
   }
   // Inside a frame the transition goes around the screens; across frames it is a plain curve.
   const inside = layout.edges.find((e) => e.from === '/campaigns' && e.to === '/brand/{id}')!;
   expect(inside.points!.length).toBeGreaterThanOrEqual(2);
-  expect(inside.points![0].x).toBeGreaterThanOrEqual(at('/campaigns').x + NODE_W - 1);
+  expect(inside.points![0].x).toBeGreaterThanOrEqual(at('/campaigns').x + at('/campaigns').w - 1);
   expect(layout.edges.find((e) => e.to === '/reports')!.points).toBeUndefined();
   expect(
     layout.screens
@@ -127,7 +130,7 @@ test('layout: a frame per section, linked screens left to right, routes around t
   );
   const reports = moved.screens.find((p) => p.screen.key === '/reports')!;
   expect([reports.x, reports.y, reports.manual]).toEqual([-900, 10, true]);
-  expect(moved.sections.find((s) => s.name === 'Аналитика')!.x).toBeGreaterThan(0);
+  expect(moved.sections.find((s) => s.name === 'Аналитика')!.x).toBeGreaterThanOrEqual(0);
 });
 
 test('the crawl starts at the root page the map knows, with the hash that opens it', () => {
@@ -182,7 +185,7 @@ test('a hub with many screens makes a wide frame, not a tall one, and no screens
   for (const e of layout.edges.filter((e) => e.from === '/s')) {
     const leaf = layout.screens.find((p) => p.screen.key === e.to)!;
     const end = e.points![e.points!.length - 1];
-    expect(end).toEqual({ x: leaf.x + NODE_W / 2, y: leaf.y });
+    expect(end).toEqual({ x: leaf.x + leaf.w / 2, y: leaf.y });
   }
   const all = layout.screens;
   for (let i = 0; i < all.length; i++)
@@ -195,4 +198,84 @@ test('links show at first only while they are few', () => {
   const screens = [screen('/hub'), ...many.map((e) => screen(e.to.screen))];
   expect(linksByDefault({ screens, edges: many, aliases: {}, threads: {} })).toBe(false);
   expect(linksByDefault(map)).toBe(true);
+});
+
+test('a screen takes the size of the window its look was taken in', async () => {
+  const phone = screen('/m', {
+    section: 'M',
+    states: [
+      {
+        key: '',
+        kind: 'page',
+        name: '',
+        description: '',
+        hasShot: true,
+        hasSnapshot: true,
+        viewport: { w: 390, h: 844 },
+      },
+    ],
+  });
+  const layout = await layoutMap({ screens: [phone], edges: [], aliases: {}, threads: {} }, defaultFilters, '');
+  expect([layout.screens[0].w, layout.screens[0].h]).toEqual([390, 844]);
+});
+
+test('tabs with addresses of their own: named by their tab, side by side in a box, no arrows between them', async () => {
+  const tabs = [
+    '/tasks/scout/base',
+    '/tasks/scout/brands',
+    '/tasks/scout/current',
+    '/tasks/scout/summary',
+    '/tasks/scout/x',
+  ];
+  const names = ['Новая база', 'Новые бренды', 'Текущие', 'Сводка', 'Иксы'];
+  const tabState = (name: string) => ({
+    key: `tab:${name}`,
+    kind: 'tab' as const,
+    name,
+    description: '',
+    hasShot: false,
+    hasSnapshot: false,
+  });
+  const screens = [
+    screen('/tasks/scout', { title: 'Мои задания', section: 'Задания', states: [tabState('Сводка')] }),
+    ...tabs.map((key) => screen(key, { title: 'Мои задания', section: 'Задания' })),
+    screen('/authors', { title: 'Авторы', section: 'Задания' }),
+  ];
+  // Every tab leads to every other; one of them also to the authors.
+  const edges = tabs.flatMap((from) =>
+    tabs.filter((to) => to !== from).map((to) => edge(from, to, { name: names[tabs.indexOf(to)], kind: 'tab' })),
+  );
+  edges.push(edge('/tasks/scout', '/tasks/scout/base', { name: 'Новая база', kind: 'tab' }));
+  edges.push(edge('/tasks/scout/base', '/authors', { name: 'Автор' }));
+  const map = withTabs({ screens, edges, aliases: {}, threads: {} });
+
+  const named = new Map(map.screens.map((s) => [s.key, s]));
+  expect(screenLabel(named.get('/tasks/scout/brands')!)).toBe('Мои задания · Новые бренды');
+  // The page one opens first is named by the one tab it was seen with.
+  expect(named.get('/tasks/scout')!.tab).toBe('Сводка');
+  expect(named.get('/authors')!.tab).toBeUndefined();
+
+  const keys = new Set(screens.map((s) => s.key));
+  expect(tabGroupsOf(map.screens, screenEdges(edges, keys, defaultFilters))).toEqual([['/tasks/scout', ...tabs]]);
+
+  const layout = await layoutMap(map, defaultFilters, 'Без раздела');
+  expect(layout.groups).toHaveLength(1);
+  const [box] = layout.groups;
+  expect([box.title, box.count]).toEqual(['Мои задания', 6]);
+  // Six tabs: two rows of three, all inside the box, none over another.
+  const members = layout.screens.filter((p) => p.inGroup);
+  expect(members).toHaveLength(6);
+  expect(new Set(members.map((p) => p.y)).size).toBe(2);
+  for (const p of members) {
+    expect(p.x).toBeGreaterThanOrEqual(box.x);
+    expect(p.y).toBeGreaterThanOrEqual(box.y);
+    expect(p.x + p.w).toBeLessThanOrEqual(box.x + box.w);
+    expect(p.y + p.h).toBeLessThanOrEqual(box.y + box.h);
+  }
+  for (let i = 0; i < members.length; i++)
+    for (let j = i + 1; j < members.length; j++) expect(overlaps(members[i], members[j])).toBe(false);
+  // Only the arrow out of the group is drawn, from the box to the authors.
+  expect(layout.edges.map((e) => [e.from, e.to])).toEqual([['/tasks/scout/base', '/authors']]);
+  const start = layout.edges[0].points![0];
+  expect(start.x === box.x || start.x === box.x + box.w || start.y === box.y || start.y === box.y + box.h).toBe(true);
 });

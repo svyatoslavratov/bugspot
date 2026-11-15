@@ -137,7 +137,7 @@ export function LiveShot({ screen, state }: { screen: Screen; state: ScreenState
   void tick;
 
   return (
-    <div ref={box} className={`map-thumb map-live ${commenting ? 'is-commenting nodrag nopan' : ''}`}>
+    <div ref={box} className={`map-live ${commenting ? 'is-commenting nodrag nopan' : ''}`}>
       {snap && width > 0 && (
         <iframe
           key={snapKey}
@@ -160,7 +160,7 @@ export function LiveShot({ screen, state }: { screen: Screen; state: ScreenState
           <button
             key={`${p.thread.id}-${i}`}
             type="button"
-            className={`map-pin is-small intent-${statusIntent[p.thread.status]} nodrag`}
+            className={`map-pin is-canvas intent-${statusIntent[p.thread.status]} nodrag`}
             style={{ left: p.x * scale, top: p.y * scale }}
             title={p.thread.body}
             onClick={(e) => {
