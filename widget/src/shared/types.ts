@@ -312,6 +312,8 @@ export interface ScreenPatch {
   order?: number;
   hidden?: boolean;
   position?: { x: number; y: number };
+  /** Forget the position set by hand: the layout places the screen again. */
+  resetPosition?: boolean;
   mergeInto?: string;
 }
 

@@ -1,21 +1,7 @@
 // The demo glue: a pretend hash-routed app, the API in WebAssembly, and controls that switch the
 // user and the access policy. The widget itself is the same build the Go service serves.
 (() => {
-  const personas = {
-    anna: { id: 'anna', name: 'Anna (admin)', roles: 'admin' },
-    boris: { id: 'boris', name: 'Boris (developer)', roles: 'developer' },
-    guest: null,
-  };
-  const presets = {
-    team: { view: 'authenticated', comment: 'authenticated', moderate: 'role:admin' },
-    closed: { view: 'role:admin', comment: 'role:admin', moderate: 'role:admin' },
-    public: { view: '*', comment: '*', moderate: 'role:admin' },
-  };
-  const stored = (key, fallback) => localStorage.getItem(`pinpath-demo:${key}`) || fallback;
-  const state = { persona: stored('persona', 'anna'), preset: stored('preset', 'team'), lang: stored('lang', navigator.language.startsWith('ru') ? 'ru' : 'en') };
-  const jarKey = 'pinpath-demo:cookies';
-  const jar = JSON.parse(localStorage.getItem(jarKey) || '{}');
-  const base = new URL('./', document.baseURI).href;
+  const { state, personas, presets, jar, jarKey, ready } = window.pinpathDemo;
 
   // --- the pretend app ---------------------------------------------------------------------
   function render() {
@@ -27,44 +13,6 @@
   if (!location.hash) history.replaceState(null, '', '#/campaigns');
   window.addEventListener('hashchange', render);
   render();
-
-  // --- the API in the browser ---------------------------------------------------------------
-  async function bodyBytes(body) {
-    if (body == null) return null;
-    if (typeof body === 'string') return new TextEncoder().encode(body);
-    if (body instanceof Blob) return new Uint8Array(await body.arrayBuffer());
-    if (body instanceof ArrayBuffer) return new Uint8Array(body);
-    return new TextEncoder().encode(String(body));
-  }
-
-  async function demoFetch(input, init = {}) {
-    const url = new URL(typeof input === 'string' ? input : input.url, location.href);
-    const path = '/' + url.href.slice(base.length).replace(/^\//, '');
-    const headers = {};
-    new Headers(init.headers || {}).forEach((v, k) => (headers[k] = v));
-    const persona = personas[state.persona];
-    if (persona) {
-      headers['x-demo-user'] = persona.id;
-      headers['x-demo-name'] = persona.name;
-      headers['x-demo-roles'] = persona.roles;
-    }
-    const cookie = Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; ');
-    if (cookie) headers.cookie = cookie;
-    const out = window.pinpathServer.serve({ method: init.method || 'GET', path, headers, body: await bodyBytes(init.body) });
-    const resHeaders = new Headers();
-    for (const [name, value] of out.headers) {
-      if (name === 'set-cookie') {
-        const [pair] = value.split(';');
-        const [k, v] = pair.split('=');
-        if (/max-age=-1|max-age=0/i.test(value)) delete jar[k];
-        else jar[k] = v;
-        localStorage.setItem(jarKey, JSON.stringify(jar));
-      } else resHeaders.append(name, value);
-    }
-    const empty = out.status === 204 || out.status === 304;
-    return new Response(empty ? null : out.body, { status: out.status, headers: resHeaders });
-  }
-  window.pinpathConfig = { fetch: demoFetch, appVersion: '0.4.1' };
 
   // --- mounting and the controls ------------------------------------------------------------
   const status = document.getElementById('status');
@@ -136,11 +84,7 @@
     window.pinpath?.refresh();
   });
 
-  window.onPinpathServerReady = mount;
   status.textContent = 'Starting the API…';
-  const go = new Go();
-  WebAssembly.instantiateStreaming(fetch('pinpath.wasm'), go.importObject).then(
-    (result) => go.run(result.instance),
-    (error) => (status.textContent = `Could not start the API: ${error}`),
-  );
+  ready.then(mount);
+  window.addEventListener('pinpath-demo-failed', (e) => (status.textContent = `Could not start the API: ${e.detail}`));
 })();

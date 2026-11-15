@@ -462,6 +462,7 @@ paths:
                   order: { type: integer }
                   hidden: { type: boolean }
                   position: { $ref: "#/components/schemas/Point" }
+                  resetPosition: { type: boolean, description: Forget the position set by hand; the layout places the screen again }
                   mergeInto: { type: string, description: "Move states, transitions and threads into this screen; the key stays as its alias" }
       responses:
         "204": { description: Saved }

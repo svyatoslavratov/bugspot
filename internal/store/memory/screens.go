@@ -9,12 +9,13 @@ import (
 	"github.com/svyatoslavratov/pinpath/internal/domain"
 )
 
-// screenMap is the map of one project. Looks (thumbnails, snapshots, stylesheets) stay out of the
-// export: the demo keeps its state in localStorage, which is small.
+// screenMap is the map of one project. Looks (thumbnails, snapshots, stylesheets) stay out of
+// Export, which is small enough for localStorage; ExportAll carries them in Looks.
 type screenMap struct {
 	Screens map[string]*domain.Screen `json:"screens"`
 	Edges   []domain.Edge             `json:"edges"`
 	Aliases map[string]string         `json:"aliases"`
+	Looks   *savedLooks               `json:"looks,omitempty"`
 
 	shots     map[domain.StateRef]screenshot
 	snapshots map[domain.StateRef]domain.Snapshot
@@ -35,12 +36,58 @@ func (sm *screenMap) init() {
 	}
 }
 
-// afterImport drops the marks of looks an export does not carry.
+// savedLooks are the looks of a map in a full export (ExportAll).
+type savedLooks struct {
+	Shots     []savedShot           `json:"shots"`
+	Snapshots []savedSnapshot       `json:"snapshots"`
+	Assets    map[string]screenshot `json:"assets"`
+}
+
+type savedShot struct {
+	Ref domain.StateRef `json:"ref"`
+	screenshot
+}
+
+type savedSnapshot struct {
+	domain.Snapshot
+	// HTML is hidden from JSON in domain.Snapshot; the export needs it.
+	HTML []byte `json:"html"`
+}
+
+func (sm *screenMap) saveLooks() *savedLooks {
+	l := &savedLooks{Assets: sm.assets}
+	for ref, s := range sm.shots {
+		l.Shots = append(l.Shots, savedShot{Ref: ref, screenshot: s})
+	}
+	for _, s := range sm.snapshots {
+		l.Snapshots = append(l.Snapshots, savedSnapshot{Snapshot: s, HTML: s.HTML})
+	}
+	return l
+}
+
+// afterImport restores the looks a full export carries and marks the states by what is there.
 func (sm *screenMap) afterImport() {
 	sm.init()
+	if l := sm.Looks; l != nil {
+		for _, s := range l.Shots {
+			sm.shots[s.Ref] = s.screenshot
+		}
+		for _, s := range l.Snapshots {
+			snap := s.Snapshot
+			snap.HTML = s.HTML
+			sm.snapshots[domain.StateRef{Screen: snap.Screen, State: snap.State}] = snap
+		}
+		for hash, a := range l.Assets {
+			sm.assets[hash] = a
+		}
+		sm.Looks = nil
+	}
 	for _, sc := range sm.Screens {
 		for i := range sc.States {
-			sc.States[i].HasShot, sc.States[i].HasSnapshot = false, false
+			ref := domain.StateRef{Screen: sc.Key, State: sc.States[i].Key}
+			_, shot := sm.shots[ref]
+			_, snap := sm.snapshots[ref]
+			sc.States[i].HasShot, sc.States[i].HasSnapshot = shot, snap
 		}
 	}
 }
@@ -286,7 +333,9 @@ func (sm *screenMap) patch(p domain.ScreenPatch, at time.Time) error {
 	if p.Hidden != nil {
 		sc.Hidden = *p.Hidden
 	}
-	if p.Position != nil {
+	if p.ResetPosition {
+		sc.Position = nil
+	} else if p.Position != nil {
 		pos := *p.Position
 		sc.Position = &pos
 	}

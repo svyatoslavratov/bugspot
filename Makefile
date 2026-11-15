@@ -31,8 +31,11 @@ demo: widget ## the GitHub Pages demo in _site/: the widget plus the API compile
 	rm -rf _site && mkdir -p _site
 	GOOS=js GOARCH=wasm go build -trimpath -ldflags "$(LDFLAGS)" -o _site/pinpath.wasm ./cmd/pinpath-wasm
 	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" _site/
-	cp demo/index.html demo/demo.css demo/demo.js _site/
+	cp demo/index.html demo/demo.css demo/demo-api.js demo/demo.js _site/
 	cp -R internal/widgetfs/dist/widget.js internal/widgetfs/dist/assets _site/
+	# The map page with the API in WebAssembly in front of it.
+	sed 's#<script type="module"#<script src="wasm_exec.js"></script><script src="demo-api.js"></script>\n    <script type="module"#' \
+		internal/widgetfs/dist/map.html > _site/map.html
 
 run: build ## run locally with public access and a local database
 	PINPATH_AUTH=anonymous PINPATH_VIEW='*' PINPATH_COMMENT='*' PINPATH_DATA_DIR=data ./bin/pinpath

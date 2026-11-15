@@ -58,7 +58,23 @@ func (m *Store) Export() ([]byte, error) {
 	return json.Marshal(m.s)
 }
 
-// Import replaces the state with an export.
+// ExportAll is Export with the looks of the screen maps: thumbnails, DOM snapshots and their
+// stylesheets. The demo keeps it in IndexedDB, which holds more than localStorage.
+func (m *Store) ExportAll() ([]byte, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, sm := range m.s.Maps {
+		sm.Looks = sm.saveLooks()
+	}
+	defer func() {
+		for _, sm := range m.s.Maps {
+			sm.Looks = nil
+		}
+	}()
+	return json.Marshal(m.s)
+}
+
+// Import replaces the state with an export (Export or ExportAll).
 func (m *Store) Import(data []byte) error {
 	var s state
 	if err := json.Unmarshal(data, &s); err != nil {

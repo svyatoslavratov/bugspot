@@ -8,8 +8,9 @@ import { serializeDocument } from '../lib/snapshot';
 import type { Api } from '../shared/api';
 import type { Session, StateRef } from '../shared/types';
 
-const THUMBNAIL_WIDTH = 640;
-const THUMBNAIL_MAX_BYTES = 400 << 10;
+// Twice the size a node takes at a normal zoom: sharp on high-density screens and when zoomed in.
+const THUMBNAIL_WIDTH = 1280;
+const THUMBNAIL_MAX_BYTES = 900 << 10;
 
 export interface LookOptions {
   mask: 'inputs' | 'text' | 'none';

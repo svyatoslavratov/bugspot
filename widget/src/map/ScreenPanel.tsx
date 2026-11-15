@@ -46,6 +46,7 @@ export function ScreenPanel({
   screen,
   version,
   showNav,
+  thread: initialThread,
   onClose,
   onSelect,
   onOpen,
@@ -56,6 +57,8 @@ export function ScreenPanel({
   version: number;
   /** Transitions through the app's menu too. */
   showNav: boolean;
+  /** A thread to open at once: a pin clicked on the canvas. */
+  thread?: string | null;
   onClose: () => void;
   onSelect: (key: string) => void;
   onOpen: (state: string) => void;
@@ -65,7 +68,7 @@ export function ScreenPanel({
   const { t } = useMap();
   const canEdit = session.can?.map ?? false;
   const [error, setError] = useState<string | null>(null);
-  const [thread, setThread] = useState<string | null>(null);
+  const [thread, setThread] = useState<string | null>(initialThread ?? null);
   const [mergeTarget, setMergeTarget] = useState('');
   const threads = useData(
     () => api.threads({ screen: screen.key, route: screen.exampleRoute, status: ACTIVE_STATUSES, limit: 100 }),

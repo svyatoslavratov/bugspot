@@ -6,26 +6,12 @@ import { statusIntent } from '../app/labels';
 import { ThreadView } from '../app/ThreadView';
 import { useData } from '../app/useData';
 import { anchorsOf, buildAnchor, resolveAnchor } from '../lib/anchor';
-import { anyAttr, attrOf } from '../lib/attrs';
 import { interactiveOf } from '../lib/screen';
-import {
-  ACTIVE_STATUSES,
-  type Edge,
-  type ScreenMap,
-  type SnapshotData,
-  type StateRef,
-  type Thread,
-} from '../shared/types';
+import { ACTIVE_STATUSES, type Edge, type ScreenMap, type StateRef, type Thread } from '../shared/types';
 import { useMap } from './context';
 import { screenLabel } from './layout';
 import { SnapshotComposer, type Picked } from './SnapshotComposer';
-
-interface Box {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
+import { boxOf, prepare, type Box } from './snapshotDom';
 
 interface Hotspot {
   box: Box;
@@ -34,24 +20,6 @@ interface Hotspot {
 }
 
 const INTERACTIVE = 'a[href], button, [role="button"], [role="link"], [role="tab"], [role="menuitem"], summary';
-
-function boxOf(el: Element): Box {
-  const r = el.getBoundingClientRect();
-  return { x: r.left, y: r.top, w: r.width, h: r.height };
-}
-
-/** Puts the stylesheets into the snapshot and restores the scroll positions of its containers. */
-function prepare(doc: Document, snap: SnapshotData) {
-  // Snapshots taken before the rename from bugspot carry data-bugspot-* attributes.
-  for (const style of doc.querySelectorAll('style[data-pinpath-asset], style[data-bugspot-asset]')) {
-    style.textContent = snap.css[attrOf(style, 'asset') ?? ''] ?? '';
-  }
-  for (const el of doc.querySelectorAll(anyAttr('scroll'))) {
-    const [x, y] = (attrOf(el, 'scroll') ?? '0,0').split(',').map(Number);
-    el.scrollLeft = x;
-    el.scrollTop = y;
-  }
-}
 
 export function SnapshotView({
   map,
