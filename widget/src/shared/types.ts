@@ -13,6 +13,12 @@ export interface Author {
   kind: 'user' | 'agent';
 }
 
+/** A width and a height in CSS pixels. */
+export interface Size {
+  w: number;
+  h: number;
+}
+
 export interface Point {
   x: number;
   y: number;
@@ -246,6 +252,11 @@ export interface Screen {
   firstSeen?: string;
   lastSeen?: string;
   updatedAt: string;
+  /**
+   * Worked out on the map page, not stored: the tab this address is, when an app gives every tab
+   * of a page its own address — the name of the tab that leads here.
+   */
+  tab?: string;
 }
 
 export interface Edge {

@@ -3,13 +3,14 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { anchorsOf, buildAnchor, combineAnchors, pinPoint, resolveAnchor } from '../lib/anchor';
 import { pageContext } from '../lib/context';
 import { DEFAULT_HOTKEY, formatHotkey, matchesHotkey, parseHotkey } from '../lib/hotkey';
+import { dictionaries, resolveLang, type LangChoice } from '../lib/i18n';
 import { loadPrefs, savePrefs, setPendingThread, takePendingThread, type Prefs } from '../lib/prefs';
 import { currentRoute, onRouteChange } from '../lib/route';
 import { currentState } from '../lib/screen';
 import { ACTIVE_STATUSES, type ComposeMode, type CrawlConfig, type Status, type Thread } from '../shared/types';
 import { BugButton } from './BugButton';
 import { currentScreen, startCollector } from './collector';
-import { useWidget } from './context';
+import { useWidget, WidgetContext } from './context';
 import { CrawlDialog } from './CrawlDialog';
 import { Flash, FLASH_MS } from './Flash';
 import { NewThread } from './NewThread';
@@ -51,7 +52,25 @@ function statusesOf(filter: StatusFilter): Status[] | undefined {
   return [filter];
 }
 
-export const App = forwardRef<AppHandle>(function App(_, ref) {
+export const App = forwardRef<AppHandle>(function App(props, ref) {
+  // The language is the person's choice in the settings, else the browser's: everything below gets
+  // the dictionary of that language.
+  const widget = useWidget();
+  const [lang, setLang] = useState(() =>
+    resolveLang(loadPrefs({ mode: 'full', hotkey: '' }).lang, widget.settings.lang),
+  );
+  const value = useMemo(
+    () => ({ ...widget, t: dictionaries[lang], settings: { ...widget.settings, lang } }),
+    [widget, lang],
+  );
+  return (
+    <WidgetContext.Provider value={value}>
+      <WidgetApp {...props} ref={ref} onLang={(choice) => setLang(resolveLang(choice, widget.settings.lang))} />
+    </WidgetContext.Provider>
+  );
+});
+
+const WidgetApp = forwardRef<AppHandle, { onLang: (choice: LangChoice) => void }>(function WidgetApp({ onLang }, ref) {
   const { api, settings, capture, session, t, host } = useWidget();
   const canComment = session.can?.comment ?? false;
   const [prefs, setPrefs] = useState<Prefs>(() =>
@@ -226,6 +245,13 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
   const setHotkey = useCallback((value: string) => updatePrefs({ hotkey: value }), [updatePrefs]);
   const setPins = useCallback((on: boolean) => updatePrefs({ pins: on }), [updatePrefs]);
   const setRecording = useCallback((on: boolean) => void (recordingHotkey.current = on), []);
+  const setLangChoice = useCallback(
+    (choice: LangChoice) => {
+      updatePrefs({ lang: choice });
+      onLang(choice);
+    },
+    [updatePrefs, onLang],
+  );
 
   // Closing the panel cancels a comment being written there, as "Cancel" does: a forgotten draft
   // must not come back on the next open or keep the shortcut from picking.
@@ -360,9 +386,14 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
           onQuery={setQuery}
           onPins={setPins}
           settings={
-            canComment ? (
-              <SettingsMenu prefs={prefs} onMode={setMode} onHotkey={setHotkey} onRecording={setRecording} />
-            ) : undefined
+            <SettingsMenu
+              prefs={prefs}
+              canComment={canComment}
+              onMode={setMode}
+              onHotkey={setHotkey}
+              onRecording={setRecording}
+              onLang={setLangChoice}
+            />
           }
           onNew={startPicking}
           onMap={

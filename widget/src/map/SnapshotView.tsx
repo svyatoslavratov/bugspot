@@ -339,7 +339,7 @@ export function SnapshotView({
                 ref={liveFrame}
                 title={t.live}
                 src={live.url}
-                className="map-live"
+                className="map-app-frame"
                 style={{ width: viewport.w, height: viewport.h, transform: `scale(${scale})` }}
               />
             </div>

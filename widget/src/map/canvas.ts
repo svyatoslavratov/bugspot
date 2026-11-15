@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, type PointerEvent } from 'react';
 
 import type { Point } from '../shared/types';
 
@@ -18,6 +18,8 @@ export interface Canvas {
   onPick: (pick: CanvasPick) => void;
   onOpenThread: (screen: string, thread: string) => void;
   onEscape: () => void;
+  /** Starts moving a screen by its name; absent for those who may not edit the map. */
+  onMoveStart?: (e: PointerEvent, id: string) => void;
 }
 
 export const CanvasContext = createContext<Canvas>({

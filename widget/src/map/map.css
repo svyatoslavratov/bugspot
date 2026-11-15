@@ -65,51 +65,104 @@ button {
   height: 100%;
 }
 
-/* Screens. */
+/* The canvas. --z is the zoom: what belongs to the map divides by it and stays the same size on
+   screen, while the screens are drawn at their real size and zoom with the canvas. */
 
-.map-node {
+.map-flow .react-flow__node {
+  cursor: default;
+}
+
+.map-screen {
+  position: relative;
   width: 100%;
   height: 100%;
   box-sizing: border-box;
   background: #fff;
-  border: 1px solid #c5cbd3;
-  border-radius: 8px;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  box-shadow: 0 1px 2px rgb(17 20 24 / 8%);
-  transition:
-    box-shadow 0.15s,
-    opacity 0.15s;
+  box-shadow: 0 0 0 calc(1px / var(--z)) rgb(17 20 24 / 18%);
+  transition: opacity 0.15s;
 }
 
-.map-node:hover {
-  box-shadow: 0 4px 12px rgb(17 20 24 / 15%);
+.map-screen:hover {
+  box-shadow:
+    0 0 0 calc(1px / var(--z)) rgb(17 20 24 / 30%),
+    0 calc(4px / var(--z)) calc(16px / var(--z)) rgb(17 20 24 / 16%);
 }
 
-.map-node.is-selected {
-  border-color: #2d72d2;
-  box-shadow: 0 0 0 2px #2d72d2;
+.map-screen.is-selected {
+  box-shadow: 0 0 0 calc(2px / var(--z)) #2d72d2;
 }
 
-.map-node.is-dim {
+.map-screen.is-dim {
   opacity: 0.25;
 }
 
-.map-node.is-planned {
-  border-style: dashed;
-  background: #fbfbfc;
+.map-screen.is-planned {
+  background: #f6f7f9;
+  box-shadow: none;
+  outline: calc(1.5px / var(--z)) dashed #8f99a8;
 }
 
-.map-node.is-hidden {
-  opacity: 0.6;
+.map-screen.is-hidden {
+  opacity: 0.55;
+}
+
+/* The name above a screen, as a frame name in a design tool: the handle that moves the screen. */
+.map-screen-label {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(var(--w) * var(--z) * 1px);
+  padding: 0 0 4px;
+  transform: scale(calc(1 / var(--z)));
+  transform-origin: 0 100%;
+  font-size: 12px;
+  line-height: 16px;
+  color: #404854;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+}
+
+.map-screen-label.is-movable {
+  cursor: grab;
+}
+
+.map-screen-label.is-movable:active {
+  cursor: grabbing;
+}
+
+.map-screen.is-selected .map-screen-label {
+  color: #2d72d2;
+}
+
+.map-screen-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.map-chip {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: #e5e8eb;
+  font-size: 11px;
+  color: #404854;
+}
+
+.map-chip.is-threads {
+  background: #cd4246;
+  color: #fff;
+  font-weight: 600;
 }
 
 .map-thumb {
-  flex: 1;
-  min-height: 0;
-  border-radius: 4px;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   background: #edeff2;
   display: flex;
@@ -125,57 +178,251 @@ button {
 }
 
 .map-thumb-empty {
-  padding: 8px;
-  font-size: 12px;
+  padding: 8%;
+  font-size: calc(var(--w, 260) * 0.024px);
   color: #738091;
   text-align: center;
 }
 
-.map-node-title {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* In the panel the pictures are small: their text is the panel's. */
+.map-panel .map-thumb-empty {
+  font-size: 11px;
 }
 
-.map-node-meta {
+/* Frames: a light board under its screens, its name above it. */
+.map-section {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  background: rgb(255 255 255 / 60%);
+  box-shadow: 0 0 0 calc(1px / var(--z)) #dce0e5;
+  border-radius: calc(8px / var(--z));
+}
+
+.map-section.is-auto {
+  background: rgb(255 255 255 / 35%);
+  box-shadow: none;
+  outline: calc(1px / var(--z)) dashed #c5cbd3;
+}
+
+.map-frame-label {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  padding: 0 0 6px;
+  /* The same size on screen, but never taller than the gap between frames: far out it shrinks. */
+  transform: scale(min(1 / var(--z), 16));
+  transform-origin: 0 100%;
+  font-size: 14px;
+  font-weight: 600;
+  color: #404854;
+  white-space: nowrap;
+}
+
+/* A group of tabs: the screens one goes between by the tabs of one page. */
+.map-tabs {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: calc(10px / var(--z));
+  background: rgb(45 114 210 / 4%);
+  box-shadow: 0 0 0 calc(1px / var(--z)) rgb(45 114 210 / 25%);
+}
+
+.map-tabs-label {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 0 4px;
+  transform: scale(min(1 / var(--z), 8));
+  transform-origin: 0 100%;
+  font-size: 12px;
+  line-height: 16px;
+  color: #738091;
+  white-space: nowrap;
+}
+
+.map-tabs-title {
+  font-weight: 600;
+  color: #215db0;
+}
+
+/* Far away a screen has no name: a dot in its corner says it has comments to see to. */
+.map-dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #cd4246;
+  transform: scale(calc(1 / var(--z))) translate(50%, -50%);
+  transform-origin: 100% 0;
+}
+
+.map-section-auto {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #738091;
+}
+
+/* Arrows: the same width on screen at any zoom; the arrowheads follow the width. */
+.map-flow .react-flow__edge-path {
+  stroke-width: calc(var(--w, 1.5) * 1px / var(--z));
+  transition: opacity 0.15s;
+}
+
+.map-flow .kind-declared .react-flow__edge-path {
+  stroke-dasharray: calc(8px / var(--z)) calc(5px / var(--z));
+}
+
+.map-flow .kind-link .react-flow__edge-path {
+  stroke-dasharray: calc(5px / var(--z)) calc(5px / var(--z));
+}
+
+.map-flow .kind-nav .react-flow__edge-path {
+  stroke-dasharray: calc(2px / var(--z)) calc(5px / var(--z));
+}
+
+.map-flow.is-dense .react-flow__edge {
+  opacity: 0.3;
+}
+
+.map-flow.is-dense .react-flow__edge-path {
+  stroke-width: calc(1px / var(--z));
+}
+
+/* Arrows between frames cross the whole map: they show for the screen in focus only. */
+.map-flow .react-flow__edge.is-cross {
+  display: none;
+}
+
+.map-edge-label {
+  position: absolute;
+  display: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 95%);
+  box-shadow: 0 0 0 1px #dce0e5;
+  font-size: 11px;
+  color: #404854;
+  white-space: nowrap;
+  pointer-events: none;
+  transform-origin: 0 0;
+}
+
+.map-flow.show-labels .map-edge-label {
+  display: block;
+}
+
+.map-body[data-far='true'] .map-flow .map-edge-label {
+  display: none;
+}
+
+.map-legend {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.map-legend li {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
+}
+
+.map-legend-line {
+  stroke-width: 2;
+}
+
+.map-legend-line.kind-declared {
+  stroke-dasharray: 8 5;
+}
+
+.map-legend-line.kind-link {
+  stroke-dasharray: 5 5;
+}
+
+.map-legend-line.kind-nav {
+  stroke-dasharray: 2 5;
+}
+
+.map-show {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  width: 340px;
+}
+
+.map-show .bp6-control {
+  margin: 0;
+}
+
+.map-show-item {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.map-show-item span {
+  font-size: 12px;
+  color: #5f6b7c;
+}
+
+.map-busy {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
   font-size: 12px;
   color: #5f6b7c;
 }
 
-.map-node-meta code {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.map-keys {
+  margin: 8px;
+  border-collapse: collapse;
+  font-size: 12px;
 }
 
-.map-node-tags {
-  display: flex;
-  gap: 4px;
-  flex: none;
-}
-
-.map-section {
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  border-radius: 12px;
-  background: rgb(255 255 255 / 55%);
-  border: 1px solid #dce0e5;
-}
-
-/* Frames are large: their names stay readable when the whole map is in view. */
-.map-section-title {
-  padding: 16px 24px;
-  font-size: 32px;
-  line-height: 40px;
+.map-keys th {
+  padding: 3px 12px 3px 4px;
+  text-align: left;
   font-weight: 600;
-  color: #404854;
   white-space: nowrap;
+}
+
+.map-keys td {
+  padding: 3px 4px;
+  color: #5f6b7c;
+}
+
+.map-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #5f6b7c;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.map-dialog {
+  width: 620px;
+  max-width: calc(100vw - 32px);
+}
+
+.map-code {
+  margin: 4px 0 12px;
+  font-size: 12px;
+  white-space: pre;
+  overflow-x: auto;
 }
 
 /* The panel of a screen. */
@@ -218,8 +465,8 @@ button {
   gap: 2px;
 }
 
-.map-field > span:first-child,
-.map-section-label {
+.map-panel-label {
+  margin-top: 6px;
   font-size: 12px;
   font-weight: 600;
   color: #5f6b7c;
@@ -227,10 +474,22 @@ button {
   letter-spacing: 0.02em;
 }
 
+.map-description.bp6-input {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
 .map-panel-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.map-panel-actions.is-quiet {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #edeff2;
 }
 
 .map-merge {
@@ -284,7 +543,52 @@ button {
   gap: 4px;
 }
 
-.map-link,
+.map-link {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  align-items: start;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.map-thumb.is-mini {
+  width: 72px;
+  height: 45px;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px #dce0e5;
+}
+
+.map-link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.map-link-text code {
+  font-size: 11px;
+  color: #738091;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-link-via {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #5f6b7c;
+}
+
 .map-thread {
   text-align: left;
   border: 0;
@@ -476,8 +780,8 @@ button {
   gap: 10px;
 }
 
-/* The live app: a real frame, interactive, without the snapshot's overlay. */
-.map-live {
+/* The live app in the full view of a state: a real frame, interactive. */
+.map-app-frame {
   position: absolute;
   top: 0;
   left: 0;
@@ -485,35 +789,27 @@ button {
   transform-origin: 0 0;
   background: #fff;
 }
+
 .map-live-note.bp6-callout {
   margin: 8px 16px 0;
 }
+
 .map-toolbar .is-hidden {
   display: none;
 }
+
 .map-notice.bp6-callout.bp6-intent-danger {
   background: #fae6e6;
 }
 
-/* A frame by address: a suggestion until the screens get a section. */
-.map-section.is-auto {
-  border-style: dashed;
-  border-width: 2px;
-  background: rgb(255 255 255 / 40%);
-}
-.map-section-auto {
-  margin-left: 12px;
-  font-size: 18px;
-  font-weight: 400;
-  color: #738091;
-}
-
-/* A screen up close: its live snapshot, scaled into the node. */
+/* A screen up close: its live snapshot at its real size. */
 .map-live {
-  position: relative;
-  display: block;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
   background: #fff;
 }
+
 .map-live iframe {
   position: absolute;
   top: 0;
@@ -523,35 +819,26 @@ button {
   pointer-events: none;
   background: #fff;
 }
+
 .map-live.is-commenting iframe {
   pointer-events: auto;
   cursor: crosshair;
 }
+
 .map-live .map-overlay {
   overflow: hidden;
 }
-.map-pin.is-small {
-  min-width: 14px;
-  height: 14px;
-  padding: 0 3px;
-  border-width: 1px;
-  border-radius: 7px 7px 7px 1px;
-  font-size: 8px;
-  line-height: 12px;
-}
-.map-body.is-commenting .map-node {
-  cursor: crosshair;
+
+.map-live .map-hover {
+  border-width: calc(2px / var(--z));
 }
 
-/* Names of transitions: only for the screen in focus. */
-.map-edge-label {
-  position: absolute;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgb(255 255 255 / 92%);
-  border: 1px solid #dce0e5;
-  font-size: 11px;
-  color: #404854;
-  white-space: nowrap;
-  pointer-events: none;
+/* Pins on the canvas keep their size on screen, like the names. */
+.map-pin.is-canvas {
+  transform: scale(calc(1 / var(--z))) translate(-50%, -100%);
+  transform-origin: 0 0;
+}
+
+.map-body.is-commenting .map-screen {
+  cursor: crosshair;
 }

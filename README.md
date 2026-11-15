@@ -114,14 +114,15 @@ nginx is in [examples/docker-compose](examples/docker-compose).
    | `data-api` | service root | the directory of `widget.js` |
    | `data-route` | `auto`, `path`, `hash` (hash routers: `#/page`) | `auto` |
    | `data-version` | your app version, saved with each thread | — |
-   | `data-lang` | `en`, `ru` | browser language |
+   | `data-lang` | `en`, `ru`: the language when the browser's is neither | `en` |
    | `data-theme` | `light`, `dark`, `auto` | `light` |
    | `data-position` | `bottom-right`, `bottom-left`, `top-right`, `top-left` | `bottom-right` |
    | `data-mode` | `full` (the form in the panel), `tiny` (a small box at the element) | `full` |
    | `data-hotkey` | the picking shortcut by key code, e.g. `Alt+KeyC`, `Ctrl+Shift+KeyK`, `F2`; `off` | `Alt+KeyC` |
 
    `data-mode` and `data-hotkey` are defaults: each person can change them under the gear in the panel
-   (kept in their browser).
+   (kept in their browser), as well as the language — by default the browser's, both in the widget
+   and on the map.
 
    `window.pinpathConfig = { token, appVersion, fetch }` set before the script overrides these
    from code (`token` returns a JWT for the `jwt` provider).
@@ -207,13 +208,28 @@ snapshot of each state. In a snapshot the known buttons and links lead where the
 ones can be outlined, and *Comment* pins a thread on any element — the same thread shows on every
 real page of that screen.
 
+The canvas works like a design tool. Screens are drawn at their real size (the window they were
+seen in), while their names, the frame titles, the arrows and the pins keep their size on screen at
+any zoom; far out a screen has no name, only a red dot when it has open threads. Dragging the canvas
+or a screen moves around, and so do the wheel, two fingers on a trackpad, the arrows and WASD;
+Ctrl/⌘ with the wheel or a pinch zooms, as do `+` and `−`; Shift+1 shows the whole map and Shift+2
+the selected screen. A screen moves when you drag its name. Zoom in and a screen turns from a
+picture into its live snapshot — sharp at any zoom, with the pins of its threads; `C` (or the
+widget's shortcut) turns on comments, and you click any element right on the canvas. `?` on the
+toolbar lists the keys.
+
 Inside a frame the screens are laid out in layers along their transitions with as few crossings as
 possible, and the arrows go around the screens; a screen that leads to many screens that lead
-nowhere else (a menu, a list and its records) gets them as a grid block. The arrows of the screen
-under the pointer or selected stand out with their names, and arrows between frames show only for
-it. Zoom in and a screen turns from a picture into its live snapshot — sharp at any zoom, with the
-pins of its threads; with *Comment* on the toolbar you click any element of it right on the canvas.
-Screens moved by hand keep their place; *⋯ → Reset the layout* puts them back.
+nowhere else (a menu, a list and its records) gets them as a grid block, and the tabs of one page
+that have addresses of their own stand side by side in a box, named by their tabs, without arrows
+between them. The arrows of the screen under the pointer or selected stand out with their names,
+and arrows between frames show only for it. *Show* on the toolbar adds the transitions through
+links found on pages, through the app's menu and the hidden screens, and explains the arrows.
+Screens moved by hand keep their place; *Reset the layout* puts them back.
+
+Roles on the map are the roles of those who saw the screens: a crawl collects the screens of the
+role it runs with, so the screens of other roles come when people with those roles work in the
+app or a crawl runs with their sign-in.
 
 The widget's panel has a map button: it opens the map at the screen you are on.
 
@@ -243,10 +259,12 @@ work in it, comment with its widget, and the map follows the screen it is on. Th
 the pinpath origin to frame it (`frame-ancestors`), see [integration](docs/integration.md#the-screen-map).
 
 **A manifest.** What people and agents wrote about the screens — names, sections, descriptions,
-described states, declared transitions — goes to a JSON file and back: *⋯ → Download / Upload the
-manifest* on the map, or `pinpath map export -o map.json` and `pinpath map import map.json`. Keys may
-be route patterns of your router (`/authors/:id`, `/authors/[id]`); screens the map has not seen
-become planned ones. A script that reads your router can write it, and git keeps it.
+described states, declared transitions — goes to a JSON file and back: *Manifest* on the map
+(download, upload, with an example), or `pinpath map export -o map.json` and `pinpath map import
+map.json`. Uploading replaces the fields the file has and leaves the rest; uploading it again
+changes nothing. Keys may be route patterns of your router (`/authors/:id`, `/authors/[id]`);
+screens the map has not seen become planned ones. A script that reads your router can write it,
+git keeps it, and it moves the descriptions from one stand to another; looks stay out of it.
 
 ```json
 {"version": 1, "screens": [

@@ -1,5 +1,9 @@
+// Transitions on the canvas. Their width, arrowheads and names stay the same size on screen at any
+// zoom (CSS with the --z variable of the canvas), and which of them stand out — those of the
+// screen in focus — is decided by a stylesheet, so hovering a screen re-renders no edge.
+
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type Edge, type EdgeProps } from '@xyflow/react';
-import { memo } from 'react';
+import { memo, type CSSProperties } from 'react';
 
 import type { Point } from '../shared/types';
 
@@ -8,12 +12,14 @@ export type RoutedEdgeData = {
   points?: Point[];
   /** Where the label goes; by default halfway along the route. */
   labelAt?: Point;
-  /** The label shows only for the transitions of the screen in focus. */
-  showLabel: boolean;
+  /** Classes of the label: the ids of both ends, for the focus stylesheet. */
+  ends: string;
+  /** Line width in screen pixels. */
+  width: number;
 };
 export type RoutedEdgeType = Edge<RoutedEdgeData, 'routed'>;
 
-const RADIUS = 10;
+const RADIUS = 24;
 
 /** A polyline with rounded corners. */
 export function roundedPath(points: Point[]): string {
@@ -57,14 +63,15 @@ export const RoutedEdge = memo(function RoutedEdge(props: EdgeProps<RoutedEdgeTy
     path = bezier;
     at = { x, y };
   }
+  const line = { ...style, ['--w' as string]: data?.width ?? 1.5 } as CSSProperties;
   return (
     <>
-      <BaseEdge path={path} markerEnd={markerEnd} style={style} interactionWidth={12} />
-      {label && data?.showLabel && (
+      <BaseEdge path={path} markerEnd={markerEnd} style={line} interactionWidth={0} />
+      {label && (
         <EdgeLabelRenderer>
           <div
-            className="map-edge-label"
-            style={{ transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)` }}
+            className={`map-edge-label ${data?.ends ?? ''}`}
+            style={{ transform: `translate(${at.x}px, ${at.y}px) scale(calc(1 / var(--z))) translate(-50%, -50%)` }}
           >
             {label}
           </div>
@@ -75,3 +82,18 @@ export const RoutedEdge = memo(function RoutedEdge(props: EdgeProps<RoutedEdgeTy
 });
 
 export const edgeTypes = { routed: RoutedEdge };
+
+/**
+ * The stylesheet that makes the transitions of one screen stand out (its id from the class names
+ * of the edges) and fades the rest; none — all of them in their quiet look.
+ */
+export function focusCss(id: string | null): string {
+  if (!id) return '';
+  const own = `.map-flow .react-flow__edge.f-${id}, .map-flow .react-flow__edge.t-${id}`;
+  return (
+    `.map-flow .react-flow__edge { opacity: 0.1; }\n` +
+    `${own} { opacity: 1; display: inline; }\n` +
+    `.map-flow .react-flow__edge.f-${id} .react-flow__edge-path, .map-flow .react-flow__edge.t-${id} .react-flow__edge-path { stroke-width: calc(var(--w, 1.5) * 1px / var(--z)); }\n` +
+    `.map-flow .map-edge-label.f-${id}, .map-flow .map-edge-label.t-${id} { display: block; }\n`
+  );
+}

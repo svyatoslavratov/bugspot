@@ -9,6 +9,8 @@ const ru = {
   hidePins: 'Скрыть метки со страницы',
   bugHint: (hotkey: string) => `Комментарии · правый клик${hotkey ? ` или ${hotkey}` : ''} — отметить элемент`,
   settings: 'Настройки',
+  language: 'Язык',
+  languageAuto: 'Как в браузере',
   commentForm: 'Форма комментария',
   modeTiny: 'Компактная — у элемента',
   modeFull: 'Полная — в панели',
@@ -99,6 +101,8 @@ const ru = {
     'Виджет откроет приложение в окне ниже и пройдёт его сам: ссылки, вкладки, окна. Каждое состояние попадёт на карту с настоящим видом.',
   crawlSafe:
     'Данные он не меняет: из приложения уходят только запросы на чтение, формы не отправляются, кнопки удаления, отправки, сохранения, оплаты и выхода не нажимаются, на «вы уверены?» ответ — «нет».',
+  crawlRoles:
+    'Обход идёт под вашим входом: на карту попадут экраны, которые видите вы, с вашей ролью. Экраны других ролей соберёт обход, запущенный под их входом.',
   crawlFrom: 'Начать с',
   crawlButtons: 'Нажимать и другие кнопки — они могут открывать окна',
   crawlMax: 'Не больше экранов',
@@ -132,6 +136,8 @@ const en: Dict = {
   hidePins: 'Hide pins from the page',
   bugHint: (hotkey: string) => `Comments · right-click${hotkey ? ` or ${hotkey}` : ''} to pick an element`,
   settings: 'Settings',
+  language: 'Language',
+  languageAuto: 'As in the browser',
   commentForm: 'Comment form',
   modeTiny: 'Tiny — next to the element',
   modeFull: 'Full — in the panel',
@@ -216,6 +222,8 @@ const en: Dict = {
     'The widget opens the app in the window below and walks it by itself: links, tabs, windows. Every state lands on the map with its real look.',
   crawlSafe:
     'It changes no data: only reads leave the app, forms are not submitted, buttons that delete, send, save, pay or sign out are not pressed, and "are you sure?" gets a no.',
+  crawlRoles:
+    'The crawl runs with your sign-in: the map gets the screens you see, with your role. Screens of other roles come from a crawl run with their sign-in.',
   crawlFrom: 'Start from',
   crawlButtons: 'Press other buttons too — they may open windows',
   crawlMax: 'At most screens',
@@ -233,6 +241,28 @@ const en: Dict = {
 };
 
 export const dictionaries = { ru, en };
+
+export type Lang = 'ru' | 'en';
+/** What a person chose in the settings: a language, or the browser's ("auto"). */
+export type LangChoice = Lang | 'auto';
+export const LANG_NAMES: Record<Lang, string> = { ru: 'Русский', en: 'English' };
+
+/**
+ * The language to show: the person's choice; else the first of the browser's languages pinpath
+ * speaks; else the site's (data-lang); else English.
+ */
+export function resolveLang(
+  choice: LangChoice | undefined,
+  site?: Lang,
+  browser: readonly string[] = typeof navigator === 'undefined' ? [] : (navigator.languages ?? [navigator.language]),
+): Lang {
+  if (choice === 'ru' || choice === 'en') return choice;
+  for (const tag of browser) {
+    const base = tag.toLowerCase().split('-')[0];
+    if (base === 'ru' || base === 'en') return base;
+  }
+  return site ?? 'en';
+}
 
 /** "5 min ago" within an hour, then a short date and time. */
 export function when(iso: string, t: Dict, lang: 'ru' | 'en'): string {

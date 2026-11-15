@@ -1,14 +1,4 @@
-import {
-  AnchorButton,
-  Button,
-  Callout,
-  Card,
-  Checkbox,
-  Elevation,
-  H5,
-  InputGroup,
-  ProgressBar,
-} from '@blueprintjs/core';
+import { AnchorButton, Button, Callout, Card, Checkbox, Elevation, H5, InputGroup } from '@blueprintjs/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { CrawlConfig } from '../shared/types';
@@ -86,6 +76,8 @@ export function CrawlDialog({ auto, onClose }: { auto: CrawlConfig | null; onClo
   useEffect(() => () => run.current?.stop(), []);
 
   const running = status?.phase === 'starting' || status?.phase === 'running';
+  // Screens walked of those known so far: the share grows as the queue empties.
+  const done = status ? Math.max(0.03, status.screens / Math.max(1, status.screens + status.queued)) : 0;
   // The map is worth opening once the crawl found something, or ended on its own.
   const finished = status && !running && (status.phase !== 'error' || status.screens > 0);
 
@@ -108,6 +100,7 @@ export function CrawlDialog({ auto, onClose }: { auto: CrawlConfig | null; onClo
           <div className="pinpath-crawl-options">
             <p>{t.crawlIntro}</p>
             <p className="bp6-text-muted">{t.crawlSafe}</p>
+            <p className="bp6-text-muted">{t.crawlRoles}</p>
             <label className="pinpath-crawl-field">
               <span>{t.crawlFrom}</span>
               <InputGroup value={start} onValueChange={setStart} fill />
@@ -140,7 +133,19 @@ export function CrawlDialog({ auto, onClose }: { auto: CrawlConfig | null; onClo
             <code className="pinpath-crawl-current" title={status.current}>
               {status.current}
             </code>
-            {running && <ProgressBar intent="primary" />}
+            {running && (
+              // Drawn by the compositor: it keeps moving while the page is busy taking a look.
+              <div
+                className="pinpath-progress"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={1}
+                aria-valuenow={done}
+              >
+                <div className="pinpath-progress-fill" style={{ transform: `scaleX(${done})` }} />
+                <div className="pinpath-progress-shine" />
+              </div>
+            )}
             {status.phase === 'error' && status.blocked && (
               <Callout intent="warning" compact>
                 {t.crawlBlocked} <Button size="small" icon="share" text={t.crawlInWindow} onClick={inWindow} />

@@ -40,3 +40,14 @@ describe('hotkeys', () => {
     expect(formatHotkey('', false)).toBe('');
   });
 });
+
+describe('language', () => {
+  test('the choice, else the browser, else the site, else English', async () => {
+    const { resolveLang } = await import('../src/lib/i18n');
+    expect(resolveLang('ru', 'en', ['en-US'])).toBe('ru');
+    expect(resolveLang('auto', 'ru', ['en-GB', 'ru'])).toBe('en');
+    expect(resolveLang(undefined, 'en', ['de-DE', 'ru-RU'])).toBe('ru');
+    expect(resolveLang('auto', 'ru', ['de-DE'])).toBe('ru');
+    expect(resolveLang('auto', undefined, [])).toBe('en');
+  });
+});

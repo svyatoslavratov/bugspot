@@ -5,6 +5,46 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-15
+
+### Added
+
+- The screen map works like a design tool: screens at their real size, and their names, the frame
+  titles, the arrows, their names and the pins the same size on screen at any zoom. Far out a
+  screen shows no name, only a dot when it has open threads; the names of arrows show from a
+  quarter of the real size.
+- Moving around: dragging the canvas or a screen, the wheel or two fingers, the arrows or WASD;
+  zoom with Ctrl/⌘ and the wheel, a pinch, `+` and `−`; Shift+1 for the whole map, Shift+2 for the
+  selected screen. A screen moves when its name is dragged. `C` (or the widget's shortcut) turns on
+  comments on the canvas; the keys are listed under `?`.
+- Tabs of one page that have addresses of their own stand side by side in a box named by the
+  page, each named by its tab, with no arrows between them.
+- The map's toolbar shows its actions instead of a menu: *Show* (links, the menu, hidden screens,
+  each explained, and what the arrows mean), *Comment*, *Build the map*, *Reset the layout*,
+  *Manifest* — a dialog that says what the manifest is for and how to use it, with an example,
+  download and upload.
+- A language setting in the widget and on the map: the browser's by default, or Russian or
+  English; the choice is kept in the browser.
+- The panel of a screen: a description field that grows as you type, transitions as rows with the
+  screen's picture and the elements they go through, and *This is a duplicate…* explains merging.
+- The crawl dialog says whose role a crawl collects.
+
+### Changed
+
+- The map is laid out in a worker, and the screen in focus stands out without redrawing the
+  arrows: hovering and toggles do not freeze a large map, and a layout shows a spinner.
+- Thumbnails are 800 pixels wide: up close a screen is its live snapshot anyway.
+- Positions of screens moved by hand are reset once: the map's scale has changed.
+- `data-lang` is the language for browsers in neither Russian nor English; people choose theirs in
+  the settings.
+- Ctrl/⌘ with a mouse wheel zooms by about a quarter a notch instead of fourfold.
+
+### Fixed
+
+- The progress of a crawl did not move while it worked: it animates off the main thread, and the
+  crawl takes the snapshot and the thumbnail one after another with a pause between.
+- Dragging over a screen moved it instead of the canvas.
+
 ## [0.5.0] - 2026-11-15
 
 ### Added

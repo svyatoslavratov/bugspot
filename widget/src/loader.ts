@@ -4,7 +4,8 @@
 //   <script defer src="/pinpath/widget.js"></script>
 //
 // Attributes: data-api (service root; default: where widget.js came from), data-route
-// (auto | path | hash), data-version, data-theme (light | dark | auto), data-lang (ru | en),
+// (auto | path | hash), data-version, data-theme (light | dark | auto), data-lang (ru | en: the
+// language when the person chose none in the settings and the browser speaks neither),
 // data-route-params (query parameters that make different screens on the map, e.g. "tab"),
 // data-position (bottom-right | bottom-left | top-right | top-left), data-mode (full | tiny: where a
 // new comment is written by default), data-hotkey (the picking shortcut, "Alt+KeyC" by default;
@@ -123,7 +124,8 @@ async function start(script: HTMLScriptElement) {
       routeParams: (data.routeParams ?? '').split(/[\s,]+/).filter(Boolean),
       appVersion: config.appVersion ?? data.version,
       theme: pick(data.theme, ['light', 'dark', 'auto'] as const, 'light'),
-      lang: pick(data.lang ?? navigator.language.slice(0, 2), ['ru', 'en'] as const, 'en'),
+      // The site's language: used when the person chose none and the browser speaks neither.
+      lang: pick(data.lang, ['ru', 'en'] as const, 'en'),
       position: pick(data.position, ['bottom-right', 'bottom-left', 'top-right', 'top-left'] as const, 'bottom-right'),
       mode: pick(data.mode, ['full', 'tiny'] as const, 'full'),
       // Checked by the app: the loader stays small.

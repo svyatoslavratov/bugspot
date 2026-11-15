@@ -4,13 +4,15 @@
 import { BlueprintProvider, NonIdealState, Spinner } from '@blueprintjs/core';
 import blueprintCss from '@blueprintjs/core/lib/css/blueprint.css?inline';
 import flowCss from '@xyflow/react/dist/style.css?inline';
-import { StrictMode, useEffect, useState } from 'react';
+import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import widgetCss from '../app/styles.css?inline';
 import { WidgetContext, type Widget } from '../app/context';
 import { setupIcons } from '../app/icons';
-import { dictionaries } from '../lib/i18n';
+import { DEFAULT_HOTKEY } from '../lib/hotkey';
+import { dictionaries, resolveLang, type LangChoice } from '../lib/i18n';
+import { loadPrefs, updatePrefs } from '../lib/prefs';
 import { createApi } from '../shared/api';
 import type { Capture } from '../shared/capture';
 import type { Session, Settings } from '../shared/types';
@@ -26,7 +28,6 @@ function adopt(css: string) {
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
 }
 
-const lang = navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en';
 // A host page may hand in its own fetch, as the demo does with the API in WebAssembly.
 const config = window.pinpathConfig ?? window.bugspotConfig;
 const api = createApi({ base: new URL('./', location.href).href, fetch: config?.fetch, token: config?.token });
@@ -38,27 +39,55 @@ const settings: Settings = {
   route: 'auto',
   routeParams: [],
   theme: 'light',
-  lang,
+  lang: 'en',
   position: 'bottom-right',
 };
+
+// The language is shared with the widget when both live on one origin (the same settings in this
+// browser); else the browser's.
+const prefDefaults = { mode: 'full' as const, hotkey: DEFAULT_HOTKEY };
 
 function Root() {
   const [session, setSession] = useState<Session | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  const [choice, setChoice] = useState<LangChoice>(() => loadPrefs(prefDefaults).lang);
+  const lang = resolveLang(choice);
   const t = mapDictionaries[lang];
+  const env = useMemo(
+    () => ({
+      t,
+      lang,
+      choice,
+      setChoice: (next: LangChoice) => {
+        updatePrefs({ lang: next }, prefDefaults);
+        setChoice(next);
+      },
+    }),
+    [t, lang, choice],
+  );
   useEffect(() => {
+    document.documentElement.lang = lang;
     document.title = `${t.title} · pinpath`;
+  }, [lang, t.title]);
+  useEffect(() => {
     api.session().then(setSession, (e: unknown) => setFailed(e instanceof Error ? e.message : String(e)));
-  }, [t.title]);
+  }, []);
   if (failed) return <NonIdealState icon="error" title={t.loadError} description={failed} />;
   if (!session) return <NonIdealState icon={<Spinner />} title={t.loading} />;
   if (!session.visible || !session.can?.map) {
     return <NonIdealState icon="eye-off" title={t.noAccess} description={t.noAccessHint} />;
   }
-  const widget: Widget = { api, session, capture: noCapture, settings, t: dictionaries[lang], host: document.body };
+  const widget: Widget = {
+    api,
+    session,
+    capture: noCapture,
+    settings: { ...settings, lang },
+    t: dictionaries[lang],
+    host: document.body,
+  };
   return (
     <WidgetContext.Provider value={widget}>
-      <MapContext.Provider value={{ t, lang }}>
+      <MapContext.Provider value={env}>
         <MapApp />
       </MapContext.Provider>
     </WidgetContext.Provider>

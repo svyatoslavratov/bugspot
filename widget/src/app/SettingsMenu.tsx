@@ -2,6 +2,7 @@ import { Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { useEffect, useState } from 'react';
 
 import { DEFAULT_HOTKEY, formatHotkey, hotkeyFromEvent } from '../lib/hotkey';
+import { LANG_NAMES, type LangChoice } from '../lib/i18n';
 import type { Prefs } from '../lib/prefs';
 import type { ComposeMode } from '../shared/types';
 import { useWidget } from './context';
@@ -18,8 +19,13 @@ export function SettingsMenu({
   onMode,
   onHotkey,
   onRecording,
+  onLang,
+  canComment,
 }: {
   prefs: Prefs;
+  onLang: (choice: LangChoice) => void;
+  /** The comment form and the picking shortcut are for those who may comment. */
+  canComment: boolean;
   onMode: (mode: ComposeMode) => void;
   onHotkey: (hotkey: string) => void;
   /** While a new shortcut is being recorded the current one must not fire. */
@@ -60,35 +66,51 @@ export function SettingsMenu({
   const current = formatHotkey(prefs.hotkey);
   return (
     <Menu className="pinpath-menu">
-      <MenuDivider title={t.commentForm} />
-      {(['tiny', 'full'] as ComposeMode[]).map((mode) => (
+      <MenuDivider title={t.language} />
+      {(['auto', 'ru', 'en'] as LangChoice[]).map((choice) => (
         <MenuItem
-          key={mode}
+          key={choice}
           roleStructure="listoption"
-          selected={prefs.mode === mode}
-          text={mode === 'tiny' ? t.modeTiny : t.modeFull}
+          selected={prefs.lang === choice}
+          text={choice === 'auto' ? t.languageAuto : LANG_NAMES[choice]}
           shouldDismissPopover={false}
-          onClick={() => onMode(mode)}
+          onClick={() => onLang(choice)}
         />
       ))}
-      <MenuDivider title={t.hotkeyTitle} />
-      <MenuItem
-        text={recording ? (hint ?? t.hotkeyPress) : current || t.hotkeyOff}
-        label={recording ? undefined : t.hotkeyChange}
-        intent={recording && hint ? 'warning' : undefined}
-        active={recording}
-        shouldDismissPopover={false}
-        onClick={() => setRecording((r) => !r)}
-      />
-      {!recording && prefs.hotkey !== DEFAULT_HOTKEY && (
-        <MenuItem
-          text={t.hotkeyDefault(formatHotkey(DEFAULT_HOTKEY))}
-          shouldDismissPopover={false}
-          onClick={() => onHotkey(DEFAULT_HOTKEY)}
-        />
-      )}
-      {!recording && prefs.hotkey && (
-        <MenuItem text={t.hotkeyDisable} shouldDismissPopover={false} onClick={() => onHotkey('')} />
+      {canComment && <MenuDivider title={t.commentForm} />}
+      {canComment &&
+        (['tiny', 'full'] as ComposeMode[]).map((mode) => (
+          <MenuItem
+            key={mode}
+            roleStructure="listoption"
+            selected={prefs.mode === mode}
+            text={mode === 'tiny' ? t.modeTiny : t.modeFull}
+            shouldDismissPopover={false}
+            onClick={() => onMode(mode)}
+          />
+        ))}
+      {canComment && (
+        <>
+          <MenuDivider title={t.hotkeyTitle} />
+          <MenuItem
+            text={recording ? (hint ?? t.hotkeyPress) : current || t.hotkeyOff}
+            label={recording ? undefined : t.hotkeyChange}
+            intent={recording && hint ? 'warning' : undefined}
+            active={recording}
+            shouldDismissPopover={false}
+            onClick={() => setRecording((r) => !r)}
+          />
+          {!recording && prefs.hotkey !== DEFAULT_HOTKEY && (
+            <MenuItem
+              text={t.hotkeyDefault(formatHotkey(DEFAULT_HOTKEY))}
+              shouldDismissPopover={false}
+              onClick={() => onHotkey(DEFAULT_HOTKEY)}
+            />
+          )}
+          {!recording && prefs.hotkey && (
+            <MenuItem text={t.hotkeyDisable} shouldDismissPopover={false} onClick={() => onHotkey('')} />
+          )}
+        </>
       )}
     </Menu>
   );
