@@ -6,9 +6,10 @@
 // It never presses what may change data: buttons named like deleting, sending, saving, paying or
 // signing out stay untouched, forms do not submit, confirm() answers "no", and other buttons are
 // pressed only when asked (CrawlOptions.buttons) or when the app marks them (aria-haspopup="dialog",
-// data-bugspot-crawl).
+// data-pinpath-crawl).
 
 import { currentRoute } from '../lib/route';
+import { anyAttr, attrOf, hasAttr, IGNORED } from '../lib/attrs';
 import {
   cleanName,
   currentState,
@@ -112,7 +113,7 @@ const MAX_STATES = 16;
 const MAX_LINKS = 300;
 const RECAPTURE_MS = 24 * 3600_000;
 
-const NAV = 'nav, aside, header, [role="navigation"], [data-bugspot-nav]';
+const NAV = `nav, aside, header, [role="navigation"], ${anyAttr('nav')}`;
 const DIALOG = 'dialog[open], [role="dialog"], [role="alertdialog"], [aria-modal="true"]';
 /** Names of buttons that may change data or end the session: never pressed. */
 export const DANGER = new RegExp(
@@ -141,7 +142,7 @@ class Stopped extends Error {}
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-type Guarded = Window & { __bugspotGuard?: boolean; __bugspotInflight?: number };
+type Guarded = Window & { __pinpathGuard?: boolean; __pinpathInflight?: number };
 
 /** Only reads go out of the walked app: anything else could change its data. */
 const READ = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -153,9 +154,9 @@ const READ = new Set(['GET', 'HEAD', 'OPTIONS']);
  */
 export function guard(w: Window, onBlocked: (what: string) => void = () => undefined) {
   const g = w as Guarded;
-  if (g.__bugspotGuard) return;
-  g.__bugspotGuard = true;
-  g.__bugspotInflight = 0;
+  if (g.__pinpathGuard) return;
+  g.__pinpathGuard = true;
+  g.__pinpathInflight = 0;
   try {
     g.alert = () => undefined;
     g.confirm = () => false;
@@ -179,10 +180,10 @@ export function guard(w: Window, onBlocked: (what: string) => void = () => undef
         ).toUpperCase();
         if (!READ.has(method)) {
           onBlocked(`${method} ${typeof input === 'object' && 'url' in input ? input.url : String(input)}`);
-          return Promise.reject(new TypeError('Failed to fetch: the bugspot crawl lets only reads through'));
+          return Promise.reject(new TypeError('Failed to fetch: the pinpath crawl lets only reads through'));
         }
-        g.__bugspotInflight! += 1;
-        return fetch.apply(w, args).finally(() => (g.__bugspotInflight! -= 1));
+        g.__pinpathInflight! += 1;
+        return fetch.apply(w, args).finally(() => (g.__pinpathInflight! -= 1));
       };
     }
     const XHR = (w as unknown as { XMLHttpRequest?: typeof XMLHttpRequest }).XMLHttpRequest;
@@ -206,8 +207,8 @@ export function guard(w: Window, onBlocked: (what: string) => void = () => undef
           });
           return;
         }
-        g.__bugspotInflight! += 1;
-        this.addEventListener('loadend', () => (g.__bugspotInflight! -= 1), { once: true });
+        g.__pinpathInflight! += 1;
+        this.addEventListener('loadend', () => (g.__pinpathInflight! -= 1), { once: true });
         return send.apply(this, args);
       };
     }
@@ -217,7 +218,7 @@ export function guard(w: Window, onBlocked: (what: string) => void = () => undef
 }
 
 function shown(el: Element): boolean {
-  if (el.closest('[hidden], [aria-hidden="true"], [data-bugspot-ignore], [inert]')) return false;
+  if (el.closest(`[hidden], [aria-hidden="true"], ${IGNORED}, [inert]`)) return false;
   const style = el.ownerDocument.defaultView?.getComputedStyle(el);
   if (style && (style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none'))
     return false;
@@ -300,13 +301,13 @@ export function pressablesOf(root: ParentNode, all: boolean): Candidate[] {
   const out: Candidate[] = [];
   const names = new Set<string>();
   for (const el of root.querySelectorAll(
-    'button, [role="button"], input[type="button"], [aria-haspopup], [data-bugspot-crawl], [role="link"]:not([href])',
+    `button, [role="button"], input[type="button"], [aria-haspopup], ${anyAttr('crawl')}, [role="link"]:not([href])`,
   )) {
     if (out.length >= MAX_BUTTONS) break;
     if (el.closest(NAV) || el.closest('[role="tablist"]') || el.matches('a[href], [role="tab"]') || disabled(el))
       continue;
-    const marked = el.hasAttribute('data-bugspot-crawl') && el.getAttribute('data-bugspot-crawl') !== 'skip';
-    if (el.getAttribute('data-bugspot-crawl') === 'skip' || (el.getAttribute('type') === 'submit' && !marked)) continue;
+    const marked = hasAttr(el, 'crawl') && attrOf(el, 'crawl') !== 'skip';
+    if (attrOf(el, 'crawl') === 'skip' || (el.getAttribute('type') === 'submit' && !marked)) continue;
     const via = viaOf(el);
     // A button without a name may be a trash can: nothing tells.
     if (!marked && (!via.name || DANGER.test(via.name))) continue;
@@ -410,7 +411,7 @@ export function startCrawl({ api, session, settings, target, options, onStatus, 
       return null;
     }
     if (url.origin !== start.origin || LEAVE_PATH.test(url.pathname) || FILE_PATH.test(url.pathname)) return null;
-    // The service itself may live on the app's origin (/bugspot/): it is not the app.
+    // The service itself may live on the app's origin (/pinpath/): it is not the app.
     if (url.origin === apiBase.origin && url.pathname.startsWith(apiBase.pathname)) return null;
     return routeKey(screenOptions, url);
   }
@@ -451,7 +452,7 @@ export function startCrawl({ api, session, settings, target, options, onStatus, 
         await sleep(100);
         check();
         if (target.win()?.document !== doc) return;
-        const inflight = (w as Guarded).__bugspotInflight ?? 0;
+        const inflight = (w as Guarded).__pinpathInflight ?? 0;
         const busy = Date.now() - begin < BUSY_MAX_MS && doc.querySelector('[aria-busy="true"]') !== null;
         if (inflight <= 0 && !busy && Date.now() - last >= quietMs) break;
       }
@@ -559,10 +560,10 @@ export function startCrawl({ api, session, settings, target, options, onStatus, 
           ? doc.querySelector('[role="tabpanel"]:not([hidden])')
           : doc;
     let n = 0;
-    for (const el of scope?.querySelectorAll('a[href], [data-bugspot-to]') ?? []) {
+    for (const el of scope?.querySelectorAll(`a[href], ${anyAttr('to')}`) ?? []) {
       if (n >= MAX_LINKS) break;
-      if (el.closest('[data-bugspot-ignore]')) continue;
-      const declared = el.getAttribute('data-bugspot-to')?.trim();
+      if (el.closest(IGNORED)) continue;
+      const declared = attrOf(el, 'to')?.trim();
       const href = declared ?? el.getAttribute('href') ?? '';
       const to =
         declared && !/^(\/|#|https?:)/.test(declared) ? declared : linkScreen(href, screenOptions, w.location.href);

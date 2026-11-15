@@ -1,4 +1,4 @@
-// Command bugspot runs the feedback service and manages it: tokens for agents, access keys for
+// Command pinpath runs the feedback service and manages it: tokens for agents, access keys for
 // people, and a small client to read and answer threads.
 package main
 
@@ -10,30 +10,31 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
 // version is set at build time: -ldflags "-X main.version=v0.1.0".
 var version = "dev"
 
-const usage = `bugspot — pinned page comments for your team and your agents.
+const usage = `pinpath — pinned page comments for your team and your agents.
 
 Usage:
-  bugspot [serve]                     run the service (settings: BUGSPOT_* variables)
-  bugspot healthcheck                 exit 0 when the local service answers /healthz
-  bugspot token create|list|revoke    API tokens for agents (scopes read, reply, status, map)
-  bugspot key create|list|revoke      access keys for people without an account in your app
-  bugspot threads list|show|reply|status|screenshot
-                                      read and answer threads over the API (BUGSPOT_URL, BUGSPOT_TOKEN)
-  bugspot mcp                         an MCP server on stdio for agents (BUGSPOT_URL, BUGSPOT_TOKEN)
-  bugspot map crawl <app address>     walk the app in Chrome without a window and build the screen map
-                                      (BUGSPOT_TOKEN with the read and map scopes)
-  bugspot map export|import           the manifest of the map: names, sections, descriptions, transitions
-                                      (BUGSPOT_URL, BUGSPOT_TOKEN)
-  bugspot backup [-o file]            a consistent copy of the database, also while the service runs
-  bugspot version
+  pinpath [serve]                     run the service (settings: PINPATH_* variables)
+  pinpath healthcheck                 exit 0 when the local service answers /healthz
+  pinpath token create|list|revoke    API tokens for agents (scopes read, reply, status, map)
+  pinpath key create|list|revoke      access keys for people without an account in your app
+  pinpath threads list|show|reply|status|screenshot
+                                      read and answer threads over the API (PINPATH_URL, PINPATH_TOKEN)
+  pinpath mcp                         an MCP server on stdio for agents (PINPATH_URL, PINPATH_TOKEN)
+  pinpath map crawl <app address>     walk the app in Chrome without a window and build the screen map
+                                      (PINPATH_TOKEN with the read and map scopes)
+  pinpath map export|import           the manifest of the map: names, sections, descriptions, transitions
+                                      (PINPATH_URL, PINPATH_TOKEN)
+  pinpath backup [-o file]            a consistent copy of the database, also while the service runs
+  pinpath version
 
-Run "bugspot <command> -h" for the flags of a command.
+Run "pinpath <command> -h" for the flags of a command.
 `
 
 // app is one run of the command: its environment and its streams, so commands run in tests too.
@@ -88,10 +89,21 @@ func (a *app) run(args []string) int {
 		return 0
 	}
 	if err != nil {
-		fmt.Fprintln(a.stderr, "bugspot:", err)
+		fmt.Fprintln(a.stderr, "pinpath:", err)
 		return 1
 	}
 	return 0
+}
+
+// env reads a PINPATH_* variable, else its BUGSPOT_* name from before the project was renamed.
+func (a *app) env(name string) string {
+	if v := a.getenv(name); v != "" {
+		return v
+	}
+	if rest, ok := strings.CutPrefix(name, "PINPATH_"); ok {
+		return a.getenv("BUGSPOT_" + rest)
+	}
+	return ""
 }
 
 // flags is a flag set that reports to stderr and returns errors instead of exiting.

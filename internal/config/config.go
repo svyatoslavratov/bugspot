@@ -1,4 +1,4 @@
-// Package config reads the service settings from BUGSPOT_* environment variables.
+// Package config reads the service settings from PINPATH_* environment variables.
 package config
 
 import (
@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/auth"
+	"github.com/svyatoslavratov/pinpath/internal/auth"
 )
 
 // Config is the whole service configuration.
@@ -69,6 +69,10 @@ type Config struct {
 	BackupDir      string
 	BackupEvery    time.Duration
 	BackupKeepDays int
+
+	// Legacy lists the BUGSPOT_* variables that were read because their PINPATH_* names are not
+	// set: they still work, and the service warns about them at start.
+	Legacy []string
 }
 
 var knownProviders = []string{auth.ProviderForward, auth.ProviderJWT, auth.ProviderHeader, auth.ProviderKey, auth.ProviderAnonymous}
@@ -76,10 +80,27 @@ var knownProviders = []string{auth.ProviderForward, auth.ProviderJWT, auth.Provi
 type reader struct {
 	getenv func(string) string
 	errs   []error
+	legacy map[string]bool
+}
+
+// env reads PINPATH_<name>, else BUGSPOT_<name> — the name before the project was renamed —
+// and remembers that the legacy one was used.
+func (r *reader) env(name string) string {
+	if v := strings.TrimSpace(r.getenv("PINPATH_" + name)); v != "" {
+		return v
+	}
+	v := strings.TrimSpace(r.getenv("BUGSPOT_" + name))
+	if v != "" {
+		if r.legacy == nil {
+			r.legacy = map[string]bool{}
+		}
+		r.legacy["BUGSPOT_"+name] = true
+	}
+	return v
 }
 
 func (r *reader) str(name, def string) string {
-	if v := strings.TrimSpace(r.getenv("BUGSPOT_" + name)); v != "" {
+	if v := r.env(name); v != "" {
 		return v
 	}
 	return def
@@ -87,16 +108,16 @@ func (r *reader) str(name, def string) string {
 
 // secret reads NAME or the file named by NAME_FILE (Docker and Kubernetes secrets).
 func (r *reader) secret(name string) string {
-	if v := r.getenv("BUGSPOT_" + name); v != "" {
+	if v := r.env(name); v != "" {
 		return v
 	}
-	path := r.getenv("BUGSPOT_" + name + "_FILE")
+	path := r.env(name + "_FILE")
 	if path == "" {
 		return ""
 	}
 	data, err := os.ReadFile(path) //nolint:gosec // the operator names the file
 	if err != nil {
-		r.errs = append(r.errs, fmt.Errorf("BUGSPOT_%s_FILE: %w", name, err))
+		r.errs = append(r.errs, fmt.Errorf("PINPATH_%s_FILE: %w", name, err))
 		return ""
 	}
 	return strings.TrimSpace(string(data))
@@ -110,7 +131,7 @@ func (r *reader) boolean(name string, def bool) bool {
 	v := r.str(name, strconv.FormatBool(def))
 	b, err := strconv.ParseBool(v)
 	if err != nil {
-		r.errs = append(r.errs, fmt.Errorf("BUGSPOT_%s=%q: want true or false", name, v))
+		r.errs = append(r.errs, fmt.Errorf("PINPATH_%s=%q: want true or false", name, v))
 	}
 	return b
 }
@@ -119,7 +140,7 @@ func (r *reader) duration(name string, def time.Duration) time.Duration {
 	v := r.str(name, def.String())
 	d, err := time.ParseDuration(v)
 	if err != nil || d < 0 {
-		r.errs = append(r.errs, fmt.Errorf("BUGSPOT_%s=%q: want a duration such as 30s or 720h", name, v))
+		r.errs = append(r.errs, fmt.Errorf("PINPATH_%s=%q: want a duration such as 30s or 720h", name, v))
 	}
 	return d
 }
@@ -128,7 +149,7 @@ func (r *reader) integer(name string, def int64) int64 {
 	v := r.str(name, strconv.FormatInt(def, 10))
 	n, err := strconv.ParseInt(v, 10, 64)
 	if err != nil || n < 0 {
-		r.errs = append(r.errs, fmt.Errorf("BUGSPOT_%s=%q: want a non-negative integer", name, v))
+		r.errs = append(r.errs, fmt.Errorf("PINPATH_%s=%q: want a non-negative integer", name, v))
 	}
 	return n
 }
@@ -136,7 +157,7 @@ func (r *reader) integer(name string, def int64) int64 {
 func (r *reader) rules(name, def string) auth.Rules {
 	rules, err := auth.ParseRules(r.str(name, def))
 	if err != nil {
-		r.errs = append(r.errs, fmt.Errorf("BUGSPOT_%s: %w", name, err))
+		r.errs = append(r.errs, fmt.Errorf("PINPATH_%s: %w", name, err))
 	}
 	return rules
 }
@@ -144,7 +165,7 @@ func (r *reader) rules(name, def string) auth.Rules {
 func (r *reader) mapping(name string, def auth.Mapping) auth.Mapping {
 	m, err := auth.ParseMapping(r.str(name, ""), def)
 	if err != nil {
-		r.errs = append(r.errs, fmt.Errorf("BUGSPOT_%s: %w", name, err))
+		r.errs = append(r.errs, fmt.Errorf("PINPATH_%s: %w", name, err))
 	}
 	return m
 }
@@ -211,12 +232,12 @@ func Load(getenv func(string) string) (Config, error) {
 	if keep := r.integer("BACKUP_KEEP_DAYS", 14); keep >= 0 && keep <= 36500 {
 		c.BackupKeepDays = int(keep)
 	} else {
-		r.errs = append(r.errs, fmt.Errorf("BUGSPOT_BACKUP_KEEP_DAYS=%d: from 0 to 36500", keep))
+		r.errs = append(r.errs, fmt.Errorf("PINPATH_BACKUP_KEEP_DAYS=%d: from 0 to 36500", keep))
 	}
 	if pk := r.str("JWT_PUBLIC_KEY", ""); pk != "" {
 		key, err := parsePublicKey(pk)
 		if err != nil {
-			r.errs = append(r.errs, fmt.Errorf("BUGSPOT_JWT_PUBLIC_KEY: %w", err))
+			r.errs = append(r.errs, fmt.Errorf("PINPATH_JWT_PUBLIC_KEY: %w", err))
 		}
 		c.JWTPublicKey = key
 	}
@@ -225,7 +246,7 @@ func Load(getenv func(string) string) (Config, error) {
 		if err != nil {
 			addr, aerr := netip.ParseAddr(p)
 			if aerr != nil {
-				r.errs = append(r.errs, fmt.Errorf("BUGSPOT_TRUSTED_PROXIES: %q is neither an address nor a CIDR", p))
+				r.errs = append(r.errs, fmt.Errorf("PINPATH_TRUSTED_PROXIES: %q is neither an address nor a CIDR", p))
 				continue
 			}
 			prefix = netip.PrefixFrom(addr, addr.BitLen())
@@ -233,9 +254,13 @@ func Load(getenv func(string) string) (Config, error) {
 		c.TrustedProxies = append(c.TrustedProxies, prefix)
 	}
 	if err := c.LogLevel.UnmarshalText([]byte(r.str("LOG_LEVEL", "info"))); err != nil {
-		r.errs = append(r.errs, fmt.Errorf("BUGSPOT_LOG_LEVEL: %w", err))
+		r.errs = append(r.errs, fmt.Errorf("PINPATH_LOG_LEVEL: %w", err))
 	}
 	r.errs = append(r.errs, c.validate()...)
+	for name := range r.legacy {
+		c.Legacy = append(c.Legacy, name)
+	}
+	slices.Sort(c.Legacy)
 	return c, errors.Join(r.errs...)
 }
 
@@ -244,42 +269,42 @@ func (c *Config) validate() []error {
 	seen := map[string]bool{}
 	for _, p := range c.Providers {
 		if !slices.Contains(knownProviders, p) {
-			errs = append(errs, fmt.Errorf("BUGSPOT_AUTH: unknown provider %q (want %s)", p, strings.Join(knownProviders, ", ")))
+			errs = append(errs, fmt.Errorf("PINPATH_AUTH: unknown provider %q (want %s)", p, strings.Join(knownProviders, ", ")))
 		}
 		if seen[p] {
-			errs = append(errs, fmt.Errorf("BUGSPOT_AUTH: %q twice", p))
+			errs = append(errs, fmt.Errorf("PINPATH_AUTH: %q twice", p))
 		}
 		seen[p] = true
 	}
 	if seen[auth.ProviderForward] && c.ForwardURL == "" {
-		errs = append(errs, errors.New("forward auth needs BUGSPOT_FORWARD_URL"))
+		errs = append(errs, errors.New("forward auth needs PINPATH_FORWARD_URL"))
 	}
 	if seen[auth.ProviderForward] && len(c.ForwardCookies)+len(c.ForwardHeaders) == 0 {
-		errs = append(errs, errors.New("forward auth needs BUGSPOT_FORWARD_COOKIES or BUGSPOT_FORWARD_HEADERS"))
+		errs = append(errs, errors.New("forward auth needs PINPATH_FORWARD_COOKIES or PINPATH_FORWARD_HEADERS"))
 	}
 	if seen[auth.ProviderJWT] {
 		switch {
 		case len(c.JWTSecret) == 0 && c.JWTPublicKey == nil:
-			errs = append(errs, errors.New("jwt auth needs BUGSPOT_JWT_SECRET or BUGSPOT_JWT_PUBLIC_KEY"))
+			errs = append(errs, errors.New("jwt auth needs PINPATH_JWT_SECRET or PINPATH_JWT_PUBLIC_KEY"))
 		case len(c.JWTSecret) > 0 && len(c.JWTSecret) < 32:
-			errs = append(errs, errors.New("BUGSPOT_JWT_SECRET must be at least 32 bytes"))
+			errs = append(errs, errors.New("PINPATH_JWT_SECRET must be at least 32 bytes"))
 		}
 	}
 	if seen[auth.ProviderHeader] && len(c.TrustedProxies) == 0 {
-		errs = append(errs, errors.New("header auth needs BUGSPOT_TRUSTED_PROXIES: otherwise anyone can send the headers"))
+		errs = append(errs, errors.New("header auth needs PINPATH_TRUSTED_PROXIES: otherwise anyone can send the headers"))
 	}
 	if !slices.Contains([]string{"auto", "true", "false"}, c.CookieSecure) {
-		errs = append(errs, fmt.Errorf("BUGSPOT_COOKIE_SECURE=%q: want auto, true or false", c.CookieSecure))
+		errs = append(errs, fmt.Errorf("PINPATH_COOKIE_SECURE=%q: want auto, true or false", c.CookieSecure))
 	}
 	if !slices.Contains([]string{"none", "inputs", "text"}, c.MapMask) {
-		errs = append(errs, fmt.Errorf("BUGSPOT_MAP_MASK=%q: want none, inputs or text", c.MapMask))
+		errs = append(errs, fmt.Errorf("PINPATH_MAP_MASK=%q: want none, inputs or text", c.MapMask))
 	}
 	if c.BackupDir != "" && c.BackupEvery < time.Minute {
-		errs = append(errs, fmt.Errorf("BUGSPOT_BACKUP_EVERY=%s: at least 1m", c.BackupEvery))
+		errs = append(errs, fmt.Errorf("PINPATH_BACKUP_EVERY=%s: at least 1m", c.BackupEvery))
 	}
 	for _, o := range c.AllowedOrigins {
 		if !strings.HasPrefix(o, "https://") && !strings.HasPrefix(o, "http://") || strings.HasSuffix(o, "/") {
-			errs = append(errs, fmt.Errorf("BUGSPOT_ALLOWED_ORIGINS: %q must look like https://app.example.com", o))
+			errs = append(errs, fmt.Errorf("PINPATH_ALLOWED_ORIGINS: %q must look like https://app.example.com", o))
 		}
 	}
 	return errs

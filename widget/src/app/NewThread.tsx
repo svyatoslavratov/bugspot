@@ -32,14 +32,14 @@ export function NewThread({
 
   return (
     <form
-      className="bugspot-new"
+      className="pinpath-new"
       onSubmit={(e) => {
         e.preventDefault();
         void d.submit(onCreated);
       }}
     >
-      <div className={`bugspot-meta ${Classes.TEXT_MUTED}`}>
-        {t.element}: <span className="bugspot-code">{describeTarget(view.anchor, t.andMore)}</span>
+      <div className={`pinpath-meta ${Classes.TEXT_MUTED}`}>
+        {t.element}: <span className="pinpath-code">{describeTarget(view.anchor, t.andMore)}</span>
       </div>
       <SegmentedControl
         fill
@@ -68,9 +68,9 @@ export function NewThread({
       )}
       <Checkbox checked={d.attach} label={t.attachScreenshot} onChange={(e) => d.setAttach(e.currentTarget.checked)} />
       {d.attach && (
-        <div className="bugspot-preview">
+        <div className="pinpath-preview">
           {d.shot.kind === 'pending' && (
-            <div className="bugspot-preview-wait">
+            <div className="pinpath-preview-wait">
               <Spinner size={20} /> {t.capturing}
             </div>
           )}
@@ -80,7 +80,7 @@ export function NewThread({
               {t.screenshotFailed}: {d.shot.message}
             </Callout>
           )}
-          <div className="bugspot-preview-actions">
+          <div className="pinpath-preview-actions">
             <Button size="small" icon="refresh" text={t.retake} onClick={() => void d.take('dom')} />
             {'getDisplayMedia' in (navigator.mediaDevices ?? {}) && (
               <Button size="small" icon="camera" text={t.captureTab} onClick={() => void d.take('tab')} />
@@ -93,7 +93,7 @@ export function NewThread({
           {d.error}
         </Callout>
       )}
-      <div className="bugspot-form-actions">
+      <div className="pinpath-form-actions">
         <Button text={t.cancel} onClick={onCancel} />
         <Button
           type="submit"

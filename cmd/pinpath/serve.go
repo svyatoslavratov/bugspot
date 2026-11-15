@@ -10,19 +10,33 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/auth"
-	"github.com/svyatoslavratov/bugspot/internal/backup"
-	"github.com/svyatoslavratov/bugspot/internal/config"
-	"github.com/svyatoslavratov/bugspot/internal/httpapi"
-	"github.com/svyatoslavratov/bugspot/internal/store/sqlite"
-	"github.com/svyatoslavratov/bugspot/internal/widgetfs"
+	"github.com/svyatoslavratov/pinpath/internal/auth"
+	"github.com/svyatoslavratov/pinpath/internal/backup"
+	"github.com/svyatoslavratov/pinpath/internal/config"
+	"github.com/svyatoslavratov/pinpath/internal/httpapi"
+	"github.com/svyatoslavratov/pinpath/internal/store/sqlite"
+	"github.com/svyatoslavratov/pinpath/internal/widgetfs"
 )
 
 func openStore(ctx context.Context, cfg config.Config) (*sqlite.Store, error) {
 	if err := os.MkdirAll(cfg.DataDir, 0o700); err != nil {
 		return nil, err
 	}
-	return sqlite.Open(ctx, filepath.Join(cfg.DataDir, "bugspot.db"))
+	return sqlite.Open(ctx, databasePath(cfg.DataDir))
+}
+
+// databasePath is pinpath.db in the data directory; a directory that has only the bugspot.db of
+// the time before the rename keeps using it, so an update loses nothing.
+func databasePath(dir string) string {
+	current := filepath.Join(dir, "pinpath.db")
+	legacy := filepath.Join(dir, "bugspot.db")
+	if _, err := os.Stat(current); err == nil {
+		return current
+	}
+	if _, err := os.Stat(legacy); err == nil {
+		return legacy
+	}
+	return current
 }
 
 func (a *app) serve(args []string) error {
@@ -50,7 +64,7 @@ func (a *app) serve(args []string) error {
 		}
 	}
 	if len(chain) == 0 {
-		logger.Warn("no identity providers (BUGSPOT_AUTH): the widget stays hidden unless the policy is public")
+		logger.Warn("no identity providers (PINPATH_AUTH): the widget stays hidden unless the policy is public")
 	}
 	api := httpapi.New(httpapi.Options{
 		Project: cfg.Project, Enabled: cfg.Enabled, Store: st, Chain: chain, Keys: keys, Policy: cfg.Policy,
@@ -70,7 +84,10 @@ func (a *app) serve(args []string) error {
 	backups := backup.Options{Dir: cfg.BackupDir, Every: cfg.BackupEvery, KeepDays: cfg.BackupKeepDays, Store: st, Logger: logger}
 	errs := make(chan error, 1)
 	go func() { errs <- srv.ListenAndServe() }()
-	logger.Info("bugspot started", "addr", cfg.Addr, "version", version, "project", cfg.Project,
+	if len(cfg.Legacy) > 0 {
+		logger.Warn("old variable names: the project is pinpath now, rename them to PINPATH_*", "variables", cfg.Legacy)
+	}
+	logger.Info("pinpath started", "addr", cfg.Addr, "version", version, "project", cfg.Project,
 		"providers", cfg.Providers, "view", cfg.Policy.View.String(), "comment", cfg.Policy.Comment.String(),
 		"moderate", cfg.Policy.Moderate.String(), "map", cfg.Policy.Map.String(), "map_collect", cfg.Policy.Collect.String(),
 		"map_mask", cfg.MapMask, "backups", backup.Describe(backups))
@@ -94,13 +111,13 @@ func (a *app) serve(args []string) error {
 // healthcheck lets a distroless container (no curl) check itself.
 func (a *app) healthcheck(args []string) error {
 	fs := a.flags("healthcheck")
-	addr := fs.String("url", "", "health URL (default: http://127.0.0.1<BUGSPOT_ADDR>/healthz)")
+	addr := fs.String("url", "", "health URL (default: http://127.0.0.1<PINPATH_ADDR>/healthz)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	url := *addr
 	if url == "" {
-		listen := a.getenv("BUGSPOT_ADDR")
+		listen := a.env("PINPATH_ADDR")
 		if listen == "" {
 			listen = ":8090"
 		}

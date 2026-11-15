@@ -9,8 +9,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/secret"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/secret"
 )
 
 // mapEnv: admins open the map, everyone signed in builds it; an agent token may read and edit it.
@@ -52,19 +52,19 @@ func TestMapAccess(t *testing.T) {
 	if w := e.do(call{method: "GET", path: "/api/v1/map", user: "anna"}); w.Code != http.StatusForbidden {
 		t.Fatalf("map for a collector: %d", w.Code)
 	}
-	if w := e.do(call{method: "GET", path: "/api/v1/map", headers: map[string]string{"X-Bugspot-Token": mapAgent}}); w.Code != 200 {
+	if w := e.do(call{method: "GET", path: "/api/v1/map", headers: map[string]string{"X-Pinpath-Token": mapAgent}}); w.Code != 200 {
 		t.Fatalf("map for an agent with the map scope: %d %s", w.Code, w.Body)
 	}
-	if w := e.do(call{method: "GET", path: "/api/v1/map", headers: map[string]string{"X-Bugspot-Token": e.agent}}); w.Code != http.StatusForbidden {
+	if w := e.do(call{method: "GET", path: "/api/v1/map", headers: map[string]string{"X-Pinpath-Token": e.agent}}); w.Code != http.StatusForbidden {
 		t.Fatalf("map for an agent without the map scope: %d", w.Code)
 	}
 	// An agent with the map scope crawls the app: it reports what it sees like a person.
-	agentVisit := e.do(call{method: "POST", path: "/api/v1/map/visits", headers: map[string]string{"X-Bugspot-Token": mapAgent},
+	agentVisit := e.do(call{method: "POST", path: "/api/v1/map/visits", headers: map[string]string{"X-Pinpath-Token": mapAgent},
 		body: map[string]any{"visits": []any{map[string]any{"screen": "/a"}}}})
 	if agentVisit.Code != http.StatusNoContent {
 		t.Fatalf("a crawling agent reports visits: %d %s", agentVisit.Code, agentVisit.Body)
 	}
-	otherVisit := e.do(call{method: "POST", path: "/api/v1/map/visits", headers: map[string]string{"X-Bugspot-Token": e.agent},
+	otherVisit := e.do(call{method: "POST", path: "/api/v1/map/visits", headers: map[string]string{"X-Pinpath-Token": e.agent},
 		body: map[string]any{"visits": []any{map[string]any{"screen": "/a"}}}})
 	if otherVisit.Code != http.StatusForbidden {
 		t.Fatalf("an agent without the map scope reports visits: %d", otherVisit.Code)
@@ -175,7 +175,7 @@ func TestMapLooks(t *testing.T) {
 	if w := e.do(call{method: "POST", path: "/api/v1/map/assets/missing", user: "anna", body: map[string]any{"hashes": []string{"nope"}}}); w.Code != 400 {
 		t.Fatalf("bad hash: %d", w.Code)
 	}
-	snapshot := map[string]any{"html": `<html><head><style data-bugspot-asset="` + hash + `"></style></head><body><h1>Кампании</h1></body></html>`,
+	snapshot := map[string]any{"html": `<html><head><style data-pinpath-asset="` + hash + `"></style></head><body><h1>Кампании</h1></body></html>`,
 		"css": []string{hash}, "outline": map[string]any{"title": "Кампании"}, "viewport": map[string]int{"w": 1440, "h": 900}, "hash": "s1"}
 	path := "/api/v1/map/snapshot?screen=/campaigns&state=tab:Активные"
 	if w := e.do(call{method: "PUT", path: path, user: "anna", body: snapshot}); w.Code != 400 || !strings.Contains(w.Body.String(), "stylesheets first") {
@@ -238,7 +238,7 @@ func TestMapEditing(t *testing.T) {
 	}}); code != http.StatusNoContent {
 		t.Fatalf("visits: %d", code)
 	}
-	asAgent := map[string]string{"X-Bugspot-Token": mapAgent}
+	asAgent := map[string]string{"X-Pinpath-Token": mapAgent}
 	patch := []any{map[string]any{"key": "/authors", "name": "Авторы", "section": "База", "description": "Список авторов"},
 		map[string]any{"key": "/authors/list", "mergeInto": "/authors"}}
 	if w := e.do(call{method: "PATCH", path: "/api/v1/map/screens", user: "anna", body: patch}); w.Code != http.StatusForbidden {
@@ -314,7 +314,7 @@ func TestThreadScreens(t *testing.T) {
 
 func TestMapManifest(t *testing.T) {
 	e, mapAgent := mapEnv(t)
-	agent := map[string]string{"X-Bugspot-Token": mapAgent}
+	agent := map[string]string{"X-Pinpath-Token": mapAgent}
 	if code := e.visit("anna", map[string]any{"visits": []any{map[string]any{"screen": "/authors", "title": "Авторы"}}}); code != http.StatusNoContent {
 		t.Fatalf("visit: %d", code)
 	}
@@ -341,7 +341,7 @@ func TestMapManifest(t *testing.T) {
 	}
 
 	w = e.do(call{method: "GET", path: "/api/v1/map/manifest", user: "boss", roles: "admin"})
-	if w.Code != 200 || !strings.Contains(w.Header().Get("Content-Disposition"), "bugspot-map.json") {
+	if w.Code != 200 || !strings.Contains(w.Header().Get("Content-Disposition"), "pinpath-map.json") {
 		t.Fatalf("export: %d %v", w.Code, w.Header())
 	}
 	out := decodeBody[domain.Manifest](t, w)

@@ -1,7 +1,7 @@
 //go:build js && wasm
 
-// Command bugspot-wasm runs the real API handler in the browser for the GitHub Pages demo: the
-// widget's requests go to globalThis.bugspotFetch instead of the network, the data lives in the
+// Command pinpath-wasm runs the real API handler in the browser for the GitHub Pages demo: the
+// widget's requests go to globalThis.pinpathFetch instead of the network, the data lives in the
 // memory store and is saved to localStorage. The demo page picks the user and the access policy.
 package main
 
@@ -15,16 +15,16 @@ import (
 	"syscall/js"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/auth"
-	"github.com/svyatoslavratov/bugspot/internal/httpapi"
-	"github.com/svyatoslavratov/bugspot/internal/store/memory"
+	"github.com/svyatoslavratov/pinpath/internal/auth"
+	"github.com/svyatoslavratov/pinpath/internal/httpapi"
+	"github.com/svyatoslavratov/pinpath/internal/store/memory"
 )
 
-const storageKey = "bugspot-demo-v1"
+const storageKey = "pinpath-demo-v1"
 
 // demoAgentToken lets the demo page act as an agent through the real API rules. It only ever
 // exists inside the visitor's browser.
-const demoAgentToken = "bsp_DEMOAGENTDEMOAGENTDEMOAGENTDEMOAGENT"
+const demoAgentToken = "ppt_DEMOAGENTDEMOAGENTDEMOAGENTDEMOAGENT"
 
 var (
 	st      = memory.New()
@@ -34,7 +34,7 @@ var (
 func rules(s string) auth.Rules {
 	r, err := auth.ParseRules(s)
 	if err != nil {
-		js.Global().Get("console").Call("error", "bugspot demo: "+err.Error())
+		js.Global().Get("console").Call("error", "pinpath demo: "+err.Error())
 	}
 	return r
 }
@@ -136,8 +136,8 @@ func main() {
 	api.Set("reset", js.FuncOf(reset))
 	api.Set("startedAt", time.Now().UnixMilli())
 	api.Set("agentToken", demoAgentToken)
-	js.Global().Set("bugspotServer", api)
-	if ready := js.Global().Get("onBugspotServerReady"); ready.Type() == js.TypeFunction {
+	js.Global().Set("pinpathServer", api)
+	if ready := js.Global().Get("onPinpathServerReady"); ready.Type() == js.TypeFunction {
 		ready.Invoke()
 	}
 	select {}

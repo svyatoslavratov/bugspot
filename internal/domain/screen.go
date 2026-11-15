@@ -45,7 +45,7 @@ func StateNameOf(key string) string {
 }
 
 // EdgeSource tells how a transition became known: seen after a click, read from a link on the
-// page, or declared by the app (data-bugspot-to) or by a person or an agent.
+// page, or declared by the app (data-pinpath-to) or by a person or an agent.
 type EdgeSource string
 
 // Edge sources.
@@ -89,7 +89,7 @@ type Size struct {
 }
 
 // Screen is one screen of the app. Key is how the widget names it: the route with ids folded
-// into {id}, or the value of data-bugspot-screen.
+// into {id}, or the value of data-pinpath-screen.
 type Screen struct {
 	Key string `json:"key"`
 	// Name, Section and Description are given by people or agents; Title is what the page said.

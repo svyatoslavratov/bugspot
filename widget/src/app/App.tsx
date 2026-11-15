@@ -31,14 +31,14 @@ export interface AppHandle {
 export type View = { kind: 'list' } | { kind: 'thread'; id: string } | ({ kind: 'new'; draft?: Draft } & Target);
 
 const POLL_MS = 30_000;
-const CRAWL_HASH = 'bugspot-crawl';
+const CRAWL_HASH = 'pinpath-crawl';
 
 /**
- * A crawl asked for when the page opened: by `bugspot map crawl` (it starts at once) or by the
- * map's "Build the map" link (#bugspot-crawl: the dialog opens and waits for a click).
+ * A crawl asked for when the page opened: by `pinpath map crawl` (it starts at once) or by the
+ * map's "Build the map" link (#pinpath-crawl: the dialog opens and waits for a click).
  */
 function requestedCrawl(): CrawlConfig | null | undefined {
-  if (window.__bugspotCrawl?.auto) return window.__bugspotCrawl;
+  if (window.__pinpathCrawl?.auto) return window.__pinpathCrawl;
   if (!location.hash.includes(CRAWL_HASH)) return undefined;
   const hash = location.hash.replace(new RegExp(`[#&]?${CRAWL_HASH}`), '');
   history.replaceState(history.state, '', location.pathname + location.search + (hash && hash !== '#' ? hash : ''));
@@ -86,7 +86,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
     const asked = requestedCrawl();
     if (asked !== undefined && !canMap) {
       if (asked?.auto)
-        window.__bugspotCrawlStatus = {
+        window.__pinpathCrawlStatus = {
           phase: 'error',
           error: 'this identity may not build the map: give the token the map scope',
         };
@@ -109,7 +109,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
       onRouteChange(() => {
         setRoute(currentRoute(settings.route));
         setScreen(currentScreen(settings));
-        // The app may name its screen (data-bugspot-screen) once the new page renders.
+        // The app may name its screen (data-pinpath-screen) once the new page renders.
         setTimeout(() => setScreen(currentScreen(settings)), 400);
       }),
     [settings],
@@ -117,7 +117,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
   // People who build the screen map report what they see; see collector.ts. A crawl from the
   // command line reports through its crawler only.
   useEffect(() => {
-    if (!session.can?.collect || window.__bugspotCrawl?.auto) return;
+    if (!session.can?.collect || window.__pinpathCrawl?.auto) return;
     return startCollector({ api, session, settings, host });
   }, [api, session, settings, host]);
   // In a frame of the screen map ("live app"), the map follows the screen the app is on.
@@ -127,7 +127,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
     let last = '';
     const post = () => {
       const message = {
-        type: 'bugspot:screen',
+        type: 'pinpath:screen',
         screen: currentScreen(settings),
         state: currentState().key,
         url: location.href,

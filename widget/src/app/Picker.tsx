@@ -115,7 +115,7 @@ export function Picker({
       <PickedOutlines picks={picked} />
       {hover && (
         <div
-          className="bugspot-highlight"
+          className="pinpath-highlight"
           style={{
             left: hover.rect.left - 2,
             top: hover.rect.top - 2,
@@ -123,12 +123,12 @@ export function Picker({
             height: hover.rect.height + 4,
           }}
         >
-          <span className="bugspot-highlight-label">{hover.el.tagName.toLowerCase()}</span>
+          <span className="pinpath-highlight-label">{hover.el.tagName.toLowerCase()}</span>
         </div>
       )}
-      <div className="bugspot-pick-bar" role="status">
+      <div className="pinpath-pick-bar" role="status">
         <span>
-          {notice && <strong className="bugspot-pick-notice">{notice} · </strong>}
+          {notice && <strong className="pinpath-pick-notice">{notice} · </strong>}
           {picked.length === 0 ? t.pickHint : full ? t.pickedFull(picked.length) : t.picked(picked.length)}
         </span>
         {picked.length > 0 && <Button size="small" intent="primary" text={t.pickDone} onClick={() => onPick(picked)} />}
@@ -150,10 +150,10 @@ export function PickedOutlines({ picks }: { picks: Pick[] }) {
         return (
           <div
             key={i}
-            className="bugspot-picked"
+            className="pinpath-picked"
             style={{ left: r.left - 2, top: r.top - 2, width: r.width + 4, height: r.height + 4 }}
           >
-            {picks.length > 1 && <span className="bugspot-picked-number">{i + 1}</span>}
+            {picks.length > 1 && <span className="pinpath-picked-number">{i + 1}</span>}
           </div>
         );
       })}

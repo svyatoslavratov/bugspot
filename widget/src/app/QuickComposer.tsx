@@ -79,12 +79,12 @@ export function QuickComposer({
       <PickedOutlines picks={target.picks} />
       <div
         ref={box}
-        className={`bugspot-quick ${Classes.CARD} ${Classes.ELEVATION_3}`}
+        className={`pinpath-quick ${Classes.CARD} ${Classes.ELEVATION_3}`}
         style={{ left, top, width: WIDTH }}
         role="dialog"
         aria-label={t.newComment}
       >
-        <div className="bugspot-quick-head">
+        <div className="pinpath-quick-head">
           <ButtonGroup variant="minimal">
             {(['issue', 'question', 'idea'] as Kind[]).map((k) => (
               <Tooltip key={k} content={t.kind[k]} placement="top">
@@ -100,9 +100,9 @@ export function QuickComposer({
             ))}
           </ButtonGroup>
           {target.picks.length > 1 && (
-            <span className={`bugspot-quick-count ${Classes.TEXT_MUTED}`}>{t.elementsCount(target.picks.length)}</span>
+            <span className={`pinpath-quick-count ${Classes.TEXT_MUTED}`}>{t.elementsCount(target.picks.length)}</span>
           )}
-          <Tooltip content={t.expand} placement="top" className="bugspot-push-right">
+          <Tooltip content={t.expand} placement="top" className="pinpath-push-right">
             <Button
               size="small"
               variant="minimal"
@@ -137,7 +137,7 @@ export function QuickComposer({
             {d.error}
           </Callout>
         )}
-        <div className="bugspot-quick-foot">
+        <div className="pinpath-quick-foot">
           <span className={Classes.TEXT_MUTED}>
             {d.shot.kind === 'pending' ? t.capturing : d.shot.kind === 'ready' ? t.shotAttached : t.screenshotFailed}
             {' · '}

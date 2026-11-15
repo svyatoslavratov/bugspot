@@ -6,6 +6,7 @@ import { statusIntent } from '../app/labels';
 import { ThreadView } from '../app/ThreadView';
 import { useData } from '../app/useData';
 import { anchorsOf, buildAnchor, resolveAnchor } from '../lib/anchor';
+import { anyAttr, attrOf } from '../lib/attrs';
 import { interactiveOf } from '../lib/screen';
 import {
   ACTIVE_STATUSES,
@@ -41,11 +42,12 @@ function boxOf(el: Element): Box {
 
 /** Puts the stylesheets into the snapshot and restores the scroll positions of its containers. */
 function prepare(doc: Document, snap: SnapshotData) {
-  for (const style of doc.querySelectorAll('style[data-bugspot-asset]')) {
-    style.textContent = snap.css[style.getAttribute('data-bugspot-asset') ?? ''] ?? '';
+  // Snapshots taken before the rename from bugspot carry data-bugspot-* attributes.
+  for (const style of doc.querySelectorAll('style[data-pinpath-asset], style[data-bugspot-asset]')) {
+    style.textContent = snap.css[attrOf(style, 'asset') ?? ''] ?? '';
   }
-  for (const el of doc.querySelectorAll('[data-bugspot-scroll]')) {
-    const [x, y] = (el.getAttribute('data-bugspot-scroll') ?? '0,0').split(',').map(Number);
+  for (const el of doc.querySelectorAll(anyAttr('scroll'))) {
+    const [x, y] = (attrOf(el, 'scroll') ?? '0,0').split(',').map(Number);
     el.scrollLeft = x;
     el.scrollTop = y;
   }
@@ -103,7 +105,7 @@ export function SnapshotView({
     const onMessage = (ev: MessageEvent) => {
       if (!liveFrame.current || ev.source !== liveFrame.current.contentWindow) return;
       const data = ev.data as { type?: unknown; screen?: unknown; state?: unknown } | null;
-      if (data?.type !== 'bugspot:screen' || typeof data.screen !== 'string') return;
+      if (data?.type !== 'pinpath:screen' || typeof data.screen !== 'string') return;
       const state = typeof data.state === 'string' ? data.state : '';
       setLive((l) => (l && !l.heard ? { ...l, heard: true, silent: false } : l));
       const { view: now, onView: go } = following.current;

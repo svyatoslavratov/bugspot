@@ -97,7 +97,7 @@ type ImportResult struct {
 }
 
 // PatternKey turns a route pattern into a screen key: /authors/:id/edit → /authors/{id}/edit.
-// Keys that are not routes (data-bugspot-screen names) stay as they are; a query stays too.
+// Keys that are not routes (data-pinpath-screen names) stay as they are; a query stays too.
 func PatternKey(key string) string {
 	if !strings.HasPrefix(key, "/") {
 		return key

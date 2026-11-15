@@ -64,7 +64,7 @@ const ru = {
   setStatus: 'Статус',
   openPage: 'Открыть страницу',
   showOnPage: 'Показать на странице',
-  aboutProject: 'bugspot на GitHub — открытый код',
+  aboutProject: 'pinpath на GitHub — открытый код',
   detached: 'Элемент не найден',
   inLayer: (kind: 'dialog' | 'popup', title?: string) =>
     `Элемент ${kind === 'dialog' ? 'в окне' : 'во всплывающем меню'}${title ? ` «${title}»` : ''} — откройте его, чтобы увидеть метку`,
@@ -187,7 +187,7 @@ const en: Dict = {
   setStatus: 'Status',
   openPage: 'Open the page',
   showOnPage: 'Show on the page',
-  aboutProject: 'bugspot on GitHub — open source',
+  aboutProject: 'pinpath on GitHub — open source',
   detached: 'Element not found',
   inLayer: (kind: 'dialog' | 'popup', title?: string) =>
     `The element is in ${kind === 'dialog' ? 'a window' : 'a popup'}${title ? ` «${title}»` : ''}: open it to see the pin`,

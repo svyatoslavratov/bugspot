@@ -53,7 +53,7 @@ as an appointed representative at an online or offline event.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the
 community leaders responsible for enforcement privately, through the maintainer's GitHub profile
 ([@svyatoslavratov](https://github.com/svyatoslavratov)) or a
-[private report](https://github.com/svyatoslavratov/bugspot/security/advisories/new). All
+[private report](https://github.com/svyatoslavratov/pinpath/security/advisories/new). All
 complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any

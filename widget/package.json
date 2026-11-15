@@ -1,9 +1,9 @@
 {
-  "name": "bugspot-widget",
+  "name": "pinpath-widget",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "The bugspot widget: loader and the React + Blueprint app served by the bugspot service.",
+  "description": "The pinpath widget: loader and the React + Blueprint app served by the pinpath service.",
   "license": "AGPL-3.0-only",
   "scripts": {
     "build": "node scripts/build.mjs",

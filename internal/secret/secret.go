@@ -8,6 +8,7 @@ import (
 	"encoding/base32"
 	"encoding/hex"
 	"fmt"
+	"strings"
 )
 
 var encoding = base32.StdEncoding.WithPadding(base32.NoPadding)
@@ -21,11 +22,24 @@ func ID() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }
 
-// Prefixes tell an agent token from an access key at a glance.
+// Prefixes tell an agent token from an access key at a glance. Credentials made before the
+// project was renamed from bugspot carry the legacy prefixes and stay valid.
 const (
-	AgentPrefix = "bsp_"
-	KeyPrefix   = "bsk_"
+	AgentPrefix       = "ppt_"
+	KeyPrefix         = "ppk_"
+	LegacyAgentPrefix = "bsp_"
+	LegacyKeyPrefix   = "bsk_"
 )
+
+// IsAgentToken reports whether s looks like an agent token, new or legacy.
+func IsAgentToken(s string) bool {
+	return strings.HasPrefix(s, AgentPrefix) || strings.HasPrefix(s, LegacyAgentPrefix)
+}
+
+// IsKey reports whether s looks like an access key, new or legacy.
+func IsKey(s string) bool {
+	return strings.HasPrefix(s, KeyPrefix) || strings.HasPrefix(s, LegacyKeyPrefix)
+}
 
 // New returns a credential with 160 random bits after the prefix.
 func New(prefix string) string {

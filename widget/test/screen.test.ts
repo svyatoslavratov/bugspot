@@ -53,9 +53,12 @@ describe('screen keys', () => {
     );
   });
 
-  test('the app may name its screen with data-bugspot-screen', () => {
-    document.body.innerHTML = '<main data-bugspot-screen="author-card"></main>';
+  test('the app may name its screen with data-pinpath-screen', () => {
+    document.body.innerHTML = '<main data-pinpath-screen="author-card"></main>';
     expect(screenKeyOf({ route: 'auto' }, { pathname: '/', search: '', hash: '#/author/7' })).toBe('author-card');
+    // The name the attribute had before the rename works the same.
+    document.body.innerHTML = '<main data-bugspot-screen="old-card"></main>';
+    expect(screenKeyOf({ route: 'auto' }, { pathname: '/', search: '', hash: '#/author/7' })).toBe('old-card');
     document.body.innerHTML = '';
     expect(screenKeyOf({ route: 'auto' }, { pathname: '/', search: '', hash: '#/author/7' })).toBe('/author/{id}');
   });
@@ -163,8 +166,8 @@ describe('fingerprint and outline', () => {
     expect(structureHash()).toBe(a);
     document.querySelector('main')!.append(document.createElement('section'));
     expect(structureHash()).not.toBe(a);
-    const widget = document.createElement('bugspot-widget');
-    widget.setAttribute('data-bugspot-ignore', '');
+    const widget = document.createElement('pinpath-widget');
+    widget.setAttribute('data-pinpath-ignore', '');
     const b = structureHash();
     document.body.append(widget);
     expect(structureHash()).toBe(b);

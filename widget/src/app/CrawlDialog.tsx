@@ -16,8 +16,8 @@ import { useWidget } from './context';
 import { frameTarget, startCrawl, windowTarget, type CrawlStatus, type CrawlTarget } from './crawler';
 
 /** The crawler's frame and window are named so: the widget does not start inside them. */
-export const CRAWL_FRAME = 'bugspot-crawl';
-const CRAWL_WINDOW = 'bugspot-crawl-window';
+export const CRAWL_FRAME = 'pinpath-crawl';
+const CRAWL_WINDOW = 'pinpath-crawl-window';
 
 /**
  * Builds the map by walking the app: the options, then the app in a frame shrunk to fit, the
@@ -46,11 +46,11 @@ export function CrawlDialog({ auto, onClose }: { auto: CrawlConfig | null; onClo
         options: { start, buttons, maxScreens: Math.max(1, max) },
         onStatus: (s) => {
           setStatus(s);
-          window.__bugspotCrawlStatus = s;
+          window.__pinpathCrawlStatus = s;
         },
       });
       run.current = crawl;
-      window.__bugspotCrawlStop = crawl.stop;
+      window.__pinpathCrawlStop = crawl.stop;
       void crawl.done.then((s) => {
         run.current = null;
         // A window of its own goes away with the crawl; the frame stays as the last view.
@@ -90,9 +90,9 @@ export function CrawlDialog({ auto, onClose }: { auto: CrawlConfig | null; onClo
   const finished = status && !running && (status.phase !== 'error' || status.screens > 0);
 
   return (
-    <div className="bugspot-crawl">
-      <Card className="bugspot-crawl-card" elevation={Elevation.FOUR} role="dialog" aria-label={t.crawlTitle}>
-        <header className="bugspot-crawl-head">
+    <div className="pinpath-crawl">
+      <Card className="pinpath-crawl-card" elevation={Elevation.FOUR} role="dialog" aria-label={t.crawlTitle}>
+        <header className="pinpath-crawl-head">
           <H5>{t.crawlTitle}</H5>
           <Button
             icon="cross"
@@ -105,20 +105,20 @@ export function CrawlDialog({ auto, onClose }: { auto: CrawlConfig | null; onClo
           />
         </header>
         {!status && (
-          <div className="bugspot-crawl-options">
+          <div className="pinpath-crawl-options">
             <p>{t.crawlIntro}</p>
             <p className="bp6-text-muted">{t.crawlSafe}</p>
-            <label className="bugspot-crawl-field">
+            <label className="pinpath-crawl-field">
               <span>{t.crawlFrom}</span>
               <InputGroup value={start} onValueChange={setStart} fill />
             </label>
-            <div className="bugspot-crawl-row">
+            <div className="pinpath-crawl-row">
               <Checkbox
                 checked={buttons}
                 label={t.crawlButtons}
                 onChange={(e) => setButtons(e.currentTarget.checked)}
               />
-              <label className="bugspot-crawl-max">
+              <label className="pinpath-crawl-max">
                 <span>{t.crawlMax}</span>
                 <InputGroup
                   type="number"
@@ -133,11 +133,11 @@ export function CrawlDialog({ auto, onClose }: { auto: CrawlConfig | null; onClo
           </div>
         )}
         {status && (
-          <div className="bugspot-crawl-status">
+          <div className="pinpath-crawl-status">
             <div>
               <strong>{t.crawlPhase[status.phase]}</strong> · {t.crawlProgress(status)}
             </div>
-            <code className="bugspot-crawl-current" title={status.current}>
+            <code className="pinpath-crawl-current" title={status.current}>
               {status.current}
             </code>
             {running && <ProgressBar intent="primary" />}
@@ -156,7 +156,7 @@ export function CrawlDialog({ auto, onClose }: { auto: CrawlConfig | null; onClo
                 {t.crawlPopupBlocked}
               </Callout>
             )}
-            <div className="bugspot-crawl-actions">
+            <div className="pinpath-crawl-actions">
               {running && <Button icon="stop" text={t.crawlStop} onClick={() => run.current?.stop()} />}
               {finished && (
                 <AnchorButton
@@ -171,7 +171,7 @@ export function CrawlDialog({ auto, onClose }: { auto: CrawlConfig | null; onClo
             </div>
           </div>
         )}
-        <div className="bugspot-crawl-view" style={{ width: size.w * scale, height: size.h * scale }}>
+        <div className="pinpath-crawl-view" style={{ width: size.w * scale, height: size.h * scale }}>
           <iframe
             ref={frame}
             name={CRAWL_FRAME}

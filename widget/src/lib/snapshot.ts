@@ -1,7 +1,9 @@
 // A DOM snapshot of the page for the screen map: the document without scripts and event handlers,
 // rendered later in a sandboxed frame. Stylesheets are cut out and sent once, named by their
-// SHA-256; in the HTML they become <style data-bugspot-asset="HASH"></style>. What people typed is
-// masked (inputs mode), or all text is (text mode); data-bugspot-mask masks a part always.
+// SHA-256; in the HTML they become <style data-pinpath-asset="HASH"></style>. What people typed is
+// masked (inputs mode), or all text is (text mode); data-pinpath-mask masks a part always.
+
+import { hasAttr } from './attrs';
 
 export type Mask = 'none' | 'inputs' | 'text';
 
@@ -99,14 +101,14 @@ interface Context {
 
 /** Stylesheets become placeholders now; their hashes are filled in once computed. */
 function placeholder(ctx: Context, text: string): string {
-  const id = `@@bugspot-css-${ctx.counter++}@@`;
+  const id = `@@pinpath-css-${ctx.counter++}@@`;
   ctx.pending.push(
     sha256(text).then((hash) => {
       ctx.css.set(hash, text);
       ctx.placeholders.set(id, hash);
     }),
   );
-  return `<style data-bugspot-asset="${id}"></style>`;
+  return `<style data-pinpath-asset="${id}"></style>`;
 }
 
 function adoptedOf(root: Document | ShadowRoot): CSSStyleSheet[] {
@@ -159,7 +161,7 @@ function attributes(el: Element, ctx: Context, masked: boolean): string {
     }
   }
   if (tag === 'option' && (el as HTMLOptionElement).selected && !el.hasAttribute('selected')) out += ' selected';
-  if (el.scrollTop > 0 || el.scrollLeft > 0) out += ` data-bugspot-scroll="${el.scrollLeft},${el.scrollTop}"`;
+  if (el.scrollTop > 0 || el.scrollLeft > 0) out += ` data-pinpath-scroll="${el.scrollLeft},${el.scrollTop}"`;
   return out;
 }
 
@@ -176,7 +178,7 @@ function serializeNode(node: Node, ctx: Context, masked: boolean): string {
   }
   if (node.nodeType !== Node.ELEMENT_NODE) return '';
   const el = node as Element;
-  if (el === ctx.exclude || el.hasAttribute('data-bugspot-ignore')) return '';
+  if (el === ctx.exclude || hasAttr(el, 'ignore')) return '';
   const tag = el.localName;
   if (DROP.has(tag)) return '';
   if (tag === 'link') {
@@ -199,7 +201,7 @@ function serializeNode(node: Node, ctx: Context, masked: boolean): string {
   }
   if (tag === 'iframe' || tag === 'frame') {
     const rect = el.getBoundingClientRect();
-    return `<div data-bugspot-frame style="width:${Math.round(rect.width)}px;height:${Math.round(rect.height)}px;background:#e5e8eb"></div>`;
+    return `<div data-pinpath-frame style="width:${Math.round(rect.width)}px;height:${Math.round(rect.height)}px;background:#e5e8eb"></div>`;
   }
   if (tag === 'canvas') {
     try {
@@ -209,7 +211,7 @@ function serializeNode(node: Node, ctx: Context, masked: boolean): string {
       return `<div${attributes(el, ctx, false)}></div>`;
     }
   }
-  const isMasked = masked || el.hasAttribute('data-bugspot-mask');
+  const isMasked = masked || hasAttr(el, 'mask');
   let out = `<${tag}${attributes(el, ctx, isMasked)}>`;
   if (VOID.has(tag)) return out;
   const shadow = (el as HTMLElement).shadowRoot;
@@ -267,7 +269,7 @@ export async function serializeDocument(doc: Document, options: { mask: Mask; ex
   };
   let html = `<!DOCTYPE html>${serializeNode(doc.documentElement, ctx, false)}`;
   await Promise.all(ctx.pending);
-  html = html.replace(/@@bugspot-css-\d+@@/g, (id) => ctx.placeholders.get(id) ?? '');
+  html = html.replace(/@@pinpath-css-\d+@@/g, (id) => ctx.placeholders.get(id) ?? '');
   const win = doc.defaultView ?? window;
   return {
     html,

@@ -18,7 +18,7 @@ import (
 func TestMapManifestCommands(t *testing.T) {
 	var imported string
 	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Bugspot-Token") != "bsp_test" || r.URL.Path != "/api/v1/map/manifest" {
+		if r.Header.Get("X-Pinpath-Token") != "ppt_test" || r.URL.Path != "/api/v1/map/manifest" {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -31,7 +31,7 @@ func TestMapManifestCommands(t *testing.T) {
 		_, _ = w.Write([]byte(`{"version":1,"screens":[{"key":"/a","name":"Авторы"}]}`))
 	}))
 	defer api.Close()
-	env := map[string]string{"BUGSPOT_URL": api.URL, "BUGSPOT_TOKEN": "bsp_test"}
+	env := map[string]string{"PINPATH_URL": api.URL, "PINPATH_TOKEN": "ppt_test"}
 
 	r := run(t, env, "map", "export")
 	if r.code != 0 || !strings.Contains(r.stdout, "\n  \"screens\": [") {
@@ -64,14 +64,14 @@ func TestMapCrawlArguments(t *testing.T) {
 		want string
 	}{
 		{nil, []string{"map", "crawl"}, "usage"},
-		{nil, []string{"map", "crawl", "https://app.test"}, "BUGSPOT_TOKEN"},
-		{map[string]string{"BUGSPOT_TOKEN": "bsp_x"}, []string{"map", "crawl", "ftp://app.test"}, "http(s) URL"},
-		{map[string]string{"BUGSPOT_TOKEN": "bsp_x"}, []string{"map", "crawl", "--viewport", "big", "https://app.test"}, "WIDTHxHEIGHT"},
-		{map[string]string{"BUGSPOT_TOKEN": "bsp_x"}, []string{"map", "crawl", "--header", "nocolon", "https://app.test"}, "Name: value"},
-		{map[string]string{"BUGSPOT_TOKEN": "bsp_x"}, []string{"map", "crawl", "--cookie", "novalue", "https://app.test"}, "name=value"},
-		{map[string]string{"BUGSPOT_TOKEN": "bsp_x"}, []string{"map", "crawl", "--chrome", "/nope/chrome", "https://app.test"}, "/nope/chrome"},
-		{map[string]string{"BUGSPOT_TOKEN": "bsp_x"}, []string{"map", "crawl", "--widget", "ftp://x", "https://app.test"}, "--widget"},
-		{map[string]string{"BUGSPOT_TOKEN": "bsp_x"}, []string{"map", "crawl", "--widget", "https://x", "--route", "tree", "https://app.test"}, "--route"},
+		{nil, []string{"map", "crawl", "https://app.test"}, "PINPATH_TOKEN"},
+		{map[string]string{"PINPATH_TOKEN": "ppt_x"}, []string{"map", "crawl", "ftp://app.test"}, "http(s) URL"},
+		{map[string]string{"PINPATH_TOKEN": "ppt_x"}, []string{"map", "crawl", "--viewport", "big", "https://app.test"}, "WIDTHxHEIGHT"},
+		{map[string]string{"PINPATH_TOKEN": "ppt_x"}, []string{"map", "crawl", "--header", "nocolon", "https://app.test"}, "Name: value"},
+		{map[string]string{"PINPATH_TOKEN": "ppt_x"}, []string{"map", "crawl", "--cookie", "novalue", "https://app.test"}, "name=value"},
+		{map[string]string{"PINPATH_TOKEN": "ppt_x"}, []string{"map", "crawl", "--chrome", "/nope/chrome", "https://app.test"}, "/nope/chrome"},
+		{map[string]string{"PINPATH_TOKEN": "ppt_x"}, []string{"map", "crawl", "--widget", "ftp://x", "https://app.test"}, "--widget"},
+		{map[string]string{"PINPATH_TOKEN": "ppt_x"}, []string{"map", "crawl", "--widget", "https://x", "--route", "tree", "https://app.test"}, "--route"},
 	} {
 		if r := run(t, c.env, c.args...); r.code != 1 || !strings.Contains(r.stderr, c.want) {
 			t.Errorf("%v = %+v, want %q", c.args, r, c.want)
@@ -80,8 +80,8 @@ func TestMapCrawlArguments(t *testing.T) {
 	if w, h, err := parseViewport("1280x720"); err != nil || w != 1280 || h != 720 {
 		t.Fatalf("viewport = %d %d %v", w, h, err)
 	}
-	if w, err := injectWidget("https://app.test/bugspot/", "hash"); err != nil || w == nil ||
-		*w != (injectedWidget{Src: "https://app.test/bugspot/widget.js", Route: "hash"}) {
+	if w, err := injectWidget("https://app.test/pinpath/", "hash"); err != nil || w == nil ||
+		*w != (injectedWidget{Src: "https://app.test/pinpath/widget.js", Route: "hash"}) {
 		t.Fatalf("inject = %+v %v", w, err)
 	}
 	if w, err := injectWidget("", "auto"); w != nil || err != nil {
@@ -130,7 +130,7 @@ func fakeBrowser(t *testing.T, statuses []string) (*cdp, *[]string) {
 				switch {
 				case m.Method == "Browser.getVersion":
 					result = map[string]any{"product": "Chrome/140"}
-				case m.Method == "Runtime.evaluate" && strings.Contains(string(m.Params), "__bugspotCrawlStatus"):
+				case m.Method == "Runtime.evaluate" && strings.Contains(string(m.Params), "__pinpathCrawlStatus"):
 					value := statuses[min(i, len(statuses)-1)]
 					i++
 					result = map[string]any{"result": map[string]any{"value": value}}
@@ -168,14 +168,14 @@ func TestCDPCalls(t *testing.T) {
 
 func TestFollowCrawl(t *testing.T) {
 	running := `{"phase":"running","screens":3,"states":5,"looks":4,"queued":7,"current":"/authors"}`
-	done := `{"phase":"done","screens":12,"states":30,"looks":28,"edges":40,"map":"https://app.test/bugspot/map"}`
+	done := `{"phase":"done","screens":12,"states":30,"looks":28,"edges":40,"map":"https://app.test/pinpath/map"}`
 	c, calls := fakeBrowser(t, []string{"null", running, running, done})
 	a, out, errOut := newApp(context.Background(), nil, "")
 	if err := a.followCrawl(context.Background(), c, "s1", time.Millisecond, time.Second); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Count(errOut.String(), "screens 3 · states 5") != 1 || !strings.Contains(out.String(), "done: 12 screens, 30 states, 28 looks, 40 transitions") ||
-		!strings.Contains(out.String(), "the map: https://app.test/bugspot/map") {
+		!strings.Contains(out.String(), "the map: https://app.test/pinpath/map") {
 		t.Fatalf("output:\n%s\n%s", out, errOut)
 	}
 	if len(*calls) != 4 {
@@ -196,7 +196,7 @@ func TestFollowCrawl(t *testing.T) {
 	if err := a.followCrawl(ctx, c, "s1", time.Millisecond, time.Second); err == nil || !strings.Contains(err.Error(), "--timeout") {
 		t.Fatalf("a crawl past its time = %v", err)
 	}
-	if last := (*calls)[len(*calls)-1]; !strings.Contains(last, "__bugspotCrawlStop") {
+	if last := (*calls)[len(*calls)-1]; !strings.Contains(last, "__pinpathCrawlStop") {
 		t.Fatalf("the crawl was not stopped: %s", last)
 	}
 }
@@ -211,7 +211,7 @@ func TestOnlyReads(t *testing.T) {
 	}
 	handle(paused("GET", nil))
 	handle(paused("PUT", map[string]string{"Content-Type": "application/json"}))
-	handle(paused("POST", map[string]string{"x-bugspot-token": "bsp_x"}))
+	handle(paused("POST", map[string]string{"x-pinpath-token": "ppt_x"}))
 	handle(cdpMessage{Method: "Page.loadEventFired"})
 	want := []string{`Fetch.continueRequest {"requestId":"r-GET"}`, `Fetch.failRequest {"errorReason":"BlockedByClient","requestId":"r-PUT"}`,
 		`Fetch.continueRequest {"requestId":"r-POST"}`}

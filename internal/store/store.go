@@ -6,7 +6,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
 )
 
 // Store is the storage the API needs. Every thread method is scoped to a project.

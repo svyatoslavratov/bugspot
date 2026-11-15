@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/store"
-	"github.com/svyatoslavratov/bugspot/internal/store/sqlite"
-	"github.com/svyatoslavratov/bugspot/internal/store/storetest"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/store"
+	"github.com/svyatoslavratov/pinpath/internal/store/sqlite"
+	"github.com/svyatoslavratov/pinpath/internal/store/storetest"
 )
 
 func open(t *testing.T, path string) *sqlite.Store {
@@ -25,12 +25,12 @@ func open(t *testing.T, path string) *sqlite.Store {
 
 func TestStore(t *testing.T) {
 	storetest.Run(t, func(t *testing.T) store.Store {
-		return open(t, filepath.Join(t.TempDir(), "bugspot.db"))
+		return open(t, filepath.Join(t.TempDir(), "pinpath.db"))
 	})
 }
 
 func TestReopenKeepsDataAndSkipsMigrations(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "bugspot.db")
+	path := filepath.Join(t.TempDir(), "pinpath.db")
 	ctx := context.Background()
 	s, err := sqlite.Open(ctx, path)
 	if err != nil {
@@ -50,7 +50,7 @@ func TestReopenKeepsDataAndSkipsMigrations(t *testing.T) {
 func TestBackupIsAWorkingCopy(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
-	s := open(t, filepath.Join(dir, "bugspot.db"))
+	s := open(t, filepath.Join(dir, "pinpath.db"))
 	if err := s.CreateThread(ctx, &domain.Thread{ID: "t1", Project: "p", Status: domain.StatusOpen, Body: "first"}); err != nil {
 		t.Fatal(err)
 	}

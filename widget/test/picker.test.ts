@@ -58,7 +58,7 @@ function key(name: string) {
   });
 }
 
-const bar = () => container.querySelector('.bugspot-pick-bar')!.textContent;
+const bar = () => container.querySelector('.pinpath-pick-bar')!.textContent;
 
 describe('Picker', () => {
   test('a plain click picks one element and the page never sees the click', () => {
@@ -77,7 +77,7 @@ describe('Picker', () => {
     click(page[0], true);
     click(page[1], true);
     expect(onPick).not.toHaveBeenCalled();
-    expect(container.querySelectorAll('.bugspot-picked')).toHaveLength(2);
+    expect(container.querySelectorAll('.pinpath-picked')).toHaveLength(2);
     expect(bar()).toContain('2 picked');
     click(page[2]);
     expect(onPick.mock.calls[0][0].map((p: Pick) => p.el)).toEqual(page);
@@ -89,7 +89,7 @@ describe('Picker', () => {
     click(page[0], true);
     click(page[1], true);
     click(page[0], true);
-    expect(container.querySelectorAll('.bugspot-picked')).toHaveLength(1);
+    expect(container.querySelectorAll('.pinpath-picked')).toHaveLength(1);
     click(page[1]);
     expect(onPick.mock.calls[0][0].map((p: Pick) => p.el)).toEqual([page[1]]);
   });
@@ -111,7 +111,7 @@ describe('Picker', () => {
     const onPick = vi.fn();
     render(onPick);
     for (const el of many) click(el, true);
-    expect(container.querySelectorAll('.bugspot-picked')).toHaveLength(MAX_ELEMENTS);
+    expect(container.querySelectorAll('.pinpath-picked')).toHaveLength(MAX_ELEMENTS);
     expect(bar()).toContain('no more fit');
     click(page[0]);
     expect(onPick.mock.calls[0][0]).toHaveLength(MAX_ELEMENTS);

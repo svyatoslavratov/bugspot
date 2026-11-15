@@ -72,7 +72,7 @@ export function PinLayer({
   );
 
   return (
-    <div className={`bugspot-pins ${passive ? 'is-passive' : ''}`}>
+    <div className={`pinpath-pins ${passive ? 'is-passive' : ''}`}>
       {pins.map(({ thread, index, point }) => (
         // The pin itself is the tooltip target: a wrapper around a fixed pin has no box of its
         // own and would anchor the tooltip to the top left corner of the page.
@@ -86,7 +86,7 @@ export function PinLayer({
               {...target}
               ref={ref}
               type="button"
-              className={`${className ?? ''} bugspot-pin intent-${statusIntent[thread.status]} ${
+              className={`${className ?? ''} pinpath-pin intent-${statusIntent[thread.status]} ${
                 thread.id === selectedId ? 'is-selected' : ''
               } ${thread.id === flashId ? 'is-flashing' : ''}`}
               style={{ left: point.x, top: point.y }}

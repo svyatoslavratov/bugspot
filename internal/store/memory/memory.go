@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/store"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/store"
 )
 
 type screenshot struct {

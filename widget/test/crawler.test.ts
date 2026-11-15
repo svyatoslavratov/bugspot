@@ -11,7 +11,7 @@ const ORIGIN = 'https://app.test';
 // and reports whose rows lead to a report by a click.
 const pages: Record<string, string> = {
   '/': `<nav><a href="/authors">Авторы</a><a href="/reports">Отчёты</a><a href="/logout">Выйти</a>
-    <a href="/bugspot/map">Карта</a></nav>
+    <a href="/pinpath/map">Карта</a></nav>
     <main><h1>Главная</h1><a href="/authors/7">Иванов</a><a href="/files/all.pdf">Выгрузка</a></main>`,
   '/authors': `<main><h1>Авторы</h1>
     <div role="tablist"><button role="tab" aria-selected="true" id="t1">Активные</button>
@@ -87,7 +87,7 @@ function fakeApp(events: string[], loaded: string[]): CrawlTarget {
 
 function fakeApi(visits: VisitInput[], edges: EdgeInput[], looks: StateRef[]): Api {
   const api = {
-    base: `${ORIGIN}/bugspot/`,
+    base: `${ORIGIN}/pinpath/`,
     captures: async () => ({ states: [], aliases: {} }),
     map: async () => ({
       screens: [{ key: '/reports', exampleUrl: `${ORIGIN}/reports`, states: [] }],
@@ -157,7 +157,7 @@ describe('crawler', () => {
     // Signing out, files and the service itself are not walked.
     expect(loaded).not.toContain('/logout');
     expect(loaded).not.toContain('/files/all.pdf');
-    expect(loaded.some((p) => p.startsWith('/bugspot'))).toBe(false);
+    expect(loaded.some((p) => p.startsWith('/pinpath'))).toBe(false);
     // One card is enough for a screen with ids.
     expect(loaded.filter((p) => p.startsWith('/authors/')).length).toBe(1);
 
@@ -177,7 +177,7 @@ describe('crawler', () => {
     expect(events).not.toContain('icon');
     expect(looks.length).toBeGreaterThanOrEqual(6);
     expect(status.screens).toBe(5);
-    expect(status.map).toBe(`${ORIGIN}/bugspot/map`);
+    expect(status.map).toBe(`${ORIGIN}/pinpath/map`);
   }, 30_000);
 
   test('presses other buttons when asked, still not the dangerous or nameless ones', async () => {

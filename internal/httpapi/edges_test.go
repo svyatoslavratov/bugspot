@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/auth"
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/secret"
-	"github.com/svyatoslavratov/bugspot/internal/store/memory"
+	"github.com/svyatoslavratov/pinpath/internal/auth"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/secret"
+	"github.com/svyatoslavratov/pinpath/internal/store/memory"
 )
 
 // brokenStore fails the health check and panics on lists.
@@ -60,7 +60,7 @@ func TestAgentTokenStates(t *testing.T) {
 	_ = e.store.CreateCredential(ctx, domain.Credential{ID: "x1", Kind: domain.CredentialAgent, Hash: secret.Hash(expired), Scopes: []string{"read"}, ExpiresAt: &past})
 	_ = e.store.CreateCredential(ctx, domain.Credential{ID: "x2", Kind: domain.CredentialAgent, Hash: secret.Hash(revoked), Scopes: []string{"read"}, RevokedAt: &past})
 	_ = e.store.CreateCredential(ctx, domain.Credential{ID: "x3", Kind: domain.CredentialKey, Hash: secret.Hash(key)})
-	for name, token := range map[string]string{"expired": expired, "revoked": revoked, "a key as a token": key, "unknown": "bsp_nope"} {
+	for name, token := range map[string]string{"expired": expired, "revoked": revoked, "a key as a token": key, "unknown": "ppt_nope"} {
 		w := e.do(call{method: "GET", path: "/api/v1/threads", headers: map[string]string{auth.TokenHeader: token}})
 		if w.Code != http.StatusUnauthorized || !strings.Contains(w.Body.String(), "invalid_token") {
 			t.Errorf("%s: %d %s", name, w.Code, w.Body)
@@ -75,7 +75,8 @@ func TestAgentTokenStates(t *testing.T) {
 func TestKeysAndCookies(t *testing.T) {
 	e := newEnv(t, nil)
 	w := e.do(call{method: "DELETE", path: "/api/v1/session/key"})
-	if c := w.Result().Cookies(); w.Code != http.StatusNoContent || len(c) != 1 || c[0].MaxAge >= 0 {
+	// The cookie of a key opened before the rename from bugspot expires too.
+	if c := w.Result().Cookies(); w.Code != http.StatusNoContent || len(c) != 2 || c[0].MaxAge >= 0 || c[1].Name != "bugspot_key" || c[1].MaxAge >= 0 {
 		t.Fatalf("close key: %d %v", w.Code, c)
 	}
 	off := newEnv(t, func(o *Options) { o.Keys = nil })
@@ -181,5 +182,47 @@ func TestEditingAndReplies(t *testing.T) {
 	rec := &statusRecorder{ResponseWriter: httptest.NewRecorder()}
 	if rec.Unwrap() == nil {
 		t.Fatal("Unwrap lost the writer")
+	}
+}
+
+// What clients sent before the project was renamed from bugspot keeps working: the old headers,
+// agent tokens and access keys with the old prefixes, and the old cookies.
+func TestLegacyNames(t *testing.T) {
+	e := newEnv(t, func(o *Options) {
+		o.Policy.View = rules(t, "*")
+		o.Policy.Comment = rules(t, "*")
+	})
+	legacyAgent := "bsp_" + strings.Repeat("a", 32)
+	legacyKey := "bsk_" + strings.Repeat("b", 32)
+	_ = e.store.CreateCredential(context.Background(), domain.Credential{ID: "a9", Kind: domain.CredentialAgent, Name: "Old agent",
+		Hash: secret.Hash(legacyAgent), Scopes: []string{domain.ScopeRead}, CreatedAt: now})
+	_ = e.store.CreateCredential(context.Background(), domain.Credential{ID: "k9", Kind: domain.CredentialKey, Name: "Old key",
+		Hash: secret.Hash(legacyKey), CreatedAt: now})
+
+	agent := decodeBody[sessionBody](t, e.do(call{method: "GET", path: "/api/v1/session", headers: map[string]string{"X-Bugspot-Token": legacyAgent}}))
+	if agent.User == nil || agent.User.Name != "Old agent" {
+		t.Fatalf("an old agent token in the old header = %+v", agent.User)
+	}
+	if w := e.do(call{method: "GET", path: "/api/v1/session", headers: map[string]string{"X-Bugspot-Token": "bsp_unknown"}}); w.Code != http.StatusUnauthorized {
+		t.Fatalf("an unknown old token: %d", w.Code)
+	}
+	w := e.do(call{method: "POST", path: "/api/v1/threads", body: newThread("/a"), noCSRF: true,
+		headers: map[string]string{"X-Bugspot-Request": "1", "Cookie": "bugspot_anon=0193a6b2-7d1c-7a3e-9f00-1234567890ab"}})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("the old CSRF header and anonymous cookie: %d %s", w.Code, w.Body)
+	}
+	if th := decodeBody[threadView](t, w); th.Author.ID != "anon:0193a6b2-7d1c-7a3e-9f00-1234567890ab" {
+		t.Fatalf("author from the old cookie = %+v", th.Author)
+	}
+	key := decodeBody[sessionBody](t, e.do(call{method: "POST", path: "/api/v1/session/key", body: map[string]string{"key": legacyKey}}))
+	if key.User == nil || key.User.Name != "Old key" {
+		t.Fatalf("an old access key = %+v", key.User)
+	}
+	if s := decodeBody[sessionBody](t, e.do(call{method: "GET", path: "/api/v1/session", headers: map[string]string{"Cookie": "bugspot_key=" + legacyKey}})); s.User == nil || s.User.Name != "Old key" {
+		t.Fatalf("the old key cookie = %+v", s.User)
+	}
+	pre := e.do(call{method: "OPTIONS", path: "/api/v1/threads", headers: map[string]string{"Origin": "https://app.example.com", "Access-Control-Request-Method": "POST"}})
+	if allowed := pre.Header().Get("Access-Control-Allow-Headers"); !strings.Contains(allowed, "X-Pinpath-Request") || !strings.Contains(allowed, "X-Bugspot-Request") {
+		t.Fatalf("CORS headers = %q", allowed)
 	}
 }

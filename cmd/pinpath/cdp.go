@@ -203,7 +203,7 @@ func findChrome(asked string) (string, error) {
 			return p, nil
 		}
 	}
-	return "", errors.New("no Chrome or Chromium found: install one, or point --chrome (BUGSPOT_CHROME) at it")
+	return "", errors.New("no Chrome or Chromium found: install one, or point --chrome (PINPATH_CHROME) at it")
 }
 
 func launchBrowser(ctx context.Context, o browserOptions) (*browser, error) {
@@ -212,7 +212,7 @@ func launchBrowser(ctx context.Context, o browserOptions) (*browser, error) {
 	}
 	b := &browser{dir: o.profile, stderr: &tailBuffer{max: 4 << 10}}
 	if b.dir == "" {
-		dir, err := os.MkdirTemp("", "bugspot-chrome-")
+		dir, err := os.MkdirTemp("", "pinpath-chrome-")
 		if err != nil {
 			return nil, err
 		}

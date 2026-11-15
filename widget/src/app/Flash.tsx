@@ -45,7 +45,7 @@ export function Flash({ anchor }: { anchor: Partial<Anchor> }) {
   return (
     <>
       {boxes.map((box, i) => (
-        <div key={i} className="bugspot-flash" style={box} aria-hidden />
+        <div key={i} className="pinpath-flash" style={box} aria-hidden />
       ))}
     </>
   );

@@ -8,7 +8,7 @@ Issues and pull requests are welcome.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org): `feat:`,
   `fix:`, `docs:`, `test:`, `chore:`, `ci:`.
 - Report bugs and propose features with the issue templates; ask questions in
-  [Discussions](https://github.com/svyatoslavratov/bugspot/discussions); report vulnerabilities
+  [Discussions](https://github.com/svyatoslavratov/pinpath/discussions); report vulnerabilities
   privately (see [SECURITY.md](SECURITY.md)).
 - Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 - By contributing you agree that your contribution is licensed under the AGPL-3.0, like the project.

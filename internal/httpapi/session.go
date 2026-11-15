@@ -3,8 +3,8 @@ package httpapi
 import (
 	"net/http"
 
-	"github.com/svyatoslavratov/bugspot/internal/auth"
-	"github.com/svyatoslavratov/bugspot/internal/secret"
+	"github.com/svyatoslavratov/pinpath/internal/auth"
+	"github.com/svyatoslavratov/pinpath/internal/secret"
 )
 
 type sessionUser struct {
@@ -57,7 +57,7 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request, c caller) error
 	// An anonymous visitor gets a random id on the first visit, so they can edit what they write.
 	if c.id != nil && c.id.Provider == auth.ProviderAnonymous && c.id.ID == "" && c.perms.View {
 		value := secret.ID()
-		//nolint:gosec // Secure follows the request (BUGSPOT_COOKIE_SECURE); HttpOnly and SameSite are set
+		//nolint:gosec // Secure follows the request (PINPATH_COOKIE_SECURE); HttpOnly and SameSite are set
 		http.SetCookie(w, &http.Cookie{Name: auth.AnonymousCookie, Value: value, Path: "/", MaxAge: 365 * 24 * 3600,
 			HttpOnly: true, Secure: s.secure(r), SameSite: http.SameSiteLaxMode})
 		c.id.ID = "anon:" + value
@@ -89,7 +89,7 @@ func (s *Server) openKey(w http.ResponseWriter, r *http.Request, _ caller) error
 	if cred.ExpiresAt != nil {
 		maxAge = min(maxAge, int(cred.ExpiresAt.Sub(s.o.Now()).Seconds()))
 	}
-	//nolint:gosec // Secure follows the request (BUGSPOT_COOKIE_SECURE); HttpOnly and SameSite are set
+	//nolint:gosec // Secure follows the request (PINPATH_COOKIE_SECURE); HttpOnly and SameSite are set
 	http.SetCookie(w, &http.Cookie{Name: auth.KeyCookie, Value: body.Key, Path: "/", MaxAge: maxAge,
 		HttpOnly: true, Secure: s.secure(r), SameSite: http.SameSiteLaxMode})
 	id := &auth.Identity{ID: "key:" + cred.ID, Name: cred.Name, Roles: cred.Roles, Provider: auth.ProviderKey}
@@ -102,9 +102,12 @@ func (s *Server) openKey(w http.ResponseWriter, r *http.Request, _ caller) error
 }
 
 func (s *Server) closeKey(w http.ResponseWriter, r *http.Request, _ caller) error {
-	//nolint:gosec // an expiring cookie; Secure follows the request
-	http.SetCookie(w, &http.Cookie{Name: auth.KeyCookie, Value: "", Path: "/", MaxAge: -1,
-		HttpOnly: true, Secure: s.secure(r), SameSite: http.SameSiteLaxMode})
+	// The legacy cookie of a key opened before the rename goes too.
+	for _, name := range []string{auth.KeyCookie, auth.LegacyKeyCookie} {
+		//nolint:gosec // an expiring cookie; Secure follows the request
+		http.SetCookie(w, &http.Cookie{Name: name, Value: "", Path: "/", MaxAge: -1,
+			HttpOnly: true, Secure: s.secure(r), SameSite: http.SameSiteLaxMode})
+	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

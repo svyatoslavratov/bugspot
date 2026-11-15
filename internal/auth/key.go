@@ -4,15 +4,18 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/secret"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/secret"
 )
 
-// KeyCookie holds an access key after the visitor opened a link with ?bugspot_key=….
-const KeyCookie = "bugspot_key"
+// KeyCookie holds an access key after the visitor opened a link with ?pinpath_key=….
+// LegacyKeyCookie is its name before the project was renamed from bugspot; it is still read.
+const (
+	KeyCookie       = "pinpath_key"
+	LegacyKeyCookie = "bugspot_key"
+)
 
 // Credentials looks up hashed credentials; the store implements it.
 type Credentials interface {
@@ -32,7 +35,7 @@ func (k *Key) Name() string { return ProviderKey }
 
 // Lookup returns the active key credential for a raw key.
 func (k *Key) Lookup(ctx context.Context, raw string) (domain.Credential, bool, error) {
-	if !strings.HasPrefix(raw, secret.KeyPrefix) {
+	if !secret.IsKey(raw) {
 		return domain.Credential{}, false, nil
 	}
 	c, err := k.Store.CredentialByHash(ctx, secret.Hash(raw))
@@ -47,7 +50,7 @@ func (k *Key) Lookup(ctx context.Context, raw string) (domain.Credential, bool, 
 
 // Identify implements Provider.
 func (k *Key) Identify(ctx context.Context, r *http.Request) (*Identity, error) {
-	cookie, err := r.Cookie(KeyCookie)
+	cookie, err := cookieOf(r, KeyCookie, LegacyKeyCookie)
 	if err != nil || cookie.Value == "" {
 		return nil, nil
 	}

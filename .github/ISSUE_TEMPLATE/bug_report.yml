@@ -9,8 +9,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: bugspot version
-      description: "`bugspot version`, or the image tag."
+      label: pinpath version
+      description: "`pinpath version`, or the image tag."
       placeholder: v0.3.2
     validations:
       required: true
@@ -44,7 +44,7 @@ body:
     id: config
     attributes:
       label: Configuration
-      description: The BUGSPOT_* variables you set, without secrets.
+      description: The PINPATH_* variables you set, without secrets.
       render: shell
   - type: input
     id: environment

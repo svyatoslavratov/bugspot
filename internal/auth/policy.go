@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
 )
 
 // Rule matches identities:

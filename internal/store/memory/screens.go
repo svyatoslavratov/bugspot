@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
 )
 
 // screenMap is the map of one project. Looks (thumbnails, snapshots, stylesheets) stay out of the

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/store"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/store"
 )
 
 // A comment left on the map shows on every page of its screen: the filter and the summary take the

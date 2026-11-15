@@ -31,7 +31,7 @@ beforeEach(() => {
       <input aria-label="Search campaigns" placeholder="Search" />
       <button id=":r12:">Export</button>
       <table><tbody>
-        <tr><td>Northwind</td><td data-bugspot="budget-1">480 000 ₽</td></tr>
+        <tr><td>Northwind</td><td data-pinpath="budget-1">480 000 ₽</td></tr>
         <tr><td>Contoso</td><td>1 250   000 ₽</td></tr>
       </tbody></table>
       <section data-testid="cards"><article><h3>Maria</h3></article><article><h3>Pavel</h3></article></section>
@@ -47,7 +47,13 @@ describe('selectorOf', () => {
   });
 
   test('prefers stable attributes and skips generated ids', () => {
-    expect(selectorOf(document.querySelector('[data-bugspot]')!)).toBe('[data-bugspot="budget-1"]');
+    expect(selectorOf(document.querySelector('[data-pinpath]')!)).toBe('[data-pinpath="budget-1"]');
+    // Pages that kept the attribute's name from before the rename.
+    const old = document.createElement('span');
+    old.setAttribute('data-bugspot', 'total');
+    document.body.append(old);
+    expect(selectorOf(old)).toBe('[data-bugspot="total"]');
+    old.remove();
     expect(selectorOf(document.querySelector('input')!)).toBe('input[aria-label="Search campaigns"]');
     const button = document.querySelector('button')!;
     expect(selectorOf(button)).not.toContain(':r12:');
@@ -100,7 +106,7 @@ describe('anchors', () => {
 
 describe('several elements', () => {
   test('combineAnchors keeps the first element on top and anchorsOf lists them all', () => {
-    const [a, b] = [document.querySelector('input')!, document.querySelector('[data-bugspot]')!];
+    const [a, b] = [document.querySelector('input')!, document.querySelector('[data-pinpath]')!];
     const one = buildAnchor(a, { x: 20, y: 15 });
     const two = buildAnchor(b, { x: 30, y: 15 });
     expect(combineAnchors([one])).toEqual(one);

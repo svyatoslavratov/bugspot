@@ -1,14 +1,14 @@
-# bugspot
+# pinpath
 
-[![CI](https://github.com/svyatoslavratov/bugspot/actions/workflows/ci.yml/badge.svg)](https://github.com/svyatoslavratov/bugspot/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/svyatoslavratov/bugspot?sort=semver)](https://github.com/svyatoslavratov/bugspot/releases)
-[![Go Reference](https://pkg.go.dev/badge/github.com/svyatoslavratov/bugspot.svg)](https://pkg.go.dev/github.com/svyatoslavratov/bugspot)
-[![Coverage Status](https://coveralls.io/repos/github/svyatoslavratov/bugspot/badge.svg?branch=main)](https://coveralls.io/github/svyatoslavratov/bugspot?branch=main)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/svyatoslavratov/bugspot/badge)](https://scorecard.dev/viewer/?uri=github.com/svyatoslavratov/bugspot)
+[![CI](https://github.com/svyatoslavratov/pinpath/actions/workflows/ci.yml/badge.svg)](https://github.com/svyatoslavratov/pinpath/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/svyatoslavratov/pinpath?sort=semver)](https://github.com/svyatoslavratov/pinpath/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/svyatoslavratov/pinpath.svg)](https://pkg.go.dev/github.com/svyatoslavratov/pinpath)
+[![Coverage Status](https://coveralls.io/repos/github/svyatoslavratov/pinpath/badge.svg?branch=main)](https://coveralls.io/github/svyatoslavratov/pinpath?branch=main)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/svyatoslavratov/pinpath/badge)](https://scorecard.dev/viewer/?uri=github.com/svyatoslavratov/pinpath)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
-[![Demo](https://img.shields.io/badge/demo-live-2d72d2)](https://svyatoslavratov.github.io/bugspot/)
+[![Demo](https://img.shields.io/badge/demo-live-2d72d2)](https://svyatoslavratov.github.io/pinpath/)
 
-**Комментарии к элементам страницы для команды и для агентов.** Плавающий жучок в любом
+**Комментарии к элементам страницы и карта экранов приложения — для команды и для агентов.** Плавающий жучок в любом
 веб-приложении: нажали, выбрали элемент, написали, что не так. Комментарий закрепляется за этим
 элементом вместе со скриншотом, браузером, версией приложения, последними ошибками консоли и
 неудачными запросами. Разработчики — или ИИ-агент с API-токеном — отвечают в ветке, переводят её
@@ -18,9 +18,15 @@
 добавляется один тег `<script>`. Кому показывать виджет — решаете вы: от всех подряд до одних
 админов, через вход вашего же приложения.
 
-**[Демо →](https://svyatoslavratov.github.io/bugspot/)** (API работает прямо в браузере через WebAssembly)
+**[Демо →](https://svyatoslavratov.github.io/pinpath/)** (API работает прямо в браузере через WebAssembly)
 
 [English version](README.md)
+
+> **Раньше назывался bugspot.** С версии 0.5.0 проект называется pinpath: бинарник, образ
+> (`ghcr.io/svyatoslavratov/pinpath`) и все имена внутри. Всё, что настроено раньше, продолжает
+> работать: переменные `BUGSPOT_*` (сервис перечислит их в предупреждении при старте), атрибуты
+> `data-bugspot-*`, заголовки `X-Bugspot-*`, токены и ключи `bsp_`/`bsk_`, ссылки `?bugspot_key=`,
+> `window.bugspotConfig` и файл `bugspot.db` в каталоге данных. Переименуйте их, когда будет удобно.
 
 ![Человек оставляет комментарий, агент исправляет через MCP, человек проверяет и закрывает](docs/images/demo.gif)
 
@@ -41,7 +47,7 @@
   комментария (метка на каждом). Писать можно в полной форме в панели или в *компактном* режиме —
   в маленьком поле прямо у элемента, как в Figma (Enter — отправить). После отправки можно сразу
   выбрать следующий элемент, Esc — закончить. Режим и сочетание — под шестерёнкой в шапке панели.
-- **Агенты — полноправные участники.** MCP-сервер (`bugspot mcp`), токены с правами, CLI и обычный
+- **Агенты — полноправные участники.** MCP-сервер (`pinpath mcp`), токены с правами, CLI и обычный
   REST API. Агент доводит до «исправлен», проверяет и закрывает только человек.
 - **Карта экранов.** Пока люди работают в приложении, виджет сам собирает его экраны, их вкладки и
   окна, что куда ведёт (какой кнопкой или ссылкой) и как выглядит каждое состояние на самом деле:
@@ -56,8 +62,8 @@
   «видеть / писать / модерировать» по ролям и пользователям.
 - **Лёгкий.** Кому виджет не положен, получает загрузчик на 2,6 КБ и один запрос. Сервис —
   статический бинарник на 12 МБ (образ distroless — 15 МБ), SQLite внутри.
-- **Резервные копии.** С `BUGSPOT_BACKUP_DIR` сервис сам хранит датированные снимки базы (при старте,
-  затем раз в сутки, 14 дней); `bugspot backup` снимает копию в любой момент.
+- **Резервные копии.** С `PINPATH_BACKUP_DIR` сервис сам хранит датированные снимки базы (при старте,
+  затем раз в сутки, 14 дней); `pinpath backup` снимает копию в любой момент.
 - **Безопасный по умолчанию.** Защита от CSRF, список разрешённых доменов для CORS, лимиты частоты
   и размера, только проверенные изображения, хеши вместо ключей, контейнер без root и с
   файловой системой только для чтения. Подробнее — [SECURITY.md](SECURITY.md).
@@ -72,40 +78,40 @@
 Рядом с приложением, например в том же docker-compose:
 
 ```yaml
-bugspot:
-  image: ghcr.io/svyatoslavratov/bugspot:v0.3.2
+pinpath:
+  image: ghcr.io/svyatoslavratov/pinpath:v0.3.2
   restart: unless-stopped
   read_only: true
-  volumes: [bugspot-data:/data]
+  volumes: [pinpath-data:/data]
   environment:
-    BUGSPOT_PROJECT: crm
-    BUGSPOT_AUTH: forward
-    BUGSPOT_FORWARD_URL: http://app:8080/api/me
-    BUGSPOT_FORWARD_COOKIES: session
-    BUGSPOT_FORWARD_MAP: id=user.id,name=user.name,roles=user.role
-    BUGSPOT_VIEW: authenticated
-    BUGSPOT_COMMENT: authenticated
-    BUGSPOT_MODERATE: role:admin
-    BUGSPOT_TRUSTED_PROXIES: 172.16.0.0/12
+    PINPATH_PROJECT: crm
+    PINPATH_AUTH: forward
+    PINPATH_FORWARD_URL: http://app:8080/api/me
+    PINPATH_FORWARD_COOKIES: session
+    PINPATH_FORWARD_MAP: id=user.id,name=user.name,roles=user.role
+    PINPATH_VIEW: authenticated
+    PINPATH_COMMENT: authenticated
+    PINPATH_MODERATE: role:admin
+    PINPATH_TRUSTED_PROXIES: 172.16.0.0/12
 ```
 
-Или бинарником из [релизов](https://github.com/svyatoslavratov/bugspot/releases). Данные — в
-`/data` (`BUGSPOT_DATA_DIR`), держите его на томе.
+Или бинарником из [релизов](https://github.com/svyatoslavratov/pinpath/releases). Данные — в
+`/data` (`PINPATH_DATA_DIR`), держите его на томе.
 
 ### 2. Отдайте его под доменом приложения
 
 Так cookie и Content-Security-Policy работают без настроек:
 
 ```nginx
-location /bugspot/ {
-    proxy_pass http://bugspot:8090/;
+location /pinpath/ {
+    proxy_pass http://pinpath:8090/;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     client_max_body_size 4m;   # скриншоты
 }
 ```
 
-Сервис на другом домене тоже работает: перечислите домены приложения в `BUGSPOT_ALLOWED_ORIGINS`
+Сервис на другом домене тоже работает: перечислите домены приложения в `PINPATH_ALLOWED_ORIGINS`
 и используйте провайдер `jwt` или `key` (cookie приложения на чужой домен не уходят).
 
 ### 3. Добавьте скрипт
@@ -113,7 +119,7 @@ location /bugspot/ {
 Только там, где виджет нужен (например, на dev и stage):
 
 ```html
-<script defer src="/bugspot/widget.js" data-version="1.4.2"></script>
+<script defer src="/pinpath/widget.js" data-version="1.4.2"></script>
 ```
 
 | Атрибут | Значения | По умолчанию |
@@ -130,7 +136,7 @@ location /bugspot/ {
 `data-mode` и `data-hotkey` — значения по умолчанию: каждый может сменить их под шестерёнкой в
 панели (они хранятся в его браузере).
 
-`window.bugspotConfig = { token, appVersion, fetch }` до скрипта задаёт то же из кода (`token`
+`window.pinpathConfig = { token, appVersion, fetch }` до скрипта задаёт то же из кода (`token`
 возвращает JWT для провайдера `jwt`).
 
 Сам виджет доступ не решает: загрузчик спрашивает `GET /api/v1/session` и скачивает приложение,
@@ -140,35 +146,35 @@ location /bugspot/ {
 
 Два слоя: **провайдеры** определяют, кто пользователь, **политика** — что ему можно.
 
-`BUGSPOT_AUTH` — провайдеры по порядку; срабатывает первый, который узнал запрос.
+`PINPATH_AUTH` — провайдеры по порядку; срабатывает первый, который узнал запрос.
 
 | Провайдер | Когда подходит | Что нужно от приложения |
 | --- | --- | --- |
-| `forward` | у приложения сессия в cookie на том же домене | ничего: bugspot сам спрашивает ваш эндпоинт «кто я» с cookie пользователя и берёт поля из JSON |
-| `jwt` | другой домен или нужно передать точные роли | бэкенд подписывает короткий JWT (HS256, RS256, ES256), страница отдаёт его через `bugspotConfig.token` |
-| `header` | перед приложением прокси авторизации (oauth2-proxy, Authelia, Traefik) | ничего: заголовкам верим только с адресов `BUGSPOT_TRUSTED_PROXIES` |
-| `key` | нужен комментарий от человека без аккаунта (заказчика) | ссылка `?bugspot_key=bsk_…`; ключ превращается в httpOnly-cookie |
+| `forward` | у приложения сессия в cookie на том же домене | ничего: pinpath сам спрашивает ваш эндпоинт «кто я» с cookie пользователя и берёт поля из JSON |
+| `jwt` | другой домен или нужно передать точные роли | бэкенд подписывает короткий JWT (HS256, RS256, ES256), страница отдаёт его через `pinpathConfig.token` |
+| `header` | перед приложением прокси авторизации (oauth2-proxy, Authelia, Traefik) | ничего: заголовкам верим только с адресов `PINPATH_TRUSTED_PROXIES` |
+| `key` | нужен комментарий от человека без аккаунта (заказчика) | ссылка `?pinpath_key=ppk_…`; ключ превращается в httpOnly-cookie |
 | `anonymous` | открытый сбор отзывов | ничего; гость указывает имя |
 
 У политики три права, каждое — список правил (хватает одного совпадения):
 
-- `BUGSPOT_VIEW` — видеть виджет и читать комментарии;
-- `BUGSPOT_COMMENT` — писать комментарии и ответы, править и закрывать свои;
-- `BUGSPOT_MODERATE` — менять любой статус, удалять любой комментарий.
+- `PINPATH_VIEW` — видеть виджет и читать комментарии;
+- `PINPATH_COMMENT` — писать комментарии и ответы, править и закрывать свои;
+- `PINPATH_MODERATE` — менять любой статус, удалять любой комментарий.
 
 Правила: `*` (все), `authenticated` (все, кроме анонимов), `anonymous`, `role:<роль>`,
 `user:<id>`, `provider:<провайдер>`.
 
 | Нужно | Настройки |
 | --- | --- |
-| Только админы | `BUGSPOT_VIEW=role:admin` `BUGSPOT_COMMENT=role:admin` |
-| Пишет вся команда, закрывает тимлид | `BUGSPOT_VIEW=authenticated` `BUGSPOT_COMMENT=authenticated` `BUGSPOT_MODERATE=role:lead` |
-| Плюс заказчик по ссылке | `BUGSPOT_AUTH=…,key` и `provider:key` в `BUGSPOT_VIEW` и `BUGSPOT_COMMENT` |
-| Всем | `BUGSPOT_AUTH=anonymous` `BUGSPOT_VIEW=*` `BUGSPOT_COMMENT=*` |
-| Выключить | `BUGSPOT_ENABLED=false` или не добавлять скрипт |
+| Только админы | `PINPATH_VIEW=role:admin` `PINPATH_COMMENT=role:admin` |
+| Пишет вся команда, закрывает тимлид | `PINPATH_VIEW=authenticated` `PINPATH_COMMENT=authenticated` `PINPATH_MODERATE=role:lead` |
+| Плюс заказчик по ссылке | `PINPATH_AUTH=…,key` и `provider:key` в `PINPATH_VIEW` и `PINPATH_COMMENT` |
+| Всем | `PINPATH_AUTH=anonymous` `PINPATH_VIEW=*` `PINPATH_COMMENT=*` |
+| Выключить | `PINPATH_ENABLED=false` или не добавлять скрипт |
 
 Пример `forward`: приложение отвечает на `GET /api/me` объектом
-`{"user": {"id": 7, "name": "Анна", "role": "admin"}}` для вошедшего и `401` для остальных. bugspot
+`{"user": {"id": 7, "name": "Анна", "role": "admin"}}` для вошедшего и `401` для остальных. pinpath
 пересылает только перечисленные cookie, только на этот адрес, и помнит ответ 30 секунд. Роли — строка,
 строка через запятую или массив.
 
@@ -176,21 +182,21 @@ location /bugspot/ {
 
 ## Карта экранов
 
-Карта собирается сама: тот, кому разрешено `BUGSPOT_MAP_COLLECT` (по умолчанию все, кто видит
+Карта собирается сама: тот, кому разрешено `PINPATH_MAP_COLLECT` (по умолчанию все, кто видит
 виджет), по ходу работы в приложении сообщает
 
 - **экраны** — адрес, в котором id свёрнуты в `{id}` (`/author/0193…` → `/author/{id}`), или имя,
-  которое страница даёт себе в `data-bugspot-screen`;
+  которое страница даёт себе в `data-pinpath-screen`;
 - **состояния** — сама страница, выбранная вкладка (`role="tab"` с `aria-selected`) или открытое
   окно (`role="dialog"`, `<dialog open>`);
 - **переходы** — элемент, по которому кликнули перед сменой экрана или состояния (его доступное
-  имя), ссылки страницы и `data-bugspot-to` для переходов, которых виджет не видит (кнопка, которая
+  имя), ссылки страницы и `data-pinpath-to` для переходов, которых виджет не видит (кнопка, которая
   ведёт куда-то только после сохранения);
 - **вид** каждого состояния, когда страница успокоилась: настоящая миниатюра и снимок DOM без
   скриптов; снимается заново, когда меняется вёрстка. Стили хранятся один раз; введённое людьми
-  скрывается (`BUGSPOT_MAP_MASK=inputs`) или скрывается весь текст (`text`).
+  скрывается (`PINPATH_MAP_MASK=inputs`) или скрывается весь текст (`text`).
 
-Тот, кому разрешено `BUGSPOT_MAP` (по умолчанию модераторы), открывает `<сервис>/map`: экраны по
+Тот, кому разрешено `PINPATH_MAP` (по умолчанию модераторы), открывает `<сервис>/map`: экраны по
 разделам, переходы между ними, панель, где экран называют, относят к разделу, описывают, скрывают
 и объединяют, и снимок каждого состояния. В снимке известные кнопки и ссылки ведут туда, куда
 ведут, неизвестные можно подсветить, а «Комментарий» ставит метку на любой элемент — тот же
@@ -206,27 +212,27 @@ location /bugspot/ {
 останавливает ещё и браузер), — формы не отправляются, `confirm()` отвечает «нет», кнопки с
 названиями вроде удаления, отправки, сохранения, оплаты и выхода не нажимаются; остальные кнопки —
 только если отметить это или если приложение само их пометило (`aria-haspopup="dialog"`,
-`data-bugspot-crawl`). Тот же обход работает в Chrome без окна:
+`data-pinpath-crawl`). Тот же обход работает в Chrome без окна:
 
 ```sh
-bugspot token create --name crawler --scopes read,map         # рядом с сервисом
-BUGSPOT_TOKEN=bsp_… bugspot map crawl https://app.example.com/ \
-  --cookie session=…            # или один раз войти: --headed --profile ~/.bugspot-chrome
+pinpath token create --name crawler --scopes read,map         # рядом с сервисом
+PINPATH_TOKEN=ppt_… pinpath map crawl https://app.example.com/ \
+  --cookie session=…            # или один раз войти: --headed --profile ~/.pinpath-chrome
 ```
 
 `--buttons` нажимает больше кнопок, `--max-screens` и `--timeout` ограничивают обход, `--widget
-https://app.example.com/bugspot` добавляет виджет на страницы, которые его не грузят, а стенд за
+https://app.example.com/pinpath` добавляет виджет на страницы, которые его не грузят, а стенд за
 Basic Auth берёт логин и пароль из адреса. Нужен Chrome или Chromium (`--chrome` или
-`BUGSPOT_CHROME`) на macOS или Linux.
+`PINPATH_CHROME`) на macOS или Linux.
 
 **Живое приложение.** Экран открывается снимком или, кнопкой «Живое приложение», настоящим
 приложением во фрейме: в нём можно работать и комментировать его виджетом, а карта следует за
-экраном, на котором оно. Приложение должно разрешать bugspot показывать себя во фрейме
+экраном, на котором оно. Приложение должно разрешать pinpath показывать себя во фрейме
 (`frame-ancestors`), см. [подключение](docs/integration.md#the-screen-map).
 
 **Манифест.** Что люди и агенты написали об экранах — названия, разделы, описания, описания
 состояний, объявленные переходы — выгружается в JSON и загружается обратно: «⋯ → Скачать /
-Загрузить манифест» на карте или `bugspot map export -o map.json` и `bugspot map import map.json`.
+Загрузить манифест» на карте или `pinpath map export -o map.json` и `pinpath map import map.json`.
 Ключи могут быть шаблонами маршрутов роутера (`/authors/:id`, `/authors/[id]`); экраны, которых
 карта ещё не видела, становятся запланированными. Его может писать скрипт по роутеру, хранит git.
 
@@ -242,19 +248,19 @@ Basic Auth берёт логин и пароль из адреса. Нужен C
 
 | Атрибут | Где | Что делает |
 | --- | --- | --- |
-| `data-bugspot-screen="author-card"` | любой элемент страницы | называет экран, если адрес не различает экраны |
+| `data-pinpath-screen="author-card"` | любой элемент страницы | называет экран, если адрес не различает экраны |
 | `data-route-params="tab,view"` | тег `<script>` | параметры запроса, которые делают разные экраны (иначе вкладки в адресе — состояния одного экрана) |
-| `data-bugspot-to="/reports"` | кнопка или ссылка | объявляет, куда она ведёт |
-| `data-bugspot-nav` | контейнер | отмечает собственное меню приложения (`nav`, `aside`, `header` узнаются и так) |
-| `data-bugspot-mask` | любой элемент | скрывает его текст и значения в снимках |
-| `data-bugspot-ignore` | любой элемент | убирает его из снимков и с карты |
-| `data-bugspot-crawl` | кнопка | обход может её нажимать (`="skip"` — никогда) |
+| `data-pinpath-to="/reports"` | кнопка или ссылка | объявляет, куда она ведёт |
+| `data-pinpath-nav` | контейнер | отмечает собственное меню приложения (`nav`, `aside`, `header` узнаются и так) |
+| `data-pinpath-mask` | любой элемент | скрывает его текст и значения в снимках |
+| `data-pinpath-ignore` | любой элемент | убирает его из снимков и с карты |
+| `data-pinpath-crawl` | кнопка | обход может её нажимать (`="skip"` — никогда) |
 
 ## Агенты
 
 ### MCP
 
-`bugspot mcp` — MCP-сервер на stdio с инструментами `list_threads`, `get_thread`, `get_screenshot`
+`pinpath mcp` — MCP-сервер на stdio с инструментами `list_threads`, `get_thread`, `get_screenshot`
 (сама картинка), `reply`, `set_status` и `summary`. Он работает через API с токеном агента, поэтому
 у агента ровно те права, что у токена.
 
@@ -262,17 +268,17 @@ Basic Auth берёт логин и пароль из адреса. Нужен C
 состояниями и переходами), `get_screen` (содержимое каждого состояния: заголовки, действия, поля,
 таблицы), `get_screen_image` (настоящая миниатюра), `update_screens` (название, раздел, описание,
 порядок, скрыть, объединить дубли), `update_states`, `add_screen` (запланированный экран) и
-`add_edge` (переход, которого виджет не видит). Попросите его *«Сгруппируй экраны на карте bugspot
+`add_edge` (переход, которого виджет не видит). Попросите его *«Сгруппируй экраны на карте pinpath
 и опиши, зачем каждый нужен»*.
 
 ```sh
 # Claude Code
-claude mcp add bugspot --env BUGSPOT_URL=https://app.example.com/bugspot --env BUGSPOT_TOKEN=bsp_… -- bugspot mcp
+claude mcp add pinpath --env PINPATH_URL=https://app.example.com/pinpath --env PINPATH_TOKEN=ppt_… -- pinpath mcp
 # без локального бинарника
-claude mcp add bugspot -- docker run -i --rm -e BUGSPOT_URL=… -e BUGSPOT_TOKEN=… ghcr.io/svyatoslavratov/bugspot mcp
+claude mcp add pinpath -- docker run -i --rm -e PINPATH_URL=… -e PINPATH_TOKEN=… ghcr.io/svyatoslavratov/pinpath mcp
 ```
 
-Дальше: *«Почини открытые комментарии bugspot»* — агент получает список, смотрит скриншоты, берёт
+Дальше: *«Почини открытые комментарии pinpath»* — агент получает список, смотрит скриншоты, берёт
 комментарий в работу, правит код, отвечает и ставит «исправлен». Человек проверяет, ставит отметку
 «проверено» и закрывает.
 
@@ -280,33 +286,33 @@ claude mcp add bugspot -- docker run -i --rm -e BUGSPOT_URL=… -e BUGSPOT_TOKEN
 
 ```sh
 # рядом с сервисом: создать токен (показывается один раз, хранится только хеш)
-docker compose exec bugspot bugspot token create --name claude --scopes read,reply,status,map
+docker compose exec pinpath pinpath token create --name claude --scopes read,reply,status,map
 
 # где угодно: читать и отвечать
-export BUGSPOT_URL=https://app.example.com/bugspot BUGSPOT_TOKEN=bsp_…
-bugspot threads list                     # открытые и в работе
-bugspot threads show 12                  # текст, элемент, контекст, ответы
-bugspot threads screenshot 12 --out 12.webp
-bugspot threads status 12 in_progress
-bugspot threads reply 12 "Исправил в 1.4.3: колонка теперь переносится."
-bugspot threads status 12 fixed
-bugspot map export -o map.json           # манифест карты экранов; map import применяет его
+export PINPATH_URL=https://app.example.com/pinpath PINPATH_TOKEN=ppt_…
+pinpath threads list                     # открытые и в работе
+pinpath threads show 12                  # текст, элемент, контекст, ответы
+pinpath threads screenshot 12 --out 12.webp
+pinpath threads status 12 in_progress
+pinpath threads reply 12 "Исправил в 1.4.3: колонка теперь переносится."
+pinpath threads status 12 fixed
+pinpath map export -o map.json           # манифест карты экранов; map import применяет его
 ```
 
-Стенд за HTTP Basic Auth: логин и пароль — в адрес (`https://user:pass@dev.example.com/bugspot`),
-токен идёт в `X-Bugspot-Token`, поэтому они не мешают друг другу. API описан в
+Стенд за HTTP Basic Auth: логин и пароль — в адрес (`https://user:pass@dev.example.com/pinpath`),
+токен идёт в `X-Pinpath-Token`, поэтому они не мешают друг другу. API описан в
 [api/openapi.yaml](api/openapi.yaml).
 
 ## Настройки
 
-Все настройки — переменные окружения `BUGSPOT_*`, секреты принимают и `*_FILE`. Полный список
+Все настройки — переменные окружения `PINPATH_*`, секреты принимают и `*_FILE`. Полный список
 с умолчаниями — [docs/configuration.md](docs/configuration.md).
 
 ## Разработка
 
 ```sh
 make widget      # собрать виджет (Node 22) в internal/widgetfs/dist
-make build       # bin/bugspot с виджетом внутри
+make build       # bin/pinpath с виджетом внутри
 make test        # тесты Go (с -race) и виджета
 make demo        # демо для GitHub Pages в _site/
 make run         # локальный публичный экземпляр на :8090
@@ -314,6 +320,6 @@ make run         # локальный публичный экземпляр на
 
 ## Лицензия
 
-[AGPL-3.0](LICENSE). Запуск bugspot и подключение его скрипта к вашему приложению не делают ваше
-приложение AGPL: оно общается с bugspot по HTTP. Если вы меняете сам bugspot и даёте им
+[AGPL-3.0](LICENSE). Запуск pinpath и подключение его скрипта к вашему приложению не делают ваше
+приложение AGPL: оно общается с pinpath по HTTP. Если вы меняете сам pinpath и даёте им
 пользоваться по сети — опубликуйте изменения. Нужны другие условия — напишите в issues.

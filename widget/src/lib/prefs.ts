@@ -11,13 +11,15 @@ export interface Prefs {
   hotkey: string;
 }
 
-const KEY = 'bugspot:prefs';
+const KEY = 'pinpath:prefs';
+/** Settings saved before the project was renamed; read until new ones are saved. */
+const LEGACY_KEY = 'bugspot:prefs';
 
 /** The site's defaults (script attributes) apply until the person changes a setting. */
 export function loadPrefs(defaults: { mode: ComposeMode; hotkey: string }): Prefs {
   const base: Prefs = { button: null, pins: true, ...defaults };
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Prefs>;
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY) ?? '{}') as Partial<Prefs>;
     return {
       button: saved.button ?? null,
       pins: saved.pins ?? true,
@@ -37,7 +39,7 @@ export function savePrefs(prefs: Prefs) {
   }
 }
 
-const PENDING = 'bugspot:open';
+const PENDING = 'pinpath:open';
 
 /** A thread to open after navigating to its page. */
 export function setPendingThread(id: string) {

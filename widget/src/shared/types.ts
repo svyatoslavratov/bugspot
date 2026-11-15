@@ -29,7 +29,7 @@ export interface Anchor {
   /** The click point on the page (document coordinates): the fallback position. */
   page: Point;
   viewport: { w: number; h: number };
-  /** Source location from a data-bugspot-src attribute, when the app's dev build adds it. */
+  /** Source location from a data-pinpath-src attribute, when the app's dev build adds it. */
   source?: string;
   /**
    * The modal or popup the element was in: such an element is gone once the window closes, so its
@@ -190,7 +190,7 @@ export interface ThreadQuery {
 /** Where a new comment is written: the panel form, or a tiny box next to the element. */
 export type ComposeMode = 'full' | 'tiny';
 
-/** Settings from the script tag and window.bugspotConfig. */
+/** Settings from the script tag and window.pinpathConfig. */
 export interface Settings {
   /** The default compose mode (data-mode); each person can switch it in the bug's menu. */
   mode: ComposeMode;
@@ -315,7 +315,7 @@ export interface ScreenPatch {
   mergeInto?: string;
 }
 
-/** What `bugspot map crawl` puts on the page before it loads (window.__bugspotCrawl). */
+/** What `pinpath map crawl` puts on the page before it loads (window.__pinpathCrawl). */
 export interface CrawlConfig {
   /** An agent token with the read and map scopes: the crawl acts with it. */
   token?: string;

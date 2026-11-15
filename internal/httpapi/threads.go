@@ -12,10 +12,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/svyatoslavratov/bugspot/internal/auth"
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/secret"
-	"github.com/svyatoslavratov/bugspot/internal/store"
+	"github.com/svyatoslavratov/pinpath/internal/auth"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/secret"
+	"github.com/svyatoslavratov/pinpath/internal/store"
 )
 
 // allowed is what the caller may do with one thread; the widget shows only these actions.

@@ -3,6 +3,7 @@
 // and a DOM snapshot — taken when the page settles and the map has none or the layout changed.
 
 import { currentRoute, onRouteChange } from '../lib/route';
+import { anyAttr, attrNames, attrOf, IGNORED } from '../lib/attrs';
 import {
   cleanName,
   currentState,
@@ -114,10 +115,10 @@ export function startCollector({ api, session, settings, host }: CollectorOption
   /** Links and declared transitions of the state: where it can lead without a click. */
   function scanLinks(from: StateRef) {
     let n = 0;
-    for (const el of document.querySelectorAll('a[href], [data-bugspot-to]')) {
+    for (const el of document.querySelectorAll(`a[href], ${anyAttr('to')}`)) {
       if (n >= MAX_LINKS) break;
-      if (host.contains(el) || el.closest('[data-bugspot-ignore]')) continue;
-      const declared = el.getAttribute('data-bugspot-to')?.trim();
+      if (host.contains(el) || el.closest(IGNORED)) continue;
+      const declared = attrOf(el, 'to')?.trim();
       let to: string | null;
       if (declared) to = /^(\/|#|https?:)/.test(declared) ? linkScreen(declared, options) : declared;
       else to = linkScreen(el.getAttribute('href') ?? '', options);
@@ -229,7 +230,7 @@ export function startCollector({ api, session, settings, host }: CollectorOption
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['aria-selected', 'aria-modal', 'open', 'hidden', 'role', 'data-bugspot-screen'],
+    attributeFilter: ['aria-selected', 'aria-modal', 'open', 'hidden', 'role', ...attrNames('screen')],
   });
   const stopRoutes = onRouteChange(() => evaluateSoon(60));
   const flushTimer = setInterval(() => void flush(), FLUSH_MS);

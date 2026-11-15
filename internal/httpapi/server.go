@@ -9,9 +9,9 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/auth"
-	"github.com/svyatoslavratov/bugspot/internal/ratelimit"
-	"github.com/svyatoslavratov/bugspot/internal/store"
+	"github.com/svyatoslavratov/pinpath/internal/auth"
+	"github.com/svyatoslavratov/pinpath/internal/ratelimit"
+	"github.com/svyatoslavratov/pinpath/internal/store"
 )
 
 // Options configure a Server.
@@ -40,7 +40,7 @@ type Options struct {
 	Now     func() time.Time
 }
 
-// Server is the bugspot HTTP API.
+// Server is the pinpath HTTP API.
 type Server struct {
 	o       Options
 	origins map[string]bool
@@ -131,7 +131,7 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) root(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"name": "bugspot", "version": s.o.Version})
+	writeJSON(w, http.StatusOK, map[string]string{"name": "pinpath", "version": s.o.Version})
 }
 
 func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {

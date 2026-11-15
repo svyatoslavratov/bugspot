@@ -13,10 +13,22 @@ import (
 
 // TokenHeader carries a JWT from the widget (or an agent token). It is not Authorization, so the
 // token survives HTTP Basic Auth in front of a test stand.
-const TokenHeader = "X-Bugspot-Token" //nolint:gosec // a header name, not a credential
+// LegacyTokenHeader is its name before the project was renamed from bugspot; it is still read.
+const (
+	TokenHeader       = "X-Pinpath-Token" //nolint:gosec // a header name, not a credential
+	LegacyTokenHeader = "X-Bugspot-Token" //nolint:gosec // a header name, not a credential
+)
+
+// HeaderToken is the token of X-Pinpath-Token, else of the legacy X-Bugspot-Token.
+func HeaderToken(r *http.Request) string {
+	if v := r.Header.Get(TokenHeader); v != "" {
+		return v
+	}
+	return r.Header.Get(LegacyTokenHeader)
+}
 
 // JWT verifies a short-lived token issued by the host application's backend. The page hands it
-// to the widget (window.bugspotToken); the widget sends it in X-Bugspot-Token.
+// to the widget (window.pinpathToken); the widget sends it in X-Pinpath-Token.
 type JWT struct {
 	// Secret verifies HS256 tokens; PublicKey verifies RS256 and ES256 tokens.
 	Secret    []byte
@@ -30,9 +42,9 @@ type JWT struct {
 // Name implements Provider.
 func (j *JWT) Name() string { return ProviderJWT }
 
-// bearer returns a token from X-Bugspot-Token or Authorization: Bearer, skipping agent tokens.
+// bearer returns a token from X-Pinpath-Token or Authorization: Bearer, skipping agent tokens.
 func bearer(r *http.Request) string {
-	token := r.Header.Get(TokenHeader)
+	token := HeaderToken(r)
 	if token == "" {
 		if v, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok {
 			token = strings.TrimSpace(v)

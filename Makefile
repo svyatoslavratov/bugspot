@@ -1,4 +1,4 @@
-# bugspot: the Go service embeds the widget, so build the widget first.
+# pinpath: the Go service embeds the widget, so build the widget first.
 
 NODE_BIN ?=
 NPM := $(NODE_BIN)npm
@@ -12,8 +12,8 @@ all: build
 widget: ## build widget.js and assets/ into internal/widgetfs/dist
 	cd widget && $(NPM) ci && $(NPM) run build
 
-build: widget ## the bugspot binary with the widget inside
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/bugspot ./cmd/bugspot
+build: widget ## the pinpath binary with the widget inside
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/pinpath ./cmd/pinpath
 
 test: test-go test-widget
 
@@ -29,16 +29,16 @@ lint:
 
 demo: widget ## the GitHub Pages demo in _site/: the widget plus the API compiled to WebAssembly
 	rm -rf _site && mkdir -p _site
-	GOOS=js GOARCH=wasm go build -trimpath -ldflags "$(LDFLAGS)" -o _site/bugspot.wasm ./cmd/bugspot-wasm
+	GOOS=js GOARCH=wasm go build -trimpath -ldflags "$(LDFLAGS)" -o _site/pinpath.wasm ./cmd/pinpath-wasm
 	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" _site/
 	cp demo/index.html demo/demo.css demo/demo.js _site/
 	cp -R internal/widgetfs/dist/widget.js internal/widgetfs/dist/assets _site/
 
 run: build ## run locally with public access and a local database
-	BUGSPOT_AUTH=anonymous BUGSPOT_VIEW='*' BUGSPOT_COMMENT='*' BUGSPOT_DATA_DIR=data ./bin/bugspot
+	PINPATH_AUTH=anonymous PINPATH_VIEW='*' PINPATH_COMMENT='*' PINPATH_DATA_DIR=data ./bin/pinpath
 
 docker:
-	docker build --build-arg VERSION=$(VERSION) -t bugspot:$(VERSION) .
+	docker build --build-arg VERSION=$(VERSION) -t pinpath:$(VERSION) .
 
 clean:
 	rm -rf bin _site data

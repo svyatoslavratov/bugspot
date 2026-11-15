@@ -16,8 +16,8 @@
   color: #1c2127;
 }
 
-.bugspot,
-.bugspot-portal {
+.pinpath,
+.pinpath-portal {
   pointer-events: none;
 }
 
@@ -29,58 +29,58 @@
   outline: none !important;
 }
 
-.bugspot-portal
+.pinpath-portal
   :is(.bp6-portal, .bp6-overlay, .bp6-overlay-content, .bp6-popover-transition-container, .bp6-overlay-backdrop),
-.bugspot-bug,
-.bugspot-panel,
-.bugspot-pin,
-.bugspot-quick,
-.bugspot-pick-bar,
-.bugspot-crawl {
+.pinpath-bug,
+.pinpath-panel,
+.pinpath-pin,
+.pinpath-quick,
+.pinpath-pick-bar,
+.pinpath-crawl {
   pointer-events: auto;
 }
 
-.bugspot-portal .bp6-portal {
+.pinpath-portal .bp6-portal {
   z-index: 2147483001;
 }
 
 /* Layers inside the widget: pins and the flash frame under the panel, the bug and picking on top. */
-.bugspot-pin {
+.pinpath-pin {
   z-index: 1;
 }
-.bugspot-flash {
+.pinpath-flash {
   z-index: 2;
 }
-.bugspot-panel.bp6-card {
+.pinpath-panel.bp6-card {
   z-index: 3;
 }
-.bugspot-bug {
+.pinpath-bug {
   z-index: 4;
 }
-.bugspot-highlight,
-.bugspot-picked,
-.bugspot-quick,
-.bugspot-pick-bar {
+.pinpath-highlight,
+.pinpath-picked,
+.pinpath-quick,
+.pinpath-pick-bar {
   z-index: 5;
 }
 
 /* The floating bug */
-.bugspot-bug {
+.pinpath-bug {
   position: fixed;
   touch-action: none;
   user-select: none;
 }
-.bugspot-bug .bugspot-bug-button {
+.pinpath-bug .pinpath-bug-button {
   width: 48px;
   height: 48px;
   border-radius: 50%;
   box-shadow: 0 4px 14px rgb(17 20 24 / 28%);
 }
-.bugspot-bug.is-dragging .bugspot-bug-button {
+.pinpath-bug.is-dragging .pinpath-bug-button {
   cursor: grabbing;
   transform: scale(1.06);
 }
-.bugspot-bug-count {
+.pinpath-bug-count {
   position: absolute;
   top: -4px;
   right: -4px;
@@ -98,7 +98,7 @@
 }
 
 /* The panel */
-.bugspot-panel.bp6-card {
+.pinpath-panel.bp6-card {
   position: fixed;
   transition: opacity 0.2s ease;
   display: flex;
@@ -106,94 +106,94 @@
   padding: 0;
   overflow: hidden;
 }
-.bugspot-panel-header {
+.pinpath-panel-header {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 10px 10px 10px 16px;
   border-bottom: 1px solid rgb(17 20 24 / 10%);
 }
-.bugspot-panel-title {
+.pinpath-panel-title {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-width: 0;
 }
-.bugspot-panel-title span {
+.pinpath-panel-title span {
   overflow: hidden;
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bugspot-toolbar {
+.pinpath-toolbar {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 4px 16px 10px;
   border-bottom: 1px solid rgb(17 20 24 / 10%);
 }
-.bugspot-filters {
+.pinpath-filters {
   display: flex;
   gap: 8px;
 }
-.bugspot-filters .bp6-input-group {
+.pinpath-filters .bp6-input-group {
   flex: 1;
 }
-.bugspot-toolbar .bp6-control {
+.pinpath-toolbar .bp6-control {
   margin: 0;
 }
-.bugspot-panel-body {
+.pinpath-panel-body {
   flex: 1;
   overflow: auto;
   padding: 8px 16px 16px;
 }
-.bugspot-spinner {
+.pinpath-spinner {
   margin: 24px auto;
 }
 /* A quiet link to the project under the panel. */
-.bugspot-panel-footer {
+.pinpath-panel-footer {
   padding: 2px 12px 4px;
   text-align: right;
   font-size: 11px;
   line-height: 16px;
 }
-.bugspot-panel-footer a {
+.pinpath-panel-footer a {
   color: #8f99a8;
   text-decoration: none;
 }
-.bugspot-panel-footer a:hover {
+.pinpath-panel-footer a:hover {
   color: #2d72d2;
   text-decoration: underline;
 }
-.bp6-dark .bugspot-panel-header,
-.bp6-dark .bugspot-toolbar {
+.bp6-dark .pinpath-panel-header,
+.bp6-dark .pinpath-toolbar {
   border-color: rgb(255 255 255 / 12%);
 }
 
 /* The list */
-.bugspot-list.bp6-card-list {
+.pinpath-list.bp6-card-list {
   margin: 0 -16px;
 }
-.bugspot-item {
+.pinpath-item {
   display: flex;
   flex-direction: column;
   align-items: stretch !important;
   gap: 4px;
 }
-.bugspot-item-head,
-.bugspot-item-meta,
-.bugspot-thread-nav,
-.bugspot-actions {
+.pinpath-item-head,
+.pinpath-item-meta,
+.pinpath-thread-nav,
+.pinpath-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
-.bugspot-item-time {
+.pinpath-item-time {
   margin-left: auto;
   font-size: 12px;
 }
-.bugspot-item-body {
+.pinpath-item-body {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
@@ -201,13 +201,13 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
-.bugspot-item-meta {
+.pinpath-item-meta {
   font-size: 12px;
 }
-.bugspot-number {
+.pinpath-number {
   font-weight: 600;
 }
-.bugspot-route {
+.pinpath-route {
   margin-left: auto;
   overflow: hidden;
   max-width: 50%;
@@ -217,90 +217,90 @@
 }
 
 /* A thread */
-.bugspot-thread,
-.bugspot-new {
+.pinpath-thread,
+.pinpath-new {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.bugspot-thread-nav {
+.pinpath-thread-nav {
   flex-wrap: nowrap;
   margin: 0 -8px;
 }
-.bugspot-thread-body,
-.bugspot-reply p {
+.pinpath-thread-body,
+.pinpath-reply p {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
 }
-.bugspot-thread-body {
+.pinpath-thread-body {
   font-size: 15px;
 }
-.bugspot-meta {
+.pinpath-meta {
   font-size: 12px;
 }
-.bugspot-edit,
-.bugspot-reply-form {
+.pinpath-edit,
+.pinpath-reply-form {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
 }
-.bugspot-replies {
+.pinpath-replies {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.bugspot-reply {
+.pinpath-reply {
   padding: 8px 10px;
   border-radius: 6px;
   background: rgb(143 153 168 / 12%);
 }
-.bugspot-reply.is-agent {
+.pinpath-reply.is-agent {
   background: rgb(45 114 210 / 10%);
 }
-.bugspot-shot.bp6-button {
+.pinpath-shot.bp6-button {
   display: block;
   padding: 0;
   overflow: hidden;
   border: 1px solid rgb(17 20 24 / 15%);
   border-radius: 6px;
 }
-.bugspot-shot img,
-.bugspot-preview img {
+.pinpath-shot img,
+.pinpath-preview img {
   display: block;
   width: 100%;
   max-height: 220px;
   object-fit: cover;
   object-position: top;
 }
-.bugspot-shot-dialog.bp6-dialog {
+.pinpath-shot-dialog.bp6-dialog {
   width: min(1200px, 94vw);
 }
-.bugspot-shot-dialog img {
+.pinpath-shot-dialog img {
   display: block;
   width: 100%;
 }
-.bugspot-context-table {
+.pinpath-context-table {
   width: 100%;
   font-size: 12px;
 }
-.bugspot-context-table th {
+.pinpath-context-table th {
   width: 90px;
   font-weight: 500;
 }
-.bugspot-code {
+.pinpath-code {
   font-family: 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
   font-size: 12px;
   word-break: break-all;
 }
-.bugspot-log {
+.pinpath-log {
   margin: 0;
   padding-left: 16px;
 }
 
 /* A new thread */
-.bugspot-preview {
+.pinpath-preview {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -308,35 +308,35 @@
   border: 1px dashed rgb(17 20 24 / 20%);
   border-radius: 6px;
 }
-.bugspot-preview-wait {
+.pinpath-preview-wait {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 12px;
 }
-.bugspot-preview-actions,
-.bugspot-form-actions {
+.pinpath-preview-actions,
+.pinpath-form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
 }
 
 /* Picking */
-.bugspot-highlight {
+.pinpath-highlight {
   position: fixed;
   border: 2px solid #2d72d2;
   border-radius: 3px;
   background: rgb(45 114 210 / 12%);
   pointer-events: none;
 }
-.bugspot-picked {
+.pinpath-picked {
   position: fixed;
   border: 2px solid #cd4246;
   border-radius: 3px;
   background: rgb(205 66 70 / 10%);
   pointer-events: none;
 }
-.bugspot-picked-number {
+.pinpath-picked-number {
   position: absolute;
   top: -10px;
   right: -10px;
@@ -352,11 +352,11 @@
   color: #fff;
   font: 600 11px/1 sans-serif;
 }
-.bugspot-pick-notice {
+.pinpath-pick-notice {
   color: #72ca9b;
   font-weight: 600;
 }
-.bugspot-highlight-label {
+.pinpath-highlight-label {
   position: absolute;
   top: -22px;
   left: -2px;
@@ -367,7 +367,7 @@
   font-family: monospace;
   font-size: 11px;
 }
-.bugspot-pick-bar {
+.pinpath-pick-bar {
   position: fixed;
   top: 16px;
   left: 50%;
@@ -382,45 +382,45 @@
   transform: translateX(-50%);
   max-width: calc(100vw - 32px);
 }
-.bugspot-pick-bar .bp6-button {
+.pinpath-pick-bar .bp6-button {
   flex-shrink: 0;
   white-space: nowrap;
 }
 
 /* The tiny box at the element (tiny mode) */
-.bugspot-quick.bp6-card {
+.pinpath-quick.bp6-card {
   position: fixed;
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 6px 8px 8px;
 }
-.bugspot-quick-head,
-.bugspot-quick-foot {
+.pinpath-quick-head,
+.pinpath-quick-foot {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.bugspot-quick-count {
+.pinpath-quick-count {
   margin-left: 4px;
   font-size: 12px;
 }
-.bugspot-quick-foot {
+.pinpath-quick-foot {
   justify-content: space-between;
   font-size: 11px;
   line-height: 14px;
 }
-.bugspot-quick textarea.bp6-input {
+.pinpath-quick textarea.bp6-input {
   min-height: 52px;
   max-height: 200px;
   resize: none;
 }
-.bugspot-menu {
+.pinpath-menu {
   min-width: 240px;
 }
 
 /* Pins */
-.bugspot-pin {
+.pinpath-pin {
   position: fixed;
   display: flex;
   align-items: center;
@@ -440,45 +440,45 @@
   cursor: pointer;
   transform: translate(0, -100%);
 }
-.bugspot-pin.intent-warning {
+.pinpath-pin.intent-warning {
   background: #c87619;
 }
-.bugspot-pin.intent-primary {
+.pinpath-pin.intent-primary {
   background: #2d72d2;
 }
-.bugspot-pin.intent-success {
+.pinpath-pin.intent-success {
   background: #238551;
 }
-.bugspot-pin.intent-none {
+.pinpath-pin.intent-none {
   background: #5f6b7c;
 }
-.bugspot-pins.is-passive .bugspot-pin {
+.pinpath-pins.is-passive .pinpath-pin {
   opacity: 0.55;
   pointer-events: none;
 }
-.bugspot-pin.is-selected {
+.pinpath-pin.is-selected {
   outline: 3px solid rgb(45 114 210 / 45%);
 }
-.bugspot-pin:hover {
+.pinpath-pin:hover {
   transform: translate(0, -100%) scale(1.1);
 }
 
 /* Form controls do not inherit the font by default, and the page's normalize does not reach here. */
-.bugspot :is(input, textarea, select, button),
-.bugspot-portal :is(input, textarea, select, button) {
+.pinpath :is(input, textarea, select, button),
+.pinpath-portal :is(input, textarea, select, button) {
   font-family: inherit;
 }
 
 /* "Show on the page": a frame around the element and a pulsing pin. */
-.bugspot-flash {
+.pinpath-flash {
   position: fixed;
   border: 3px solid #2d72d2;
   border-radius: 6px;
   box-shadow: 0 0 0 6px rgb(45 114 210 / 22%);
   pointer-events: none;
-  animation: bugspot-flash 1.8s ease-out forwards;
+  animation: pinpath-flash 1.8s ease-out forwards;
 }
-@keyframes bugspot-flash {
+@keyframes pinpath-flash {
   0% {
     opacity: 0;
     transform: scale(1.12);
@@ -494,15 +494,15 @@
     opacity: 0;
   }
 }
-.bugspot-panel.is-peeking {
+.pinpath-panel.is-peeking {
   opacity: 0.12;
   pointer-events: none;
 }
-.bugspot-pin.is-flashing {
+.pinpath-pin.is-flashing {
   z-index: 2;
-  animation: bugspot-pin-pulse 0.6s ease-in-out 3;
+  animation: pinpath-pin-pulse 0.6s ease-in-out 3;
 }
-@keyframes bugspot-pin-pulse {
+@keyframes pinpath-pin-pulse {
   0%,
   100% {
     transform: translate(0, -100%) scale(1);
@@ -513,28 +513,28 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bugspot-flash,
-  .bugspot-pin.is-flashing {
+  .pinpath-flash,
+  .pinpath-pin.is-flashing {
     animation-duration: 0.01s;
   }
-  .bugspot-flash {
+  .pinpath-flash {
     animation: none;
   }
 }
 
-.bugspot-verified.bp6-control {
+.pinpath-verified.bp6-control {
   margin: 0;
 }
 
 /* Thread header: the status tag opens the status menu; delete sits at the right edge. */
-.bugspot-push-right {
+.pinpath-push-right {
   margin-left: auto;
 }
-.bugspot-status-picker.bp6-tag {
+.pinpath-status-picker.bp6-tag {
   cursor: pointer;
 }
 /* Editable text: looks like text, shows it is editable on hover. */
-button.bugspot-thread-body.is-editable {
+button.pinpath-thread-body.is-editable {
   display: block;
   width: 100%;
   margin: 0 -6px;
@@ -548,14 +548,14 @@ button.bugspot-thread-body.is-editable {
   text-align: left;
   cursor: text;
 }
-button.bugspot-thread-body.is-editable:hover,
-button.bugspot-thread-body.is-editable:focus-visible {
+button.pinpath-thread-body.is-editable:hover,
+button.pinpath-thread-body.is-editable:focus-visible {
   border-color: rgb(45 114 210 / 45%);
   background: rgb(45 114 210 / 5%);
 }
 
 /* Building the map: the app walked in a frame, shown smaller, over the page. */
-.bugspot-crawl {
+.pinpath-crawl {
   position: fixed;
   inset: 0;
   z-index: 5;
@@ -566,70 +566,70 @@ button.bugspot-thread-body.is-editable:focus-visible {
   background: rgba(17, 20, 24, 0.45);
   overflow: auto;
 }
-.bugspot-crawl-card.bp6-card {
+.pinpath-crawl-card.bp6-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: min(86vw, 100%);
   padding: 16px;
 }
-.bugspot-crawl-head {
+.pinpath-crawl-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.bugspot-crawl-head h5 {
+.pinpath-crawl-head h5 {
   margin: 0;
 }
-.bugspot-crawl-options p {
+.pinpath-crawl-options p {
   margin: 0 0 8px;
 }
-.bugspot-crawl-field,
-.bugspot-crawl-max {
+.pinpath-crawl-field,
+.pinpath-crawl-max {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.bugspot-crawl-field > span,
-.bugspot-crawl-max > span {
+.pinpath-crawl-field > span,
+.pinpath-crawl-max > span {
   white-space: nowrap;
 }
-.bugspot-crawl-max .bp6-input-group {
+.pinpath-crawl-max .bp6-input-group {
   width: 90px;
 }
-.bugspot-crawl-row {
+.pinpath-crawl-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 24px;
   margin-top: 10px;
 }
-.bugspot-crawl-row .bp6-checkbox {
+.pinpath-crawl-row .bp6-checkbox {
   margin: 0;
 }
-.bugspot-crawl-status {
+.pinpath-crawl-status {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.bugspot-crawl-status .bp6-callout {
+.pinpath-crawl-status .bp6-callout {
   box-sizing: border-box;
 }
-.bugspot-crawl-current {
+.pinpath-crawl-current {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
   color: #5f6b7c;
 }
-.bugspot-crawl-actions {
+.pinpath-crawl-actions {
   display: flex;
   gap: 8px;
 }
-.bugspot-crawl-actions:empty {
+.pinpath-crawl-actions:empty {
   display: none;
 }
-.bugspot-crawl-view {
+.pinpath-crawl-view {
   position: relative;
   overflow: hidden;
   align-self: center;
@@ -637,7 +637,7 @@ button.bugspot-thread-body.is-editable:focus-visible {
   border-radius: 4px;
   background: #f6f7f9;
 }
-.bugspot-crawl-view iframe {
+.pinpath-crawl-view iframe {
   position: absolute;
   top: 0;
   left: 0;

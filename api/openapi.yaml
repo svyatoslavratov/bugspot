@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: bugspot API
+  title: pinpath API
   version: 1.0.0
   license:
     name: AGPL-3.0-only
@@ -8,23 +8,23 @@ info:
   description: |
     Pinned page comments. The widget and agents use the same API.
 
-    **Who is calling.** An agent sends its token in `X-Bugspot-Token` (or `Authorization: Bearer`).
-    Everyone else is recognized by the identity providers configured with `BUGSPOT_AUTH`
+    **Who is calling.** An agent sends its token in `X-Pinpath-Token` (or `Authorization: Bearer`).
+    Everyone else is recognized by the identity providers configured with `PINPATH_AUTH`
     (forward, jwt, header, key, anonymous); a JWT for the jwt provider also goes in
-    `X-Bugspot-Token`. Permissions come from the policy (`BUGSPOT_VIEW`, `BUGSPOT_COMMENT`,
-    `BUGSPOT_MODERATE`); agents get theirs from token scopes.
+    `X-Pinpath-Token`. Permissions come from the policy (`PINPATH_VIEW`, `PINPATH_COMMENT`,
+    `PINPATH_MODERATE`); agents get theirs from token scopes.
 
-    **CSRF.** Every state-changing request from a browser must carry `X-Bugspot-Request: 1`.
+    **CSRF.** Every state-changing request from a browser must carry `X-Pinpath-Request: 1`.
     Requests with an agent token are exempt.
 
     **Threads by number.** Wherever a path takes `{id}`, the thread number (`12`, or `#12` URL-encoded)
     works as well.
 
-    **The screen map.** The widget of those allowed by `BUGSPOT_MAP_COLLECT` reports the screens of the
-    app (the route with ids folded into `{id}`, or the value of `data-bugspot-screen`), their states
+    **The screen map.** The widget of those allowed by `PINPATH_MAP_COLLECT` reports the screens of the
+    app (the route with ids folded into `{id}`, or the value of `data-pinpath-screen`), their states
     (`""` the page itself, `tab:<names>` a selected tab, `dialog:<title>` an open dialog), the
     transitions between them and the look of each state: a thumbnail and a DOM snapshot without
-    scripts whose stylesheets are stored once as assets. Those allowed by `BUGSPOT_MAP` (and agents
+    scripts whose stylesheets are stored once as assets. Those allowed by `PINPATH_MAP` (and agents
     with the `map` scope) read the map and name, group, describe and merge screens. Map paths take a
     state by `?screen=…&state=…`.
 servers:
@@ -53,7 +53,7 @@ paths:
     get:
       operationId: mapPage
       summary: The screen map page
-      description: The page reads the session and the map through the API; who may open the map is `BUGSPOT_MAP`.
+      description: The page reads the session and the map through the API; who may open the map is `PINPATH_MAP`.
       security: []
       responses:
         "200": { description: HTML, content: { text/html: {} } }
@@ -62,7 +62,7 @@ paths:
     get:
       operationId: getSession
       summary: Whether the caller sees the widget, and what they may do
-      description: Hidden answers carry only `visible:false`. An anonymous visitor gets a `bugspot_anon` cookie.
+      description: Hidden answers carry only `visible:false`. An anonymous visitor gets a `pinpath_anon` cookie.
       responses:
         "200":
           description: Session
@@ -79,7 +79,7 @@ paths:
             schema:
               type: object
               required: [key]
-              properties: { key: { type: string, example: bsk_… } }
+              properties: { key: { type: string, example: ppk_… } }
       responses:
         "200":
           description: Session of the key
@@ -217,7 +217,7 @@ paths:
     put:
       operationId: putScreenshot
       summary: Attach or replace the screenshot (the author or a moderator)
-      description: PNG, JPEG or WebP, detected by content; up to `BUGSPOT_SCREENSHOT_MAX_BYTES`.
+      description: PNG, JPEG or WebP, detected by content; up to `PINPATH_SCREENSHOT_MAX_BYTES`.
       parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
       requestBody:
         required: true
@@ -239,7 +239,7 @@ paths:
   /api/v1/map:
     get:
       operationId: getMap
-      summary: The screen map (BUGSPOT_MAP or the map scope)
+      summary: The screen map (PINPATH_MAP or the map scope)
       responses:
         "200":
           description: Screens with their states, transitions, aliases of merged screens, and active threads by screen
@@ -260,7 +260,7 @@ paths:
   /api/v1/map/captures:
     get:
       operationId: mapCaptures
-      summary: What the map knows about the look of each state (BUGSPOT_MAP_COLLECT)
+      summary: What the map knows about the look of each state (PINPATH_MAP_COLLECT)
       description: The widget takes a new look of a state when there is none or its DOM structure changed.
       responses:
         "200":
@@ -285,7 +285,7 @@ paths:
   /api/v1/map/visits:
     post:
       operationId: reportVisits
-      summary: Report states seen and transitions (BUGSPOT_MAP_COLLECT)
+      summary: Report states seen and transitions (PINPATH_MAP_COLLECT)
       parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
       requestBody:
         required: true
@@ -319,7 +319,7 @@ paths:
   /api/v1/map/assets/missing:
     post:
       operationId: missingAssets
-      summary: Which stylesheets of a snapshot the service does not have yet (BUGSPOT_MAP_COLLECT)
+      summary: Which stylesheets of a snapshot the service does not have yet (PINPATH_MAP_COLLECT)
       parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
       requestBody:
         required: true
@@ -337,7 +337,7 @@ paths:
   /api/v1/map/assets/{hash}:
     put:
       operationId: putAsset
-      summary: Upload a stylesheet of snapshots under its SHA-256 (BUGSPOT_MAP_COLLECT)
+      summary: Upload a stylesheet of snapshots under its SHA-256 (PINPATH_MAP_COLLECT)
       parameters:
         - { $ref: "#/components/parameters/RequestHeader" }
         - { name: hash, in: path, required: true, schema: { type: string, pattern: "^[0-9a-f]{64}$" } }
@@ -354,7 +354,7 @@ paths:
       - { $ref: "#/components/parameters/State" }
     put:
       operationId: putStateShot
-      summary: Replace the thumbnail of a state (BUGSPOT_MAP_COLLECT)
+      summary: Replace the thumbnail of a state (PINPATH_MAP_COLLECT)
       parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
       requestBody:
         required: true
@@ -365,7 +365,7 @@ paths:
         "413": { $ref: "#/components/responses/Error" }
     get:
       operationId: getStateShot
-      summary: The thumbnail of a state (BUGSPOT_MAP)
+      summary: The thumbnail of a state (PINPATH_MAP)
       responses:
         "200": { description: Image, content: { image/webp: {}, image/png: {}, image/jpeg: {} } }
         "404": { $ref: "#/components/responses/Error" }
@@ -375,7 +375,7 @@ paths:
       - { $ref: "#/components/parameters/State" }
     put:
       operationId: putStateSnapshot
-      summary: Replace the DOM snapshot of a state (BUGSPOT_MAP_COLLECT)
+      summary: Replace the DOM snapshot of a state (PINPATH_MAP_COLLECT)
       description: Upload its stylesheets first (`/api/v1/map/assets/missing`, then `PUT /api/v1/map/assets/{hash}`); up to 8 MB.
       parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
       requestBody:
@@ -386,7 +386,7 @@ paths:
               type: object
               required: [html, viewport]
               properties:
-                html: { type: string, description: "The document without scripts; stylesheets are <style data-bugspot-asset=HASH> placeholders" }
+                html: { type: string, description: "The document without scripts; stylesheets are <style data-pinpath-asset=HASH> placeholders" }
                 css: { type: array, items: { type: string } }
                 outline: { type: object, description: "Title, headings, actions, fields and tables of the page, for agents (≤64 KB)" }
                 viewport: { $ref: "#/components/schemas/Size" }
@@ -397,7 +397,7 @@ paths:
         "413": { $ref: "#/components/responses/Error" }
     get:
       operationId: getStateSnapshot
-      summary: The DOM snapshot of a state with its stylesheets (BUGSPOT_MAP)
+      summary: The DOM snapshot of a state with its stylesheets (PINPATH_MAP)
       parameters:
         - { name: fields, in: query, schema: { type: string, enum: [outline] }, description: "outline: only the outline, viewport and time — what agents read" }
       responses:
@@ -420,7 +420,7 @@ paths:
   /api/v1/map/screens:
     post:
       operationId: addScreen
-      summary: Declare a planned screen (BUGSPOT_MAP or the map scope)
+      summary: Declare a planned screen (PINPATH_MAP or the map scope)
       parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
       requestBody:
         required: true
@@ -441,7 +441,7 @@ paths:
         "409": { $ref: "#/components/responses/Error" }
     patch:
       operationId: patchScreens
-      summary: Name, group, describe, hide, place or merge screens, all at once (BUGSPOT_MAP or the map scope)
+      summary: Name, group, describe, hide, place or merge screens, all at once (PINPATH_MAP or the map scope)
       parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
       requestBody:
         required: true
@@ -471,7 +471,7 @@ paths:
   /api/v1/map/states:
     patch:
       operationId: patchStates
-      summary: Name and describe states, all at once (BUGSPOT_MAP or the map scope)
+      summary: Name and describe states, all at once (PINPATH_MAP or the map scope)
       parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
       requestBody:
         required: true
@@ -496,7 +496,7 @@ paths:
   /api/v1/map/edges:
     post:
       operationId: addEdge
-      summary: Declare a transition the widget cannot see, e.g. one after a successful save (BUGSPOT_MAP or the map scope)
+      summary: Declare a transition the widget cannot see, e.g. one after a successful save (PINPATH_MAP or the map scope)
       parameters: [{ $ref: "#/components/parameters/RequestHeader" }]
       requestBody:
         required: true
@@ -509,7 +509,7 @@ paths:
       operationId: exportMap
       summary: >-
         The part of the map people and agents wrote, as a manifest file: screens with names, sections,
-        descriptions, order and hidden flags, described states, declared transitions (BUGSPOT_MAP or the map scope)
+        descriptions, order and hidden flags, described states, declared transitions (PINPATH_MAP or the map scope)
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Manifest" } } } }
         "403": { $ref: "#/components/responses/Error" }
@@ -542,8 +542,8 @@ components:
     agentToken:
       type: apiKey
       in: header
-      name: X-Bugspot-Token
-      description: An agent token (bsp_…) from `bugspot token create`, or a JWT for the jwt provider.
+      name: X-Pinpath-Token
+      description: An agent token (ppt_…) from `pinpath token create`, or a JWT for the jwt provider.
   parameters:
     ThreadID:
       name: id
@@ -552,7 +552,7 @@ components:
       schema: { type: string }
       description: Thread id or number
     RequestHeader:
-      name: X-Bugspot-Request
+      name: X-Pinpath-Request
       in: header
       required: false
       schema: { type: string, example: "1" }

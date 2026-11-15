@@ -14,7 +14,7 @@ import (
 // fakeAPI answers like the service for thread #7 and records what the MCP server sent.
 func fakeAPI(t *testing.T, calls *[]string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Bugspot-Token") != "bsp_test" {
+		if r.Header.Get("X-Pinpath-Token") != "ppt_test" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -23,10 +23,10 @@ func fakeAPI(t *testing.T, calls *[]string) *httptest.Server {
 		*calls = append(*calls, r.Method+" "+r.URL.RequestURI()+" "+strings.TrimSpace(body.String()))
 		w.Header().Set("Content-Type", "application/json")
 		switch {
-		case r.URL.Path == "/bugspot/api/v1/threads":
+		case r.URL.Path == "/pinpath/api/v1/threads":
 			_, _ = w.Write([]byte(`{"data":[{"id":"t7","number":7,"status":"open","kind":"issue","route":"/a","body":"Кнопка","author":{"name":"Анна"},
 				"anchor":{"selector":"#x"},"context":{"console":[]},"updatedAt":"2026-11-06T12:00:00Z"}],"meta":{"total":1}}`))
-		case r.URL.Path == "/bugspot/api/v1/threads/7/screenshot":
+		case r.URL.Path == "/pinpath/api/v1/threads/7/screenshot":
 			w.Header().Set("Content-Type", "image/png")
 			_, _ = w.Write([]byte("\x89PNG\r\n\x1a\n0000"))
 		case r.Method == http.MethodPatch && strings.Contains(body.String(), "resolved"):
@@ -44,8 +44,8 @@ func TestMCP(t *testing.T) {
 	var calls []string
 	api := fakeAPI(t, &calls)
 	defer api.Close()
-	base, _ := url.Parse(api.URL + "/bugspot/")
-	s := &mcpServer{api: &client{base: base, token: "bsp_test", http: &http.Client{Timeout: 5 * time.Second}}}
+	base, _ := url.Parse(api.URL + "/pinpath/")
+	s := &mcpServer{api: &client{base: base, token: "ppt_test", http: &http.Client{Timeout: 5 * time.Second}}}
 
 	in := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}`,
@@ -102,11 +102,11 @@ func TestMCP(t *testing.T) {
 		t.Errorf("unknown tool, unknown method and broken JSON must be JSON-RPC errors")
 	}
 	want := []string{
-		"GET /bugspot/api/v1/threads?limit=50&status=open ",
-		`PATCH /bugspot/api/v1/threads/7 {"status":"in_progress"}`,
-		`PATCH /bugspot/api/v1/threads/7 {"status":"resolved"}`,
-		"GET /bugspot/api/v1/threads/7/screenshot ",
-		`POST /bugspot/api/v1/threads/7/replies {"body":"Исправлено в 1.2"}`,
+		"GET /pinpath/api/v1/threads?limit=50&status=open ",
+		`PATCH /pinpath/api/v1/threads/7 {"status":"in_progress"}`,
+		`PATCH /pinpath/api/v1/threads/7 {"status":"resolved"}`,
+		"GET /pinpath/api/v1/threads/7/screenshot ",
+		`POST /pinpath/api/v1/threads/7/replies {"body":"Исправлено в 1.2"}`,
 	}
 	if strings.Join(calls, "\n") != strings.Join(want, "\n") {
 		t.Errorf("API calls:\n%s\nwant:\n%s", strings.Join(calls, "\n"), strings.Join(want, "\n"))

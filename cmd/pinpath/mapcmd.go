@@ -17,7 +17,7 @@ import (
 
 func (a *app) mapCommand(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: bugspot map crawl|export|import")
+		return errors.New("usage: pinpath map crawl|export|import")
 	}
 	switch args[0] {
 	case "crawl":
@@ -64,7 +64,7 @@ func (a *app) mapImport(args []string) error {
 		return err
 	}
 	if fs.NArg() != 1 {
-		return errors.New("usage: bugspot map import <manifest.json | ->")
+		return errors.New("usage: pinpath map import <manifest.json | ->")
 	}
 	var data []byte
 	var err error
@@ -111,7 +111,7 @@ type crawlOptions struct {
 	Widget     *injectedWidget `json:"widget,omitempty"`
 }
 
-// crawlStatus is what the widget reports while it crawls (window.__bugspotCrawlStatus).
+// crawlStatus is what the widget reports while it crawls (window.__pinpathCrawlStatus).
 type crawlStatus struct {
 	Phase   string `json:"phase"`
 	Screens int    `json:"screens"`
@@ -130,14 +130,14 @@ type crawlStatus struct {
 // crawler as the "Build the map" button, with an agent token instead of a person.
 func (a *app) mapCrawl(args []string) error {
 	fs := a.flags("map crawl")
-	chrome := fs.String("chrome", a.getenv("BUGSPOT_CHROME"), "Chrome or Chromium to run (default: the first one installed)")
+	chrome := fs.String("chrome", a.env("PINPATH_CHROME"), "Chrome or Chromium to run (default: the first one installed)")
 	profile := fs.String("profile", "", "a Chrome profile to use and keep: sign in to the app once with --headed, then crawl with it")
 	headed := fs.Bool("headed", false, "show the browser window")
 	buttons := fs.Bool("buttons", false, "also press buttons that may open windows (never ones that delete, send, save, pay or sign out)")
 	maxScreens := fs.Int("max-screens", 100, "stop after this many screens")
 	timeout := fs.Duration("timeout", 30*time.Minute, "stop after this long")
 	viewport := fs.String("viewport", "1440x900", "window size the app is laid out in")
-	widget := fs.String("widget", "", "load the widget from this bugspot address on pages that do not, e.g. https://app.example.com/bugspot")
+	widget := fs.String("widget", "", "load the widget from this pinpath address on pages that do not, e.g. https://app.example.com/pinpath")
 	route := fs.String("route", "auto", "with --widget: how the app routes (auto, path or hash)")
 	var cookies, headers listFlag
 	fs.Var(&cookies, "cookie", "a cookie for the app, name=value (repeat for more)")
@@ -146,11 +146,11 @@ func (a *app) mapCrawl(args []string) error {
 		return err
 	}
 	if fs.NArg() != 1 {
-		return errors.New("usage: bugspot map crawl [flags] <app address>")
+		return errors.New("usage: pinpath map crawl [flags] <app address>")
 	}
-	token := a.getenv("BUGSPOT_TOKEN")
+	token := a.env("PINPATH_TOKEN")
 	if token == "" {
-		return errors.New("set BUGSPOT_TOKEN: an agent token with the read and map scopes (bugspot token create --scopes read,map)")
+		return errors.New("set PINPATH_TOKEN: an agent token with the read and map scopes (pinpath token create --scopes read,map)")
 	}
 	target, err := url.Parse(fs.Arg(0))
 	if err != nil || (target.Scheme != "http" && target.Scheme != "https") || target.Host == "" {
@@ -211,13 +211,13 @@ func (a *app) mapCrawl(args []string) error {
 	if err != nil {
 		return err
 	}
-	bootstrap := "if (window === window.top) { window.__bugspotCrawl = " + string(options) + ";"
+	bootstrap := "if (window === window.top) { window.__pinpathCrawl = " + string(options) + ";"
 	if inject != nil {
 		bootstrap += " " + widgetLoader
 	}
 	bootstrap += " }"
 	// Under the widget's own guard, a second one in the browser: a request of the page that is not
-	// a read fails, unless it is the widget reporting to bugspot (it carries the token).
+	// a read fails, unless it is the widget reporting to pinpath (it carries the token).
 	var stopped atomic.Int64
 	b.cdp.handle(onlyReads(ctx, b.cdp, &stopped))
 	setup := []struct {
@@ -279,7 +279,7 @@ func readOrReport(method string, headers map[string]string) bool {
 		return true
 	}
 	for name := range headers {
-		if strings.EqualFold(name, "X-Bugspot-Token") {
+		if strings.EqualFold(name, "X-Pinpath-Token") {
 			return true
 		}
 	}
@@ -296,8 +296,8 @@ type injectedWidget struct {
 // itself: for apps that load it only in some environments, or not at all. It reads what to load
 // from the crawl options, so nothing is spliced into it.
 const widgetLoader = `addEventListener("load", () => setTimeout(() => {
-	const w = window.__bugspotCrawl && window.__bugspotCrawl.widget;
-	if (!w || window.bugspot || window.__bugspotRun) return;
+	const w = window.__pinpathCrawl && window.__pinpathCrawl.widget;
+	if (!w || window.pinpath || window.__pinpathRun) return;
 	const s = document.createElement("script");
 	s.src = w.src;
 	s.dataset.route = w.route;
@@ -311,7 +311,7 @@ func injectWidget(base, route string) (*injectedWidget, error) {
 	}
 	u, err := url.Parse(strings.TrimSuffix(base, "/") + "/widget.js")
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return nil, fmt.Errorf("--widget must be the http(s) address of bugspot, got %q", base)
+		return nil, fmt.Errorf("--widget must be the http(s) address of pinpath, got %q", base)
 	}
 	if route != "auto" && route != "path" && route != "hash" {
 		return nil, fmt.Errorf("--route must be auto, path or hash, got %q", route)
@@ -337,10 +337,10 @@ func (a *app) followCrawl(ctx context.Context, c *cdp, session string, every, st
 	seen := false
 	for {
 		var raw string
-		err := c.evaluate(ctx, session, "JSON.stringify(window.__bugspotCrawlStatus ?? null)", &raw)
+		err := c.evaluate(ctx, session, "JSON.stringify(window.__pinpathCrawlStatus ?? null)", &raw)
 		if ctx.Err() != nil {
 			stop, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			_ = c.evaluate(stop, session, "window.__bugspotCrawlStop?.()", nil)
+			_ = c.evaluate(stop, session, "window.__pinpathCrawlStop?.()", nil)
 			cancel()
 			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				return errors.New("the crawl took longer than --timeout; what it collected is on the map")
