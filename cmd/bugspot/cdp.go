@@ -86,6 +86,10 @@ func (c *cdp) read(r io.Reader) {
 
 // call sends a method to the browser (session "") or to a page session and decodes the result.
 func (c *cdp) call(ctx context.Context, session, method string, params, out any) error {
+	// An ended context sends nothing: the answer could otherwise win the select below.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	c.mu.Lock()
 	if c.err != nil {
 		err := c.err
