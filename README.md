@@ -211,7 +211,8 @@ real page of that screen.
 The canvas works like a design tool. Screens are drawn at their real size (the window they were
 seen in), while their names, the frame titles, the arrows and the pins keep their size on screen at
 any zoom; far out a screen has no name, only a red dot when it has open threads. Dragging the canvas
-or a screen moves around, and so do the wheel, two fingers on a trackpad, the arrows and WASD;
+or a screen moves around, and so do the wheel and two fingers on a trackpad; held arrows or WASD
+glide smoothly (faster with Shift);
 Ctrl/⌘ with the wheel or a pinch zooms, as do `+` and `−`; Shift+1 shows the whole map and Shift+2
 the selected screen. A screen moves when you drag its name. Zoom in and a screen turns from a
 picture into its live snapshot — sharp at any zoom, with the pins of its threads; `C` (or the
