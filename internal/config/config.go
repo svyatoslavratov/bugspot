@@ -60,6 +60,10 @@ type Config struct {
 	RateRead, RateWrite int
 	LogLevel            slog.Level
 
+	// MapMask hides what people typed (inputs, the default), all text (text) or nothing (none) in
+	// the DOM snapshots of the screen map.
+	MapMask string
+
 	// BackupDir turns on snapshots of the database: one at start, then every BackupEvery; those
 	// older than BackupKeepDays (0: never) are removed. Put it outside the data volume.
 	BackupDir      string
@@ -172,7 +176,11 @@ func Load(getenv func(string) string) (Config, error) {
 			View:     r.rules("VIEW", "authenticated"),
 			Comment:  r.rules("COMMENT", "authenticated"),
 			Moderate: r.rules("MODERATE", ""),
+			// By default moderators open the map, and everyone who sees the widget builds it.
+			Map:     r.rules("MAP", r.str("MODERATE", "")),
+			Collect: r.rules("MAP_COLLECT", r.str("VIEW", "authenticated")),
 		},
+		MapMask:        r.str("MAP_MASK", "inputs"),
 		Providers:      r.list("AUTH"),
 		AllowedOrigins: r.list("ALLOWED_ORIGINS"),
 
@@ -262,6 +270,9 @@ func (c *Config) validate() []error {
 	}
 	if !slices.Contains([]string{"auto", "true", "false"}, c.CookieSecure) {
 		errs = append(errs, fmt.Errorf("BUGSPOT_COOKIE_SECURE=%q: want auto, true or false", c.CookieSecure))
+	}
+	if !slices.Contains([]string{"none", "inputs", "text"}, c.MapMask) {
+		errs = append(errs, fmt.Errorf("BUGSPOT_MAP_MASK=%q: want none, inputs or text", c.MapMask))
 	}
 	if c.BackupDir != "" && c.BackupEvery < time.Minute {
 		errs = append(errs, fmt.Errorf("BUGSPOT_BACKUP_EVERY=%s: at least 1m", c.BackupEvery))

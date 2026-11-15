@@ -15,6 +15,7 @@
   "dependencies": {
     "@blueprintjs/core": "6.21.0",
     "@blueprintjs/icons": "6.15.0",
+    "@xyflow/react": "12.12.1",
     "modern-screenshot": "4.7.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"

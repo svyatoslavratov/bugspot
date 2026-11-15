@@ -29,8 +29,10 @@ type Options struct {
 	CookieSecure       string
 	KeyTTL             time.Duration
 	ScreenshotMaxBytes int64
-	RateRead           int
-	RateWrite          int
+	// MapMask is what DOM snapshots of the screen map hide: inputs, text or none.
+	MapMask   string
+	RateRead  int
+	RateWrite int
 	// Widget holds widget.js and assets/; nil serves no widget.
 	Widget  fs.FS
 	Version string
@@ -45,6 +47,8 @@ type Server struct {
 	read    *ratelimit.Limiter
 	write   *ratelimit.Limiter
 	widget  *widget
+	// mapPolicy is the CSP of the map page.
+	mapPolicy string
 }
 
 // Limits the API enforces; the session endpoint tells the widget about them.
@@ -55,6 +59,7 @@ const (
 	maxContext    = 64 << 10
 	maxJSONBody   = 128 << 10
 	maxAuthorName = 80
+	maxScreenKey  = 512
 )
 
 // New builds a server.
@@ -77,6 +82,7 @@ func New(o Options) *Server {
 	if o.Widget != nil {
 		s.widget = newWidget(o.Widget)
 	}
+	s.mapPolicy = mapCSP(o.AllowedOrigins)
 	return s
 }
 
@@ -87,6 +93,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /healthz", s.healthz)
 	mux.HandleFunc("GET /widget.js", s.serveLoader)
 	mux.HandleFunc("GET /assets/{file}", s.serveAsset)
+	mux.HandleFunc("GET /map", s.serveMap)
 
 	mux.Handle("GET /api/v1/session", s.api(s.session, false))
 	mux.Handle("POST /api/v1/session/key", s.api(s.openKey, true))
@@ -101,6 +108,22 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/threads/{id}/replies", s.api(s.reply, true))
 	mux.Handle("PUT /api/v1/threads/{id}/screenshot", s.api(s.putScreenshot, true))
 	mux.Handle("GET /api/v1/threads/{id}/screenshot", s.api(s.getScreenshot, false))
+
+	mux.Handle("GET /api/v1/map", s.api(s.getMap, false))
+	mux.Handle("GET /api/v1/map/captures", s.api(s.captures, false))
+	mux.Handle("POST /api/v1/map/visits", s.api(s.visits, true))
+	mux.Handle("POST /api/v1/map/assets/missing", s.api(s.missingAssets, true))
+	mux.Handle("PUT /api/v1/map/assets/{hash}", s.api(s.putAsset, true))
+	mux.Handle("PUT /api/v1/map/shot", s.api(s.putShot, true))
+	mux.Handle("GET /api/v1/map/shot", s.api(s.getShot, false))
+	mux.Handle("PUT /api/v1/map/snapshot", s.api(s.putSnapshot, true))
+	mux.Handle("GET /api/v1/map/snapshot", s.api(s.getSnapshot, false))
+	mux.Handle("POST /api/v1/map/screens", s.api(s.addScreen, true))
+	mux.Handle("PATCH /api/v1/map/screens", s.api(s.patchScreens, true))
+	mux.Handle("PATCH /api/v1/map/states", s.api(s.patchStates, true))
+	mux.Handle("POST /api/v1/map/edges", s.api(s.addEdge, true))
+	mux.Handle("GET /api/v1/map/manifest", s.api(s.exportMap, false))
+	mux.Handle("POST /api/v1/map/manifest", s.api(s.importMap, true))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such API route")
 	})
@@ -112,7 +135,7 @@ func (s *Server) root(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
-	if _, err := s.o.Store.Summary(r.Context(), s.o.Project, ""); err != nil {
+	if _, err := s.o.Store.Summary(r.Context(), s.o.Project, "", ""); err != nil {
 		writeError(w, http.StatusServiceUnavailable, "unhealthy", "storage is unavailable")
 		return
 	}

@@ -43,6 +43,13 @@ your app's own login.
   finishes. The gear in the panel header switches the mode and the shortcut.
 - **Agents are first-class.** An MCP server (`bugspot mcp`), agent tokens with scopes, a CLI and a
   plain REST API. Agents move threads to *fixed*; only people check and resolve them.
+- **A map of the screens.** While people use the app, the widget maps its screens, their tabs and
+  dialogs, what leads where (which button or link) and how each state really looks: a thumbnail and
+  a DOM snapshot. The map page shows them by section like boards in a design tool; a snapshot is
+  clickable — its buttons follow the transitions, and comments left on it pin on the real page.
+  "Build the map" walks the whole app at once, from the widget or headless from the command line;
+  the live app opens right on the map; a manifest keeps names and descriptions in git. An agent
+  names, groups and describes the screens over MCP. No framework knowledge: URLs, the DOM and ARIA.
 - **Flexible access.** Identity from your app's session (`forward`), a JWT, a trusted proxy header,
   share links with access keys, or anonymous — combined in any order, with view / comment /
   moderate rules by role or user.
@@ -172,6 +179,81 @@ bugspot:
 Only the listed cookies are forwarded, only to that URL; answers are cached for 30 s.
 More recipes (JWT in Go and Node, oauth2-proxy, another domain): [docs/integration.md](docs/integration.md).
 
+## Screen map
+
+The map builds itself: whoever `BUGSPOT_MAP_COLLECT` allows (by default everyone who sees the
+widget) reports, while working in the app,
+
+- **screens** — the route with ids folded into `{id}` (`/author/0193…` → `/author/{id}`), or the
+  name the page gives itself in `data-bugspot-screen`;
+- **states** — the page itself, a selected tab (`role="tab"` with `aria-selected`) or an open dialog
+  (`role="dialog"`, `<dialog open>`);
+- **transitions** — the element clicked before the screen or state changed (its accessible name),
+  the links of the page, and `data-bugspot-to` for transitions the widget cannot see (a button that
+  leads somewhere only after a save);
+- **the look** of each state once the page settles: a real thumbnail and a DOM snapshot without
+  scripts, taken again when the layout changes. Stylesheets are stored once; what people typed is
+  masked (`BUGSPOT_MAP_MASK=inputs`), or all text is (`text`).
+
+Whoever `BUGSPOT_MAP` allows (by default the moderators) opens `<service>/map`: screens by section,
+transitions between them, a panel to name, group, describe, hide and merge screens, and the
+snapshot of each state. In a snapshot the known buttons and links lead where they lead, unknown
+ones can be outlined, and *Comment* pins a thread on any element — the same thread shows on every
+real page of that screen.
+
+The widget's panel has a map button: it opens the map at the screen you are on.
+
+**Build it at once.** *Screen map → Build the map…* in the widget (for those who may open the map
+and build it) walks the app by itself: it opens the app in a frame of the same origin, loads every
+screen a link leads to, selects the tabs, opens the windows buttons promise, and records each
+state with its look and the transitions. It changes no data: only reads leave the walked app —
+any other request fails as a network error would (from the command line the browser stops them
+too) — forms do not submit, `confirm()` answers no, and buttons named like deleting, sending,
+saving, paying or signing out are never pressed; other buttons are pressed only when you tick it,
+or when the app marks them (`aria-haspopup="dialog"`, `data-bugspot-crawl`). The same crawl runs
+headless in Chrome:
+
+```sh
+bugspot token create --name crawler --scopes read,map         # next to the service
+BUGSPOT_TOKEN=bsp_… bugspot map crawl https://app.example.com/ \
+  --cookie session=…            # or sign in once: --headed --profile ~/.bugspot-chrome
+```
+
+`--buttons` presses more buttons, `--max-screens` and `--timeout` bound the walk, `--widget
+https://app.example.com/bugspot` adds the widget to pages that do not load it, and a stand behind
+Basic Auth takes the credentials in the address. It needs Chrome or Chromium (`--chrome`, or
+`BUGSPOT_CHROME`) on macOS or Linux.
+
+**The live app.** A screen opens as its snapshot or, with *Live app*, as the real app in a frame:
+work in it, comment with its widget, and the map follows the screen it is on. The app has to allow
+the bugspot origin to frame it (`frame-ancestors`), see [integration](docs/integration.md#the-screen-map).
+
+**A manifest.** What people and agents wrote about the screens — names, sections, descriptions,
+described states, declared transitions — goes to a JSON file and back: *⋯ → Download / Upload the
+manifest* on the map, or `bugspot map export -o map.json` and `bugspot map import map.json`. Keys may
+be route patterns of your router (`/authors/:id`, `/authors/[id]`); screens the map has not seen
+become planned ones. A script that reads your router can write it, and git keeps it.
+
+```json
+{"version": 1, "screens": [
+  {"key": "/authors/:id", "name": "Author card", "section": "Authors", "description": "…",
+   "states": [{"key": "tab:Responses", "description": "…"}],
+   "to": ["/authors", {"screen": "/reports", "via": "Report", "kind": "link"}]}
+]}
+```
+
+Hints, all optional:
+
+| Attribute | Where | What it does |
+| --- | --- | --- |
+| `data-bugspot-screen="author-card"` | any element of a page | names the screen when the URL does not tell screens apart |
+| `data-route-params="tab,view"` | the `<script>` tag | query parameters that make different screens (otherwise tabs in the query are states of one screen) |
+| `data-bugspot-to="/reports"` | a button or link | declares where it leads |
+| `data-bugspot-nav` | a container | marks the app's own menu (`nav`, `aside`, `header` are recognized anyway) |
+| `data-bugspot-mask` | any element | masks its text and values in snapshots |
+| `data-bugspot-ignore` | any element | leaves it out of snapshots and of the map |
+| `data-bugspot-crawl` | a button | the crawl may press it (`="skip"`: never) |
+
 ## Agents
 
 ### MCP
@@ -179,6 +261,13 @@ More recipes (JWT in Go and Node, oauth2-proxy, another domain): [docs/integrati
 `bugspot mcp` is an MCP server on stdio with the tools `list_threads`, `get_thread`,
 `get_screenshot` (the image itself), `reply`, `set_status` and `summary`. It works through the API
 with an agent token, so the agent has exactly the token's rights.
+
+With the `map` scope the agent also reads and edits the screen map: `get_map` (screens by section
+with their states and transitions), `get_screen` (the outline of each state: headings, actions,
+fields, tables), `get_screen_image` (a real thumbnail), `update_screens` (name, section,
+description, order, hide, merge duplicates), `update_states`, `add_screen` (a planned screen) and
+`add_edge` (a transition the widget cannot see). Ask it *"Group the screens of the bugspot map and
+describe what each is for"*.
 
 ```sh
 # Claude Code
@@ -195,7 +284,7 @@ and resolves.
 
 ```sh
 # next to the service: create a token (shown once; only its hash is stored)
-docker compose exec bugspot bugspot token create --name claude --scopes read,reply,status
+docker compose exec bugspot bugspot token create --name claude --scopes read,reply,status,map
 
 # anywhere: read and answer
 export BUGSPOT_URL=https://app.example.com/bugspot BUGSPOT_TOKEN=bsp_…
@@ -205,6 +294,7 @@ bugspot threads screenshot 12 --out 12.webp
 bugspot threads status 12 in_progress
 bugspot threads reply 12 "Fixed in 1.4.3: the column wraps now."
 bugspot threads status 12 fixed
+bugspot map export -o map.json           # the manifest of the screen map; map import applies one
 ```
 
 A stand behind HTTP Basic Auth: put the credentials into the URL

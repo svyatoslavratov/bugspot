@@ -82,9 +82,14 @@ func (r Rule) matches(id *Identity) bool {
 	return false
 }
 
-// Policy is who may see the widget and threads, who may write and who may moderate.
+// Policy is who may see the widget and threads, who may write and who may moderate; who opens the
+// screen map and whose browsing builds it.
 type Policy struct {
 	View, Comment, Moderate Rules
+	// Map: open the screen map, name, group and describe screens.
+	Map Rules
+	// Collect: while browsing, report screens, transitions and their look to the map.
+	Collect Rules
 }
 
 // Permissions are what one identity may do.
@@ -97,15 +102,21 @@ type Permissions struct {
 	Moderate bool `json:"moderate"`
 	// Reply: answer in threads; people get it with Comment, agents with the reply scope.
 	Reply bool `json:"reply"`
+	// Map: open the screen map, name, group and describe screens; agents with the map scope.
+	Map bool `json:"map"`
+	// Collect: report what the pages show to the map; agents with the map scope, which crawl the app.
+	Collect bool `json:"collect"`
 }
 
 // For returns the permissions of id. Writing needs viewing; agents get theirs from scopes.
 func (p Policy) For(id *Identity) Permissions {
 	if id != nil && id.Provider == ProviderAgent {
 		view := id.HasScope(domain.ScopeRead)
-		return Permissions{View: view, Reply: view && id.HasScope(domain.ScopeReply)}
+		mapper := id.HasScope(domain.ScopeMap)
+		return Permissions{View: view, Reply: view && id.HasScope(domain.ScopeReply), Map: mapper, Collect: mapper}
 	}
 	view := p.View.Allows(id) || p.Moderate.Allows(id)
 	comment := view && (p.Comment.Allows(id) || p.Moderate.Allows(id))
-	return Permissions{View: view, Comment: comment, Reply: comment, Moderate: view && p.Moderate.Allows(id)}
+	return Permissions{View: view, Comment: comment, Reply: comment, Moderate: view && p.Moderate.Allows(id),
+		Map: view && p.Map.Allows(id), Collect: view && p.Collect.Allows(id)}
 }

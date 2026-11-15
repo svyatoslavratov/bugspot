@@ -25,7 +25,7 @@ screenshot and the page context (browser, app version, console errors, failed re
 X-Request-ID). Work loop: list_threads → get_thread (and get_screenshot) → set_status in_progress →
 fix the code → reply with what changed and in which version → set_status fixed. People check the
 result and resolve the thread; you cannot resolve or mark it checked. Threads are referred to by
-number (#12) or id.`
+number (#12) or id.` + mcpMapInstructions
 
 type rpcRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -184,7 +184,7 @@ func (s *mcpServer) handle(req rpcRequest) *rpcResponse {
 	case "ping":
 		res.Result = map[string]any{}
 	case "tools/list":
-		res.Result = map[string]any{"tools": mcpTools}
+		res.Result = map[string]any{"tools": append(slices.Clone(mcpTools), mapTools...)}
 	case "tools/call":
 		var p struct {
 			Name      string          `json:"name"`
@@ -226,6 +226,12 @@ type toolArgs struct {
 func textJSON(raw []byte) []mcpContent { return []mcpContent{{Type: "text", Text: string(raw)}} }
 
 func (s *mcpServer) call(name string, raw json.RawMessage) ([]mcpContent, error) {
+	if len(raw) == 0 {
+		raw = json.RawMessage("{}")
+	}
+	if content, handled, err := s.callMap(name, raw); handled {
+		return content, err
+	}
 	var a toolArgs
 	if len(raw) > 0 {
 		if err := json.Unmarshal(raw, &a); err != nil {

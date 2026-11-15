@@ -4,6 +4,8 @@ import {
   Classes,
   Elevation,
   InputGroup,
+  Menu,
+  MenuItem,
   NonIdealState,
   Popover,
   Spinner,
@@ -45,6 +47,10 @@ interface Props {
   /** The settings menu behind the gear; absent for people who may not comment. */
   settings?: JSX.Element;
   onNew: () => void;
+  /** Opens the screen map at this page's screen; absent for people who may not open it. */
+  onMap?: () => void;
+  /** Opens the crawl that builds the map; absent for people who may not build it. */
+  onCrawl?: () => void;
   onClose: () => void;
   onSelect: (thread: Thread) => void;
 }
@@ -86,6 +92,21 @@ export function Panel(p: Props) {
             onClick={() => p.onPins(!p.pins)}
           />
         </Tooltip>
+        {p.onMap && (
+          <Popover
+            placement="bottom-end"
+            content={
+              <Menu>
+                <MenuItem icon="map" text={t.mapShow} onClick={p.onMap} />
+                {p.onCrawl && <MenuItem icon="path-search" text={t.crawlStart} onClick={p.onCrawl} />}
+              </Menu>
+            }
+          >
+            <Tooltip content={t.mapOpen} placement="bottom">
+              <Button icon="map" variant="minimal" aria-label={t.mapOpen} />
+            </Tooltip>
+          </Popover>
+        )}
         {p.settings && (
           <Popover content={p.settings} placement="bottom-end">
             <Tooltip content={t.settings} placement="bottom">

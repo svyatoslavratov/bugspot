@@ -31,6 +31,9 @@ value and lists every problem at once.
 | `BUGSPOT_VIEW` | `authenticated` | who sees the widget and reads threads |
 | `BUGSPOT_COMMENT` | `authenticated` | who writes threads and replies (needs view) |
 | `BUGSPOT_MODERATE` | — | who changes any status and deletes any thread |
+| `BUGSPOT_MAP` | the value of `BUGSPOT_MODERATE` | who opens the screen map (`/map`) and names, groups, describes and merges screens; agents need the `map` scope |
+| `BUGSPOT_MAP_COLLECT` | the value of `BUGSPOT_VIEW` | whose browsing builds the map: screens, transitions, thumbnails and DOM snapshots; empty — nobody |
+| `BUGSPOT_MAP_MASK` | `inputs` | what DOM snapshots hide: `inputs` (what people typed), `text` (all text), `none` |
 
 Rules, comma or space separated, any match allows: `*`, `authenticated`, `anonymous`,
 `role:<name>`, `user:<id>`, `provider:<name>`.
@@ -84,7 +87,7 @@ Keys are created with `bugspot key create --name "Customer" --roles customer --e
 | --- | --- |
 | `bugspot serve` | run the service (the default) |
 | `bugspot healthcheck` | exit 0 when the local service is healthy (for container health checks) |
-| `bugspot token create --name N [--scopes read,reply,status] [--expires D]` | an agent token, printed once |
+| `bugspot token create --name N [--scopes read,reply,status,map] [--expires D]` | an agent token, printed once |
 | `bugspot token list` / `revoke ID` | list and revoke tokens |
 | `bugspot key create --name N [--roles r1,r2] [--expires D]` | an access key for a share link, printed once |
 | `bugspot key list` / `revoke ID` | list and revoke keys |
@@ -94,6 +97,8 @@ Keys are created with `bugspot key create --name "Customer" --roles customer --e
 | `bugspot threads status N open\|in_progress\|fixed\|wontfix` | move a thread |
 | `bugspot threads screenshot N --out file` | download the screenshot |
 | `bugspot mcp` | an MCP server on stdio for agents (`BUGSPOT_URL`, `BUGSPOT_TOKEN`) |
+| `bugspot map crawl [--buttons] [--cookie n=v] [--header 'N: v'] [--profile dir --headed] [--widget url] [--max-screens N] [--timeout D] URL` | walk the app in Chrome without a window and build the screen map (`BUGSPOT_TOKEN` with the read and map scopes; `BUGSPOT_CHROME` or `--chrome`: the browser) |
+| `bugspot map export [-o file]` / `map import file` | the manifest of the screen map (`BUGSPOT_URL`, `BUGSPOT_TOKEN` with the map scope) |
 | `bugspot backup [-o file]` | a consistent copy of the database, also while the service runs |
 
 `token` and `key` work on the database directly, so run them where the service runs

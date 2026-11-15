@@ -1,0 +1,505 @@
+/* The screen map page. Blueprint, React Flow and the widget's thread styles come first. */
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: -apple-system, 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+  font-size: 14px;
+  color: #1c2127;
+  background: #f6f7f9;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+.map-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid #dce0e5;
+  flex-wrap: wrap;
+}
+
+.map-toolbar .bp6-control {
+  margin: 0;
+}
+
+.map-title {
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+.map-search {
+  width: 260px;
+}
+
+.map-push {
+  flex: 1;
+}
+
+.map-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.map-body > .bp6-non-ideal-state {
+  height: 100%;
+}
+
+/* Screens. */
+
+.map-node {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #c5cbd3;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgb(17 20 24 / 8%);
+  transition:
+    box-shadow 0.15s,
+    opacity 0.15s;
+}
+
+.map-node:hover {
+  box-shadow: 0 4px 12px rgb(17 20 24 / 15%);
+}
+
+.map-node.is-selected {
+  border-color: #2d72d2;
+  box-shadow: 0 0 0 2px #2d72d2;
+}
+
+.map-node.is-dim {
+  opacity: 0.25;
+}
+
+.map-node.is-planned {
+  border-style: dashed;
+  background: #fbfbfc;
+}
+
+.map-node.is-hidden {
+  opacity: 0.6;
+}
+
+.map-thumb {
+  flex: 1;
+  min-height: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #edeff2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.map-thumb-empty {
+  padding: 8px;
+  font-size: 12px;
+  color: #738091;
+  text-align: center;
+}
+
+.map-node-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.map-node-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 12px;
+  color: #5f6b7c;
+}
+
+.map-node-meta code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-node-tags {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+
+.map-section {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 55%);
+  border: 1px solid #dce0e5;
+}
+
+.map-section-title {
+  padding: 12px 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #404854;
+}
+
+/* The panel of a screen. */
+
+.map-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: 400px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10;
+}
+
+.map-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.map-panel-name {
+  margin: 0;
+  flex: 1;
+}
+
+.map-panel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.map-field > span:first-child,
+.map-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #5f6b7c;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.map-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.map-merge {
+  padding: 12px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-states {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.map-state {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+}
+
+.map-state-thumb {
+  height: 76px;
+  padding: 0;
+  border: 1px solid #dce0e5;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  display: flex;
+}
+
+.map-state-thumb:disabled {
+  cursor: default;
+}
+
+.map-state-thumb .map-thumb {
+  width: 100%;
+}
+
+.map-state-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.map-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.map-link,
+.map-thread {
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.map-link:hover,
+.map-thread:hover {
+  background: #edeff2;
+}
+
+.map-thread {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.map-thread span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-muted {
+  color: #738091;
+  margin: 0;
+}
+
+/* The snapshot of a state. */
+
+.map-snapshot {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #e5e8eb;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-snapshot-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.map-stage {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.map-frame-box {
+  position: relative;
+  flex: none;
+  box-shadow: 0 4px 24px rgb(17 20 24 / 20%);
+  background: #fff;
+}
+
+.map-frame-box iframe {
+  border: 0;
+  display: block;
+  transform-origin: 0 0;
+  background: #fff;
+}
+
+.map-frame-box iframe.is-picking {
+  cursor: crosshair;
+}
+
+.map-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.map-hotspot,
+.map-unknown,
+.map-hover,
+.map-picked {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 4px;
+}
+
+.map-hotspot {
+  border: 2px solid rgb(45 114 210 / 70%);
+  background: rgb(45 114 210 / 8%);
+}
+
+/* Items of the app's menu lead everywhere: marked, but quietly. */
+.map-hotspot.is-nav {
+  border: 1px dashed rgb(45 114 210 / 35%);
+  background: none;
+}
+
+.map-unknown {
+  border: 2px dashed rgb(200 118 25 / 80%);
+}
+
+.map-hover {
+  border: 2px solid #cd4246;
+  background: rgb(205 66 70 / 8%);
+}
+
+.map-picked {
+  border: 3px solid #cd4246;
+}
+
+.map-pin {
+  position: absolute;
+  pointer-events: auto;
+  transform: translate(-50%, -100%);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 12px 12px 12px 2px;
+  border: 2px solid #fff;
+  font: 600 12px/20px sans-serif;
+  color: #fff;
+  background: #cd4246;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(17 20 24 / 30%);
+}
+
+.map-pin.intent-primary {
+  background: #2d72d2;
+}
+
+.map-pin.intent-warning {
+  background: #c87619;
+}
+
+.map-pin.intent-success {
+  background: #238551;
+}
+
+.map-pin.intent-none {
+  background: #5f6b7c;
+}
+
+.map-declared {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.map-side {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  margin: 12px;
+  height: auto;
+}
+
+.map-hint {
+  padding: 6px 16px;
+  background: #fef6e9;
+  color: #77450d;
+  font-size: 13px;
+}
+
+.map-notice.bp6-callout {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: auto;
+  max-width: 520px;
+  background: #e8f4ed;
+  box-shadow: 0 4px 16px rgb(17 20 24 / 18%);
+}
+
+.map-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* The live app: a real frame, interactive, without the snapshot's overlay. */
+.map-live {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 0;
+  transform-origin: 0 0;
+  background: #fff;
+}
+.map-live-note.bp6-callout {
+  margin: 8px 16px 0;
+}
+.map-toolbar .is-hidden {
+  display: none;
+}
+.map-notice.bp6-callout.bp6-intent-danger {
+  background: #fae6e6;
+}
+
+/* A frame by address: a suggestion until the screens get a section. */
+.map-section.is-auto {
+  border-style: dashed;
+  background: transparent;
+}
+.map-section-auto {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #738091;
+}

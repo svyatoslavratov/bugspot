@@ -4,10 +4,9 @@ const TEXT_LIMIT = 120;
 
 /** Visible text of an element, whitespace collapsed. */
 export function textOf(el: Element): string {
-  const raw =
-    el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
-      ? el.placeholder || el.value || el.getAttribute('aria-label') || ''
-      : (el.textContent ?? '');
+  // By tag name: elements of a frame are of another realm, where class checks miss them.
+  const field = el.localName === 'input' || el.localName === 'textarea' ? (el as HTMLInputElement) : null;
+  const raw = field ? field.placeholder || field.value || el.getAttribute('aria-label') || '' : (el.textContent ?? '');
   return raw.replace(/\s+/g, ' ').trim().slice(0, TEXT_LIMIT);
 }
 
@@ -48,7 +47,8 @@ export function selectorOf(el: Element, root: ParentNode = document): string {
   if (own) return own;
   const steps: string[] = [];
   let node: Element | null = el;
-  while (node && node !== document.body && node !== document.documentElement && steps.length < 10) {
+  const doc = el.ownerDocument;
+  while (node && node !== doc.body && node !== doc.documentElement && steps.length < 10) {
     const anchor: string | null = steps.length ? stableAttribute(node, root) : null;
     if (anchor) {
       steps.unshift(anchor);
@@ -61,7 +61,7 @@ export function selectorOf(el: Element, root: ParentNode = document): string {
     node = parent;
   }
   const path = steps.join(' > ');
-  return node === document.body || node === document.documentElement ? `body > ${path}` : path;
+  return node === doc.body || node === doc.documentElement ? `body > ${path}` : path;
 }
 
 const DIALOGS = 'dialog, [role="dialog"], [role="alertdialog"], [aria-modal="true"]';
@@ -75,7 +75,7 @@ export function layerOf(el: Element): Layer | undefined {
   const labelled = box
     .getAttribute('aria-labelledby')
     ?.split(/\s+/)
-    .map((id) => document.getElementById(id)?.textContent ?? '')
+    .map((id) => el.ownerDocument.getElementById(id)?.textContent ?? '')
     .join(' ');
   const heading = box.querySelector('h1, h2, h3, h4, h5, h6, [role="heading"]');
   const title = (box.getAttribute('aria-label') || labelled || (heading ? textOf(heading) : ''))
@@ -85,21 +85,26 @@ export function layerOf(el: Element): Layer | undefined {
   return { kind: dialog ? 'dialog' : 'popup', ...(title ? { title } : {}) };
 }
 
-/** Builds the anchor for a click at (clientX, clientY) on el. */
+/**
+ * Builds the anchor for a click at (clientX, clientY) on el, in the window of its document: the page
+ * itself, or the frame of a DOM snapshot on the screen map (the same anchor then pins on the page).
+ */
 export function buildAnchor(el: Element, client: Point): Anchor {
+  const doc = el.ownerDocument;
+  const win = doc.defaultView ?? window;
   const rect = el.getBoundingClientRect();
   const clamp = (v: number) => Math.min(1, Math.max(0, Number.isFinite(v) ? v : 0.5));
   const source = el.closest('[data-bugspot-src]')?.getAttribute('data-bugspot-src') ?? undefined;
   return {
-    selector: selectorOf(el),
+    selector: selectorOf(el, doc),
     text: textOf(el),
     tag: el.tagName.toLowerCase(),
     offset: {
       x: Math.round(clamp((client.x - rect.left) / rect.width) * 1000) / 1000,
       y: Math.round(clamp((client.y - rect.top) / rect.height) * 1000) / 1000,
     },
-    page: { x: Math.round(client.x + scrollX), y: Math.round(client.y + scrollY) },
-    viewport: { w: innerWidth, h: innerHeight },
+    page: { x: Math.round(client.x + win.scrollX), y: Math.round(client.y + win.scrollY) },
+    viewport: { w: win.innerWidth, h: win.innerHeight },
     source,
     layer: layerOf(el),
   };

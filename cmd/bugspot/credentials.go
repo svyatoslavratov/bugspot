@@ -38,7 +38,7 @@ func (a *app) credentials(args []string, agent bool) error {
 	case "create":
 		fs := a.flags(noun + " create")
 		name := fs.String("name", "", "who uses it; shown as the author of their replies (required)")
-		scopes := fs.String("scopes", "read,reply,status", "agent scopes: read, reply, status")
+		scopes := fs.String("scopes", "read,reply,status", "agent scopes: read, reply, status, map (read and edit the screen map)")
 		roles := fs.String("roles", "", "roles for the policy, comma separated (keys only)")
 		expires := fs.Duration("expires", 0, "lifetime such as 720h; 0 means no expiry")
 		if err := fs.Parse(args[1:]); err != nil {
@@ -50,7 +50,7 @@ func (a *app) credentials(args []string, agent bool) error {
 		c := domain.Credential{ID: secret.ID(), Kind: kind, Name: strings.TrimSpace(*name), CreatedAt: time.Now().UTC()}
 		if agent {
 			for _, s := range split(*scopes) {
-				if s != domain.ScopeRead && s != domain.ScopeReply && s != domain.ScopeStatus {
+				if s != domain.ScopeRead && s != domain.ScopeReply && s != domain.ScopeStatus && s != domain.ScopeMap {
 					return fmt.Errorf("unknown scope %q", s)
 				}
 				c.Scopes = append(c.Scopes, s)

@@ -72,9 +72,12 @@ type Thread struct {
 	Project string `json:"project"`
 	// Route is the page key the widget matches pins by: the path, or the hash path of a hash router.
 	Route string `json:"route"`
-	URL   string `json:"url"`
-	Title string `json:"title"`
-	Kind  Kind   `json:"kind"`
+	// Screen is the key of the screen on the map (the route with ids folded, or the app's own
+	// name for it): a comment left on the map shows on every page of that screen.
+	Screen string `json:"screen,omitempty"`
+	URL    string `json:"url"`
+	Title  string `json:"title"`
+	Kind   Kind   `json:"kind"`
 	// Status changes are kept with who and when.
 	Status   Status     `json:"status"`
 	StatusBy *Author    `json:"statusBy,omitempty"`
@@ -107,8 +110,10 @@ type Reply struct {
 
 // ThreadFilter narrows a thread list; empty fields do not filter.
 type ThreadFilter struct {
-	Project  string
-	Route    string
+	Project string
+	Route   string
+	// Screen widens Route: threads of the route or of the screen; alone, threads of the screen.
+	Screen   string
 	Statuses []Status
 	Kind     Kind
 	// Query is matched case-insensitively against the body, the author and the route.
@@ -161,6 +166,8 @@ const (
 	ScopeRead   = "read"
 	ScopeReply  = "reply"
 	ScopeStatus = "status"
+	// ScopeMap reads the screen map and names, groups and describes screens.
+	ScopeMap = "map"
 )
 
 // ErrNotFound is returned for a missing thread, reply, screenshot or credential.

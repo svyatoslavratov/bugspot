@@ -79,7 +79,7 @@ func TestMCP(t *testing.T) {
 	if v := result(0)["protocolVersion"]; v != "2025-06-18" {
 		t.Errorf("negotiated version = %v", v)
 	}
-	if tools := result(1)["tools"].([]any); len(tools) != len(mcpTools) {
+	if tools := result(1)["tools"].([]any); len(tools) != len(mcpTools)+len(mapTools) {
 		t.Errorf("tools/list = %d tools", len(tools))
 	}
 	text := func(i int) string {

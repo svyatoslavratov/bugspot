@@ -91,6 +91,33 @@ const ru = {
     resolved: 'Решён',
     wontfix: 'Отклонён',
   } satisfies Record<Status, string>,
+  mapOpen: 'Карта экранов',
+  mapShow: 'Открыть карту',
+  crawlStart: 'Собрать карту…',
+  crawlTitle: 'Сбор карты экранов',
+  crawlIntro:
+    'Виджет откроет приложение в окне ниже и пройдёт его сам: ссылки, вкладки, окна. Каждое состояние попадёт на карту с настоящим видом.',
+  crawlSafe:
+    'Данные он не меняет: из приложения уходят только запросы на чтение, формы не отправляются, кнопки удаления, отправки, сохранения, оплаты и выхода не нажимаются, на «вы уверены?» ответ — «нет».',
+  crawlFrom: 'Начать с',
+  crawlButtons: 'Нажимать и другие кнопки — они могут открывать окна',
+  crawlMax: 'Не больше экранов',
+  crawlGo: 'Начать',
+  crawlStop: 'Остановить',
+  crawlProgress: (s: { screens: number; states: number; looks: number; queued: number; writesBlocked: number }) =>
+    `Экранов: ${s.screens} · состояний: ${s.states} · видов: ${s.looks} · в очереди: ${s.queued}` +
+    (s.writesBlocked ? ` · не пропущено запросов на изменение: ${s.writesBlocked}` : ''),
+  crawlPhase: {
+    starting: 'Готовлюсь…',
+    running: 'Обхожу',
+    done: 'Готово',
+    stopped: 'Остановлено',
+    error: 'Не получилось',
+  },
+  crawlBlocked:
+    'Приложение запрещает показывать себя во фрейме (X-Frame-Options или CSP frame-ancestors). Его можно обойти в отдельном окне.',
+  crawlInWindow: 'Обойти в отдельном окне',
+  crawlPopupBlocked: 'Браузер не открыл окно: разрешите всплывающие окна для этого сайта.',
   kind: { issue: 'Замечание', question: 'Вопрос', idea: 'Идея' } satisfies Record<Kind, string>,
 };
 
@@ -181,6 +208,27 @@ const en: Dict = {
   justNow: 'just now',
   signedAs: 'You',
   status: { open: 'Open', in_progress: 'In progress', fixed: 'Fixed', resolved: 'Resolved', wontfix: 'Declined' },
+  mapOpen: 'Screen map',
+  mapShow: 'Open the map',
+  crawlStart: 'Build the map…',
+  crawlTitle: 'Building the screen map',
+  crawlIntro:
+    'The widget opens the app in the window below and walks it by itself: links, tabs, windows. Every state lands on the map with its real look.',
+  crawlSafe:
+    'It changes no data: only reads leave the app, forms are not submitted, buttons that delete, send, save, pay or sign out are not pressed, and "are you sure?" gets a no.',
+  crawlFrom: 'Start from',
+  crawlButtons: 'Press other buttons too — they may open windows',
+  crawlMax: 'At most screens',
+  crawlGo: 'Start',
+  crawlStop: 'Stop',
+  crawlProgress: (s: { screens: number; states: number; looks: number; queued: number; writesBlocked: number }) =>
+    `Screens: ${s.screens} · states: ${s.states} · looks: ${s.looks} · queued: ${s.queued}` +
+    (s.writesBlocked ? ` · writes stopped: ${s.writesBlocked}` : ''),
+  crawlPhase: { starting: 'Getting ready…', running: 'Walking', done: 'Done', stopped: 'Stopped', error: 'Failed' },
+  crawlBlocked:
+    'The app refuses to show in a frame (X-Frame-Options or CSP frame-ancestors). It can be walked in a separate window.',
+  crawlInWindow: 'Walk in a window',
+  crawlPopupBlocked: 'The browser did not open the window: allow pop-ups for this site.',
   kind: { issue: 'Issue', question: 'Question', idea: 'Idea' },
 };
 

@@ -5,9 +5,12 @@ import { pageContext } from '../lib/context';
 import { DEFAULT_HOTKEY, formatHotkey, matchesHotkey, parseHotkey } from '../lib/hotkey';
 import { loadPrefs, savePrefs, setPendingThread, takePendingThread, type Prefs } from '../lib/prefs';
 import { currentRoute, onRouteChange } from '../lib/route';
-import { ACTIVE_STATUSES, type ComposeMode, type Status, type Thread } from '../shared/types';
+import { currentState } from '../lib/screen';
+import { ACTIVE_STATUSES, type ComposeMode, type CrawlConfig, type Status, type Thread } from '../shared/types';
 import { BugButton } from './BugButton';
+import { currentScreen, startCollector } from './collector';
 import { useWidget } from './context';
+import { CrawlDialog } from './CrawlDialog';
 import { Flash, FLASH_MS } from './Flash';
 import { NewThread } from './NewThread';
 import { Panel, type StatusFilter, type Tab } from './Panel';
@@ -28,6 +31,19 @@ export interface AppHandle {
 export type View = { kind: 'list' } | { kind: 'thread'; id: string } | ({ kind: 'new'; draft?: Draft } & Target);
 
 const POLL_MS = 30_000;
+const CRAWL_HASH = 'bugspot-crawl';
+
+/**
+ * A crawl asked for when the page opened: by `bugspot map crawl` (it starts at once) or by the
+ * map's "Build the map" link (#bugspot-crawl: the dialog opens and waits for a click).
+ */
+function requestedCrawl(): CrawlConfig | null | undefined {
+  if (window.__bugspotCrawl?.auto) return window.__bugspotCrawl;
+  if (!location.hash.includes(CRAWL_HASH)) return undefined;
+  const hash = location.hash.replace(new RegExp(`[#&]?${CRAWL_HASH}`), '');
+  history.replaceState(history.state, '', location.pathname + location.search + (hash && hash !== '#' ? hash : ''));
+  return null;
+}
 
 function statusesOf(filter: StatusFilter): Status[] | undefined {
   if (filter === 'all') return undefined;
@@ -36,7 +52,7 @@ function statusesOf(filter: StatusFilter): Status[] | undefined {
 }
 
 export const App = forwardRef<AppHandle>(function App(_, ref) {
-  const { api, settings, capture, session, t } = useWidget();
+  const { api, settings, capture, session, t, host } = useWidget();
   const canComment = session.can?.comment ?? false;
   const [prefs, setPrefs] = useState<Prefs>(() =>
     loadPrefs({
@@ -49,6 +65,8 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
   // The tiny box at the element (tiny mode) instead of the form in the panel.
   const [quick, setQuick] = useState<Target | null>(null);
   const [route, setRoute] = useState(() => currentRoute(settings.route));
+  // The screen of the map the page belongs to: comments left on the map show on all its pages.
+  const [screen, setScreen] = useState(() => currentScreen(settings));
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
   // After a comment is sent, picking goes on with a note about it; Esc then restores the panel as
@@ -62,6 +80,20 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [version, setVersion] = useState(0);
+  const canMap = (session.can?.map ?? false) && (session.can?.collect ?? false);
+  // undefined: no crawl; null: the dialog asks; a config: the command line runs it.
+  const [crawl, setCrawl] = useState<CrawlConfig | null | undefined>(() => {
+    const asked = requestedCrawl();
+    if (asked !== undefined && !canMap) {
+      if (asked?.auto)
+        window.__bugspotCrawlStatus = {
+          phase: 'error',
+          error: 'this identity may not build the map: give the token the map scope',
+        };
+      return undefined;
+    }
+    return asked;
+  });
 
   const updatePrefs = useCallback((patch: Partial<Prefs>) => {
     setPrefs((p) => {
@@ -72,7 +104,44 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
   }, []);
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
-  useEffect(() => onRouteChange(() => setRoute(currentRoute(settings.route))), [settings.route]);
+  useEffect(
+    () =>
+      onRouteChange(() => {
+        setRoute(currentRoute(settings.route));
+        setScreen(currentScreen(settings));
+        // The app may name its screen (data-bugspot-screen) once the new page renders.
+        setTimeout(() => setScreen(currentScreen(settings)), 400);
+      }),
+    [settings],
+  );
+  // People who build the screen map report what they see; see collector.ts. A crawl from the
+  // command line reports through its crawler only.
+  useEffect(() => {
+    if (!session.can?.collect || window.__bugspotCrawl?.auto) return;
+    return startCollector({ api, session, settings, host });
+  }, [api, session, settings, host]);
+  // In a frame of the screen map ("live app"), the map follows the screen the app is on.
+  useEffect(() => {
+    if (window.parent === window) return;
+    const origin = new URL(api.base, location.href).origin;
+    let last = '';
+    const post = () => {
+      const message = {
+        type: 'bugspot:screen',
+        screen: currentScreen(settings),
+        state: currentState().key,
+        url: location.href,
+        title: document.title,
+      };
+      const key = JSON.stringify(message);
+      if (key === last) return;
+      last = key;
+      window.parent.postMessage(message, origin);
+    };
+    post();
+    const id = setInterval(post, 700);
+    return () => clearInterval(id);
+  }, [api.base, settings]);
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
     return () => clearTimeout(id);
@@ -88,19 +157,23 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
     };
   }, [refresh]);
 
-  const pins = useData(() => api.threads({ route, status: ACTIVE_STATUSES, limit: 100 }), [route, version]);
-  const summary = useData(() => api.summary(route), [route, version]);
+  const pins = useData(
+    () => api.threads({ route, screen, status: ACTIVE_STATUSES, limit: 100 }),
+    [route, screen, version],
+  );
+  const summary = useData(() => api.summary(route, screen), [route, screen, version]);
   const list = useData(
     open && view.kind === 'list'
       ? () =>
           api.threads({
             route: tab === 'page' ? route : undefined,
+            screen: tab === 'page' ? screen : undefined,
             status: statusesOf(status),
             q: debouncedQuery || undefined,
             limit: 100,
           })
       : null,
-    [open, view.kind, tab, route, status, debouncedQuery, version],
+    [open, view.kind, tab, route, screen, status, debouncedQuery, version],
   );
 
   const openThread = useCallback((id: string) => {
@@ -211,6 +284,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
       setPickNotice(undefined);
       const target: Target = {
         picks,
+        screen,
         anchor: combineAnchors(picks.map((p) => buildAnchor(p.el, p.point))),
         context: pageContext(capture, settings.appVersion, picks[0].el),
       };
@@ -221,7 +295,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
       setOpen(true);
       setView({ kind: 'new', ...target });
     },
-    [capture, settings.appVersion, prefs.mode],
+    [capture, settings.appVersion, prefs.mode, screen],
   );
 
   const counts = useMemo(() => {
@@ -291,6 +365,17 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
             ) : undefined
           }
           onNew={startPicking}
+          onMap={
+            session.can?.map
+              ? () =>
+                  window.open(
+                    `${new URL('map', api.base).href}#screen=${encodeURIComponent(screen)}`,
+                    '_blank',
+                    'noopener',
+                  )
+              : undefined
+          }
+          onCrawl={canMap ? () => setCrawl(null) : undefined}
           onClose={() => setOpen(false)}
           onSelect={goToThread}
         >
@@ -318,6 +403,7 @@ export const App = forwardRef<AppHandle>(function App(_, ref) {
           )}
         </Panel>
       )}
+      {crawl !== undefined && <CrawlDialog auto={crawl?.auto ? crawl : null} onClose={() => setCrawl(undefined)} />}
     </>
   );
 });

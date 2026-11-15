@@ -94,6 +94,8 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusNotFound, "not_found", "not found")
 	case errors.Is(err, errForbidden):
 		writeError(w, http.StatusForbidden, "forbidden", "not allowed")
+	case errors.Is(err, domain.ErrConflict):
+		writeError(w, http.StatusConflict, "conflict", "the change conflicts with the map: a screen merged into itself or into an unknown one, or a key that is taken")
 	case errors.Is(err, errTooLarge):
 		writeError(w, http.StatusRequestEntityTooLarge, "too_large", "the body is too large")
 	default:
