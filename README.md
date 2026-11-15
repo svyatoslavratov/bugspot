@@ -207,6 +207,14 @@ snapshot of each state. In a snapshot the known buttons and links lead where the
 ones can be outlined, and *Comment* pins a thread on any element — the same thread shows on every
 real page of that screen.
 
+Inside a frame the screens are laid out in layers along their transitions with as few crossings as
+possible, and the arrows go around the screens; a screen that leads to many screens that lead
+nowhere else (a menu, a list and its records) gets them as a grid block. The arrows of the screen
+under the pointer or selected stand out with their names, and arrows between frames show only for
+it. Zoom in and a screen turns from a picture into its live snapshot — sharp at any zoom, with the
+pins of its threads; with *Comment* on the toolbar you click any element of it right on the canvas.
+Screens moved by hand keep their place; *⋯ → Reset the layout* puts them back.
+
 The widget's panel has a map button: it opens the map at the screen you are on.
 
 **Build it at once.** *Screen map → Build the map…* in the widget (for those who may open the map

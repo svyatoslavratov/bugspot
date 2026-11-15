@@ -168,11 +168,14 @@ button {
   border: 1px solid #dce0e5;
 }
 
+/* Frames are large: their names stay readable when the whole map is in view. */
 .map-section-title {
-  padding: 12px 16px;
-  font-size: 18px;
+  padding: 16px 24px;
+  font-size: 32px;
+  line-height: 40px;
   font-weight: 600;
   color: #404854;
+  white-space: nowrap;
 }
 
 /* The panel of a screen. */
@@ -495,11 +498,60 @@ button {
 /* A frame by address: a suggestion until the screens get a section. */
 .map-section.is-auto {
   border-style: dashed;
-  background: transparent;
+  border-width: 2px;
+  background: rgb(255 255 255 / 40%);
 }
 .map-section-auto {
-  margin-left: 8px;
-  font-size: 12px;
+  margin-left: 12px;
+  font-size: 18px;
   font-weight: 400;
   color: #738091;
+}
+
+/* A screen up close: its live snapshot, scaled into the node. */
+.map-live {
+  position: relative;
+  display: block;
+  background: #fff;
+}
+.map-live iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  background: #fff;
+}
+.map-live.is-commenting iframe {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+.map-live .map-overlay {
+  overflow: hidden;
+}
+.map-pin.is-small {
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-width: 1px;
+  border-radius: 7px 7px 7px 1px;
+  font-size: 8px;
+  line-height: 12px;
+}
+.map-body.is-commenting .map-node {
+  cursor: crosshair;
+}
+
+/* Names of transitions: only for the screen in focus. */
+.map-edge-label {
+  position: absolute;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid #dce0e5;
+  font-size: 11px;
+  color: #404854;
+  white-space: nowrap;
+  pointer-events: none;
 }

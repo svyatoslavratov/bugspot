@@ -1,20 +1,17 @@
-// Where screens go on the map: each section is a frame, screens inside it in columns by how many
-// transitions away from the section's entry they are, frames flow in rows like boards in a design
-// tool. Screens nobody put in a section are framed by the first segment of their address. A screen
-// moved by hand keeps its place.
+// Where screens go on the map: each section is a frame, and inside it ELK lays the screens out in
+// layers along their transitions with as few crossings as it can, routing the arrows around the
+// screens; frames flow in rows like boards in a design tool. Screens nobody put in a section are
+// framed by the first segment of their address. A screen moved by hand keeps its place.
 
-import type { Edge, Screen, ScreenMap, Status } from '../shared/types';
+import type { ElkNode } from 'elkjs/lib/elk-api';
+
+import type { Edge, Point, Screen, ScreenMap, Status } from '../shared/types';
 
 export const NODE_W = 260;
 export const NODE_H = 236;
-const FRAME_PAD = 40;
-const FRAME_TITLE = 44;
-const FRAME_GAP = 80;
-const ROW_WIDTH = 3200;
-/** Screens in a column before it wraps: wide frames read better than tall ones. */
-const COLUMN_ROWS = 4;
-const GAP = 40;
-const RANK_GAP = 60;
+const FRAME_PAD = 48;
+const FRAME_TITLE = 72;
+const FRAME_GAP = 120;
 /** Unsectioned screens under one address segment get their own frame from this many. */
 const AUTO_SECTION_MIN = 3;
 
@@ -35,6 +32,8 @@ export interface PlacedScreen {
   /** Does not match the search: drawn faded. */
   dim: boolean;
   threads: number;
+  /** Moved by hand: it stays where it was put, outside the layout of its frame. */
+  manual: boolean;
 }
 
 export interface PlacedSection {
@@ -56,6 +55,10 @@ export interface PlacedEdge {
   label: string;
   kind: EdgeKind;
   count: number;
+  /** The route ELK found, around the screens of the frame; none — a plain curve. */
+  points?: Point[];
+  /** Where the name goes; by default halfway along the route. */
+  labelAt?: Point;
 }
 
 export interface Layout {
@@ -149,85 +152,6 @@ export function linksByDefault(map: ScreenMap, limit = 40): boolean {
   return screenEdges(map.edges, keys, defaultFilters).filter((e) => e.kind === 'link').length <= limit;
 }
 
-/** A grid of screens, wider than tall, starting at (x, y). */
-function grid(screens: Screen[], x: number, y: number, cols: number, out: Map<string, { x: number; y: number }>) {
-  screens.forEach((s, i) =>
-    out.set(s.key, { x: x + (i % cols) * (NODE_W + GAP), y: y + Math.floor(i / cols) * (NODE_H + GAP) }),
-  );
-}
-
-/**
- * Steps from the entries of a section (screens that lead somewhere and nothing in it leads to;
- * in a cycle, the one that leads to most) along its transitions. Unlinked screens get none.
- */
-export function ranksOf(screens: Screen[], edges: { from: string; to: string }[]): Map<string, number> {
-  const next = new Map<string, string[]>();
-  const incoming = new Set<string>();
-  for (const e of edges) {
-    next.set(e.from, [...(next.get(e.from) ?? []), e.to]);
-    incoming.add(e.to);
-  }
-  const rank = new Map<string, number>();
-  const walk = (roots: string[]) => {
-    let level = roots.filter((r) => !rank.has(r));
-    for (const r of level) rank.set(r, 0);
-    for (let depth = 1; level.length; depth++) {
-      const following: string[] = [];
-      for (const key of level)
-        for (const to of next.get(key) ?? []) {
-          if (rank.has(to)) continue;
-          rank.set(to, depth);
-          following.push(to);
-        }
-      level = following;
-    }
-  };
-  walk(screens.filter((s) => next.has(s.key) && !incoming.has(s.key)).map((s) => s.key));
-  // What only a cycle reaches: start from the screen that leads to most.
-  for (;;) {
-    const rest = screens.filter((s) => !rank.has(s.key) && next.has(s.key));
-    if (!rest.length) break;
-    rest.sort((a, b) => (next.get(b.key)?.length ?? 0) - (next.get(a.key)?.length ?? 0));
-    walk([rest[0].key]);
-  }
-  return rank;
-}
-
-/**
- * Positions of the screens of one section inside its frame: linked screens in columns by their
- * steps from the entry, a column wrapping after a few rows; the rest in a grid under them.
- */
-function placeSection(screens: Screen[], edges: PlacedEdge[]): Map<string, { x: number; y: number }> {
-  const keys = new Set(screens.map((s) => s.key));
-  const inner = edges.filter((e) => keys.has(e.from) && keys.has(e.to) && e.kind !== 'nav' && e.from !== e.to);
-  const rank = ranksOf(screens, inner);
-  const out = new Map<string, { x: number; y: number }>();
-  const byRank = new Map<number, Screen[]>();
-  for (const s of screens) {
-    const r = rank.get(s.key);
-    if (r !== undefined) byRank.set(r, [...(byRank.get(r) ?? []), s]);
-  }
-  let x = 0;
-  let rows = 0;
-  for (const r of [...byRank.keys()].sort((a, b) => a - b)) {
-    const column = byRank.get(r)!;
-    const width = Math.ceil(column.length / COLUMN_ROWS);
-    column.forEach((s, i) => {
-      out.set(s.key, {
-        x: x + Math.floor(i / COLUMN_ROWS) * (NODE_W + GAP),
-        y: (i % COLUMN_ROWS) * (NODE_H + GAP),
-      });
-    });
-    rows = Math.max(rows, Math.min(column.length, COLUMN_ROWS));
-    x += width * (NODE_W + GAP) + RANK_GAP;
-  }
-  const loose = screens.filter((s) => !rank.has(s.key));
-  const linkedCols = Math.max(0, Math.round((x - RANK_GAP) / (NODE_W + GAP)));
-  const cols = Math.max(linkedCols, Math.ceil(Math.sqrt(loose.length * 1.6)), 1);
-  grid(loose, 0, rows ? rows * (NODE_H + GAP) + RANK_GAP : 0, cols, out);
-  return out;
-}
-
 /** The address segment that frames a screen without a section: /tasks/admin → /tasks. */
 function prefixOf(key: string): string {
   return key.startsWith('/') ? `/${key.split(/[/?#]/)[1] ?? ''}` : '';
@@ -271,53 +195,232 @@ export function framesOf(
   return { frames, of };
 }
 
-export function layoutMap(map: ScreenMap, filters: MapFilters, noSection: string): Layout {
+type Elk = { layout(graph: ElkNode): Promise<ElkNode> };
+let elk: Promise<Elk> | null = null;
+
+/** ELK is large (~400 KB gzipped): it loads with the first layout, on the map page only. */
+function loadElk(): Promise<Elk> {
+  elk ??= import('elkjs/lib/elk.bundled.js').then((m) => new m.default() as unknown as Elk);
+  return elk;
+}
+
+const ELK_OPTIONS: Record<string, string> = {
+  'elk.algorithm': 'layered',
+  'elk.direction': 'RIGHT',
+  'elk.edgeRouting': 'ORTHOGONAL',
+  'elk.padding': '[top=0,left=0,bottom=0,right=0]',
+  'elk.spacing.nodeNode': '48',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '96',
+  'elk.spacing.edgeNode': '24',
+  'elk.spacing.edgeEdge': '10',
+  'elk.layered.spacing.edgeNodeBetweenLayers': '24',
+  'elk.layered.spacing.edgeEdgeBetweenLayers': '10',
+  'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+  'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+  'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+  // Unlinked groups of screens are packed next to each other, the whole frame wider than tall.
+  'elk.separateConnectedComponents': 'true',
+  'elk.spacing.componentComponent': '72',
+  'elk.aspectRatio': '1.8',
+  // A long chain of screens wraps into rows instead of one endless line.
+  'elk.layered.wrapping.strategy': 'MULTI_EDGE',
+};
+
+interface FrameLayout {
+  w: number;
+  h: number;
+  nodes: Map<string, Point>;
+  routes: Map<string, { points: Point[]; labelAt?: Point }>;
+}
+
+/** A screen leads to this many screens that lead nowhere else, and they go into a grid block. */
+const FAN_MIN = 5;
+const GAP = 40;
+/** Above each row of a block runs the line its arrows come along. */
+const BUS = GAP / 2;
+
+/**
+ * Fans: screens linked only to one screen (a menu, a list of records and their cards). ELK would
+ * stack them in one tall column; they become a grid block instead.
+ */
+export function fansOf(screens: Screen[], edges: { from: string; to: string }[]): Map<string, string[]> {
+  const neighbours = new Map<string, Set<string>>();
+  for (const e of edges) {
+    if (e.from === e.to) continue;
+    for (const [a, b] of [
+      [e.from, e.to],
+      [e.to, e.from],
+    ]) {
+      const set = neighbours.get(a) ?? new Set<string>();
+      set.add(b);
+      neighbours.set(a, set);
+    }
+  }
+  const fans = new Map<string, string[]>();
+  for (const s of screens) {
+    const only = neighbours.get(s.key);
+    if (only?.size !== 1) continue;
+    const [parent] = only;
+    // Two screens linked only to each other: a pair, not a fan.
+    if (neighbours.get(parent)?.size === 1) continue;
+    fans.set(parent, [...(fans.get(parent) ?? []), s.key]);
+  }
+  for (const [parent, leaves] of fans) if (leaves.length < FAN_MIN) fans.delete(parent);
+  return fans;
+}
+
+function gridOf(n: number) {
+  // About 1.6 times wider than tall.
+  const cols = Math.max(1, Math.round(Math.sqrt((1.6 * n * NODE_H) / NODE_W)));
+  const rows = Math.ceil(n / cols);
+  return { cols, rows, w: cols * NODE_W + (cols - 1) * GAP, h: BUS * 2 + rows * NODE_H + (rows - 1) * GAP };
+}
+
+/** One frame: its screens and the transitions between them laid out by ELK, from (0, 0). */
+async function layoutFrame(screens: Screen[], edges: PlacedEdge[]): Promise<FrameLayout> {
+  const keys = new Set(screens.map((s) => s.key));
+  const inner = edges.filter((e) => e.from !== e.to && keys.has(e.from) && keys.has(e.to));
+  const fans = fansOf(screens, inner);
+  const fanOf = new Map<string, string>();
+  for (const [parent, leaves] of fans) for (const leaf of leaves) fanOf.set(leaf, parent);
+  const blocks = [...fans].map(([parent, leaves]) => ({
+    parent,
+    leaves,
+    id: `fan:${parent}`,
+    ...gridOf(leaves.length),
+  }));
+  const graph: ElkNode = {
+    id: 'frame',
+    layoutOptions: ELK_OPTIONS,
+    children: [
+      ...screens.filter((s) => !fanOf.has(s.key)).map((s) => ({ id: s.key, width: NODE_W, height: NODE_H })),
+      ...blocks.map((b) => ({ id: b.id, width: b.w, height: b.h })),
+    ],
+    edges: [
+      ...inner
+        .filter((e) => !fanOf.has(e.from) && !fanOf.has(e.to))
+        .map((e) => ({ id: e.id, sources: [e.from], targets: [e.to] })),
+      ...blocks.map((b) => ({ id: b.id, sources: [b.parent], targets: [b.id] })),
+    ],
+  };
+  const out = await (await loadElk()).layout(graph);
+  const nodes = new Map<string, Point>();
+  const placed = new Map<string, Point>();
+  for (const c of out.children ?? []) placed.set(c.id, { x: c.x ?? 0, y: c.y ?? 0 });
+  const routes = new Map<string, { points: Point[]; labelAt?: Point }>();
+  const routeOf = new Map<string, Point[]>();
+  for (const e of out.edges ?? []) {
+    const section = e.sections?.[0];
+    if (section) routeOf.set(e.id, [section.startPoint, ...(section.bendPoints ?? []), section.endPoint]);
+  }
+  for (const s of screens) if (!fanOf.has(s.key)) nodes.set(s.key, placed.get(s.key) ?? { x: 0, y: 0 });
+  for (const e of inner) {
+    const route = routeOf.get(e.id);
+    if (route) routes.set(e.id, { points: route });
+  }
+  // A block: its screens in rows; an arrow comes along the route to the block, down a line at its
+  // left, along the gap above the row and down into the screen — never across another screen.
+  for (const b of blocks) {
+    const at = placed.get(b.id) ?? { x: 0, y: 0 };
+    const toBlock = routeOf.get(b.id);
+    b.leaves.forEach((leaf, i) => {
+      const col = i % b.cols;
+      const row = Math.floor(i / b.cols);
+      const pos = { x: at.x + col * (NODE_W + GAP), y: at.y + BUS * 2 + row * (NODE_H + GAP) };
+      nodes.set(leaf, pos);
+      if (!toBlock) return;
+      const entry = toBlock[toBlock.length - 1];
+      const busX = at.x - BUS;
+      const lineY = pos.y - BUS;
+      const centre = pos.x + NODE_W / 2;
+      const down = [
+        ...toBlock.slice(0, -1),
+        { x: busX, y: entry.y },
+        { x: busX, y: lineY },
+        { x: centre, y: lineY },
+        { x: centre, y: pos.y },
+      ];
+      const labelAt = { x: centre, y: lineY };
+      for (const e of inner) {
+        if (e.from === b.parent && e.to === leaf) routes.set(e.id, { points: down, labelAt });
+        if (e.from === leaf && e.to === b.parent) routes.set(e.id, { points: [...down].reverse(), labelAt });
+      }
+    });
+  }
+  let w = 0;
+  let h = 0;
+  for (const p of nodes.values()) {
+    w = Math.max(w, p.x + NODE_W);
+    h = Math.max(h, p.y + NODE_H);
+  }
+  return { w, h, nodes, routes };
+}
+
+/** Frames in rows about as wide as the whole map is tall: a map that fits a screen when zoomed out. */
+function rowWidth(frames: { w: number; h: number }[]): number {
+  const area = frames.reduce((n, f) => n + (f.w + FRAME_GAP) * (f.h + FRAME_GAP), 0);
+  const widest = Math.max(0, ...frames.map((f) => f.w));
+  return Math.max(widest, Math.sqrt(area * 1.6));
+}
+
+export async function layoutMap(map: ScreenMap, filters: MapFilters, noSection: string): Promise<Layout> {
   const screens = visibleScreens(map, filters);
   const keys = new Set(screens.map((s) => s.key));
   const edges = screenEdges(map.edges, keys, filters);
   const { frames, of } = framesOf(screens, noSection);
+  const laid = await Promise.all(
+    frames.map(async (frame) => {
+      const list = screens
+        .filter((s) => of.get(s.key) === frame.name)
+        .sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
+      const inner = await layoutFrame(list, edges);
+      return { ...frame, list, inner, w: inner.w + FRAME_PAD * 2, h: inner.h + FRAME_PAD * 2 + FRAME_TITLE };
+    }),
+  );
+  const limit = rowWidth(laid);
   const placed: PlacedScreen[] = [];
   const sections: PlacedSection[] = [];
+  const at = new Map<string, Point>();
+  const offsets = new Map<string, Point>();
   let cursorX = 0;
   let cursorY = 0;
   let rowHeight = 0;
-  for (const { name, auto } of frames) {
-    const list = screens.filter((s) => of.get(s.key) === name);
-    const local = placeSection(
-      [...list].sort((a, b) => a.order - b.order || a.key.localeCompare(b.key)),
-      edges,
-    );
-    let w = 0;
-    let h = 0;
-    for (const p of local.values()) {
-      w = Math.max(w, p.x + NODE_W);
-      h = Math.max(h, p.y + NODE_H);
-    }
-    const frameW = w + FRAME_PAD * 2;
-    const frameH = h + FRAME_PAD * 2 + FRAME_TITLE;
-    if (cursorX > 0 && cursorX + frameW > ROW_WIDTH) {
+  for (const f of laid) {
+    if (cursorX > 0 && cursorX + f.w > limit) {
       cursorX = 0;
       cursorY += rowHeight + FRAME_GAP;
       rowHeight = 0;
     }
-    const frame = { name, auto, x: cursorX, y: cursorY, w: frameW, h: frameH };
-    for (const s of list) {
-      const p = local.get(s.key)!;
-      const at = s.position ?? { x: frame.x + FRAME_PAD + p.x, y: frame.y + FRAME_TITLE + FRAME_PAD + p.y };
-      placed.push({ screen: s, x: at.x, y: at.y, dim: !matches(s, filters.search), threads: threadsOf(map, s.key) });
+    const origin = { x: cursorX + FRAME_PAD, y: cursorY + FRAME_TITLE + FRAME_PAD };
+    offsets.set(f.name, origin);
+    sections.push({ name: f.name, auto: f.auto, x: cursorX, y: cursorY, w: f.w, h: f.h });
+    for (const s of f.list) {
+      const p = f.inner.nodes.get(s.key) ?? { x: 0, y: 0 };
+      const auto = { x: origin.x + p.x, y: origin.y + p.y };
+      // A screen moved by hand stays where it was put; its frame keeps the size of its layout.
+      const pos = s.position ?? auto;
+      at.set(s.key, pos);
+      placed.push({
+        screen: s,
+        x: pos.x,
+        y: pos.y,
+        dim: !matches(s, filters.search),
+        threads: threadsOf(map, s.key),
+        manual: !!s.position,
+      });
     }
-    sections.push(frame);
-    cursorX += frameW + FRAME_GAP;
-    rowHeight = Math.max(rowHeight, frameH);
+    cursorX += f.w + FRAME_GAP;
+    rowHeight = Math.max(rowHeight, f.h);
   }
-  // Screens moved by hand stretch their frame.
-  for (const section of sections) {
-    const inside = placed.filter((p) => of.get(p.screen.key) === section.name);
-    const minX = Math.min(...inside.map((p) => p.x)) - FRAME_PAD;
-    const minY = Math.min(...inside.map((p) => p.y)) - FRAME_PAD - FRAME_TITLE;
-    const maxX = Math.max(...inside.map((p) => p.x + NODE_W)) + FRAME_PAD;
-    const maxY = Math.max(...inside.map((p) => p.y + NODE_H)) + FRAME_PAD;
-    Object.assign(section, { x: minX, y: minY, w: maxX - minX, h: maxY - minY });
-  }
-  return { screens: placed, sections, edges };
+  const manual = new Set(placed.filter((p) => p.manual).map((p) => p.screen.key));
+  const routed = edges.map((e) => {
+    const frame = of.get(e.from);
+    if (!frame || frame !== of.get(e.to) || manual.has(e.from) || manual.has(e.to)) return e;
+    const route = laid.find((f) => f.name === frame)?.inner.routes.get(e.id);
+    const origin = offsets.get(frame);
+    if (!route || !origin) return e;
+    const shift = (p: Point) => ({ x: origin.x + p.x, y: origin.y + p.y });
+    return { ...e, points: route.points.map(shift), labelAt: route.labelAt && shift(route.labelAt) };
+  });
+  return { screens: placed, sections, edges: routed };
 }

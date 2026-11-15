@@ -390,7 +390,9 @@ func updateScreen(ctx context.Context, q queryer, project, key string, p domain.
 	if p.Hidden != nil {
 		add("hidden", *p.Hidden)
 	}
-	if p.Position != nil {
+	if p.ResetPosition {
+		add("position", nil)
+	} else if p.Position != nil {
 		add("position", optJSON(p.Position))
 	}
 	args = append(args, project, key)

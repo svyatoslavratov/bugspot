@@ -1,10 +1,11 @@
 import { Tag } from '@blueprintjs/core';
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { Handle, Position, useStore, type Node, type NodeProps } from '@xyflow/react';
 import { memo } from 'react';
 
 import { useWidget } from '../app/context';
 import type { Screen, ScreenState } from '../shared/types';
 import { useMap } from './context';
+import { LiveShot } from './LiveShot';
 import { screenLabel } from './layout';
 import { useShot } from './useShot';
 
@@ -19,9 +20,14 @@ export type ScreenNodeType = Node<ScreenNodeData, 'screen'>;
 export type SectionNodeData = { name: string; auto: boolean };
 export type SectionNodeType = Node<SectionNodeData, 'section'>;
 
-/** The state whose look stands for the screen: the page itself, else the first one with a look. */
-export function coverState(screen: Screen): ScreenState | undefined {
-  return screen.states.find((s) => s.key === '' && s.hasShot) ?? screen.states.find((s) => s.hasShot);
+/** From this zoom a screen shows as its live DOM snapshot instead of a picture. */
+export const LIVE_ZOOM = 1.3;
+
+const kindOrder = { page: 0, tab: 1, dialog: 2 } as const;
+
+/** The state whose look stands for the screen: the page itself, else a tab, else a window. */
+export function coverState(screen: Screen, has: 'hasShot' | 'hasSnapshot' = 'hasShot'): ScreenState | undefined {
+  return screen.states.filter((s) => s[has]).sort((a, b) => kindOrder[a.kind] - kindOrder[b.kind])[0];
 }
 
 export function Thumbnail({
@@ -50,6 +56,10 @@ export function Thumbnail({
 export const ScreenNode = memo(function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
   const { t } = useMap();
   const { screen, threads, dim, selected } = data;
+  // Only the screens in view at a close zoom: the canvas renders the visible nodes only.
+  const near = useStore((s) => s.transform[2] >= LIVE_ZOOM);
+  const cover = coverState(screen);
+  const live = near ? coverState(screen, 'hasSnapshot') : undefined;
   const classes = [
     'map-node',
     dim && 'is-dim',
@@ -60,7 +70,7 @@ export const ScreenNode = memo(function ScreenNode({ data }: NodeProps<ScreenNod
   return (
     <div className={classes.filter(Boolean).join(' ')}>
       <Handle type="target" position={Position.Left} isConnectable={false} />
-      <Thumbnail screen={screen} state={coverState(screen)} />
+      {live ? <LiveShot screen={screen} state={live} /> : <Thumbnail screen={screen} state={cover} />}
       <div className="map-node-title" title={screenLabel(screen)}>
         {screenLabel(screen)}
       </div>

@@ -145,6 +145,13 @@ func screenMap(t *testing.T, s store.Store) {
 	if !find(t, m, "/brands").Hidden {
 		t.Fatal("hidden screen is not hidden")
 	}
+	// A screen moved by hand goes back to the layout.
+	if err := s.PatchScreens(ctx, "p", []domain.ScreenPatch{{Key: "/campaigns", ResetPosition: true}}, at); err != nil {
+		t.Fatal(err)
+	}
+	if m, _ := s.ScreenMap(ctx, "p"); find(t, m, "/campaigns").Position != nil {
+		t.Fatal("the position stays after a reset")
+	}
 	// A planned screen people reach stops being planned.
 	if err := s.RecordVisits(ctx, "p", []domain.Visit{{Screen: "/reports"}}, nil, at); err != nil {
 		t.Fatal(err)

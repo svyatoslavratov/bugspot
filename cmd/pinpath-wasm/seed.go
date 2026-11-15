@@ -33,6 +33,17 @@ func seed() {
 			Hash: secret.Hash(demoAgentToken), Scopes: []string{domain.ScopeRead, domain.ScopeReply, domain.ScopeStatus},
 			CreatedAt: time.Now().UTC()})
 	}
+	// What people or an agent would write about the screens; the widget adds their real look and
+	// transitions as soon as the pages are open.
+	if m, _ := st.ScreenMap(ctx, "demo"); len(m.Screens) == 0 {
+		text := func(s string) *string { return &s }
+		_, _ = st.ImportMap(ctx, "demo", domain.Manifest{Version: 1, Screens: []domain.ManifestScreen{
+			{Key: "/campaigns", Name: text("Campaigns"), Section: text("CRM"),
+				Description: text("All brand campaigns with their dates, budget and status; the export for accounting.")},
+			{Key: "/authors", Name: text("Authors"), Section: text("CRM"),
+				Description: text("The authors the agency works with; scouts add new ones here.")},
+		}}, time.Now().UTC())
+	}
 	if list, _, _ := st.ListThreads(ctx, domain.ThreadFilter{Project: "demo", Limit: 1}); len(list) > 0 {
 		return
 	}
@@ -54,7 +65,7 @@ func seed() {
 		context, _ := json.Marshal(map[string]any{"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/141.0", "language": "en",
 			"viewport": map[string]any{"w": 1440, "h": 900, "dpr": 2}, "appVersion": "0.4.1", "console": []any{},
 			"network": []any{map[string]any{"method": "GET", "url": "/api/campaigns?search=…", "status": 500, "requestId": "req-7f3a", "durationMs": 312}}})
-		t := &domain.Thread{ID: secret.ID(), Project: "demo", Route: s.route, URL: "https://example.com/#" + s.route, Title: "Acme CRM",
+		t := &domain.Thread{ID: secret.ID(), Project: "demo", Route: s.route, Screen: s.route, URL: "https://example.com/#" + s.route, Title: "Acme CRM",
 			Kind: s.kind, Status: s.status, Body: s.body, Anchor: anchor, Context: context, Author: s.author, CreatedAt: at, UpdatedAt: at}
 		if s.status != domain.StatusOpen {
 			statusAt := at.Add(20 * time.Minute)

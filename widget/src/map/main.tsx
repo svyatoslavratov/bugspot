@@ -27,7 +27,9 @@ function adopt(css: string) {
 }
 
 const lang = navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en';
-const api = createApi({ base: new URL('./', location.href).href });
+// A host page may hand in its own fetch, as the demo does with the API in WebAssembly.
+const config = window.pinpathConfig ?? window.bugspotConfig;
+const api = createApi({ base: new URL('./', location.href).href, fetch: config?.fetch, token: config?.token });
 // The map page captures nothing of its own: threads made here describe the screen, not this page.
 const noCapture: Capture = { console: [], network: [], uninstall: () => undefined };
 const settings: Settings = {

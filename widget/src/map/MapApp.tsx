@@ -1,6 +1,7 @@
 import {
   Button,
   Callout,
+  Card,
   HTMLSelect,
   InputGroup,
   Menu,
@@ -20,14 +21,17 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useNodesState,
+  useReactFlow,
   type Edge as FlowEdge,
   type Node,
 } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useWidget } from '../app/context';
+import { buildAnchor } from '../lib/anchor';
 import { useData } from '../app/useData';
 import type { ScreenMap, StateRef } from '../shared/types';
+import { CanvasContext, type Canvas, type CanvasPick } from './canvas';
 import { useMap } from './context';
 import {
   crawlAddress,
@@ -37,9 +41,12 @@ import {
   NODE_H,
   NODE_W,
   type EdgeKind,
+  type Layout,
   type MapFilters,
 } from './layout';
-import { nodeTypes, type ScreenNodeData, type SectionNodeData } from './nodes';
+import { edgeTypes, type RoutedEdgeData } from './edges';
+import { LIVE_ZOOM, nodeTypes, type ScreenNodeData, type SectionNodeData } from './nodes';
+import { SnapshotComposer } from './SnapshotComposer';
 import { ScreenPanel } from './ScreenPanel';
 import { SnapshotView } from './SnapshotView';
 
@@ -86,12 +93,19 @@ export function MapApp() {
 function MapCanvas() {
   const { api, session } = useWidget();
   const { t } = useMap();
+  const flow = useReactFlow();
   const canEdit = session.can?.map ?? false;
+  const canComment = session.can?.comment ?? false;
   const [version, setVersion] = useState(0);
   const map = useData(() => api.map(), [version]);
   const [filters, setFilters] = useState<MapFilters>(defaultFilters);
   const [selected, setSelected] = useState<string | null>(() => readHash().screen);
+  const [hovered, setHovered] = useState<string | null>(null);
   const [view, setView] = useState<StateRef | null>(() => readHash().view);
+  const [commenting, setCommenting] = useState(false);
+  const [pick, setPick] = useState<CanvasPick | null>(null);
+  const [openThread, setOpenThread] = useState<string | null>(null);
+  const [pinsVersion, setPinsVersion] = useState(0);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
 
   useEffect(() => writeHash(selected, view), [selected, view]);
@@ -114,10 +128,24 @@ function MapCanvas() {
     linksDecided.current = true;
     if (!linksByDefault(data)) setFilters((f) => ({ ...f, showLinks: false }));
   }, [data]);
-  const layout = useMemo(() => (data ? layoutMap(data, filters, t.noSection) : null), [data, filters, t.noSection]);
+
+  // The layout is computed by ELK in the background; the old one stays on screen meanwhile.
+  const [layout, setLayout] = useState<Layout | null>(null);
+  useEffect(() => {
+    if (!data) return;
+    let alive = true;
+    layoutMap(data, filters, t.noSection).then(
+      (l) => alive && setLayout(l),
+      () => undefined,
+    );
+    return () => {
+      alive = false;
+    };
+  }, [data, filters, t.noSection]);
   const roles = useMemo(() => [...new Set(data?.screens.flatMap((s) => s.roles) ?? [])].sort(), [data]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const fitted = useRef(false);
   useEffect(() => {
     if (!layout) return;
     const sectionNodes: Node<SectionNodeData>[] = layout.sections.map((s) => ({
@@ -138,33 +166,79 @@ function MapCanvas() {
       style: { width: NODE_W, height: NODE_H },
     }));
     setNodes([...sectionNodes, ...screenNodes]);
-  }, [layout, selected, setNodes]);
+    if (!fitted.current) {
+      fitted.current = true;
+      const focus = selected && layout.screens.some((p) => p.screen.key === selected) ? [{ id: selected }] : undefined;
+      requestAnimationFrame(() => void flow.fitView({ padding: 0.08, nodes: focus, maxZoom: focus ? 1 : undefined }));
+    }
+  }, [layout, selected, setNodes, flow]);
 
-  const edges = useMemo<FlowEdge[]>(
-    () =>
-      (layout?.edges ?? []).map((e) => {
-        const style = edgeStyle[e.kind];
-        const touches = selected !== null && (e.from === selected || e.to === selected);
-        return {
+  // The transitions of the screen in focus (selected or under the pointer) stand out with their
+  // names; the rest stay thin, so a dense map still shows its shape.
+  const focus = hovered ?? selected;
+  const edges = useMemo<FlowEdge<RoutedEdgeData>[]>(() => {
+    const list = layout?.edges ?? [];
+    const dense = list.length > 40;
+    // A transition between frames crosses the whole map: it shows for the screen in focus only.
+    return list.flatMap((e) => {
+      const style = edgeStyle[e.kind];
+      const touches = focus !== null && (e.from === focus || e.to === focus);
+      if (!e.points && !touches) return [];
+      const opacity = focus === null ? (dense ? 0.35 : 1) : touches ? 1 : 0.1;
+      return [
+        {
           id: e.id,
+          type: 'routed' as const,
           source: e.from,
           target: e.to,
           label: e.label || undefined,
-          labelBgPadding: [4, 2] as [number, number],
-          labelStyle: { fontSize: 11 },
+          data: { points: e.points, labelAt: e.labelAt, showLabel: touches || (focus === null && !dense) },
           markerEnd: { type: MarkerType.ArrowClosed, color: style.stroke },
           style: {
             ...style,
-            strokeWidth: (e.kind === 'observed' ? 1.5 + Math.min(3, Math.log2(1 + e.count)) : 1.2) + (touches ? 1 : 0),
-            opacity: selected === null || touches ? 1 : 0.25,
+            strokeWidth:
+              (e.kind === 'observed' ? 1.5 + Math.min(2.5, Math.log2(1 + e.count)) : 1.2) + (touches ? 1 : 0),
+            opacity,
           },
           zIndex: touches ? 2 : 0,
-        };
-      }),
-    [layout, selected],
+        },
+      ];
+    });
+  }, [layout, focus]);
+
+  // Comments right on the canvas: a close screen shows its live snapshot, and an element picked in
+  // it gets a thread — the same thread the real page pins.
+  const stopCommenting = useCallback(() => {
+    setCommenting(false);
+    setPick(null);
+  }, []);
+  useEffect(() => {
+    if (!commenting) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && stopCommenting();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [commenting, stopCommenting]);
+  const canvas = useMemo<Canvas>(
+    () => ({
+      commenting,
+      version: pinsVersion,
+      onPick: (p) => {
+        setPick(p);
+        setSelected(p.screen);
+      },
+      onOpenThread: (key, id) => {
+        setPick(null);
+        setSelected(key);
+        setOpenThread(id);
+      },
+      onEscape: stopCommenting,
+    }),
+    [commenting, pinsVersion, stopCommenting],
   );
+  const zoomTo = (id: string) => void flow.fitView({ nodes: [{ id }], duration: 400, padding: 0.25, maxZoom: 2.6 });
 
   const screen = data?.screens.find((s) => s.key === selected) ?? null;
+  const pickScreen = pick ? (data?.screens.find((s) => s.key === pick.screen) ?? null) : null;
   const set = <K extends keyof MapFilters>(key: K, value: MapFilters[K]) => setFilters((f) => ({ ...f, [key]: value }));
   const file = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ intent: 'success' | 'danger'; text: string } | null>(null);
@@ -183,6 +257,17 @@ function MapCanvas() {
       reload();
     } catch (e) {
       say('danger', `${t.importError}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+  const moved = data?.screens.filter((s) => s.position) ?? [];
+  const resetLayout = async () => {
+    try {
+      for (let i = 0; i < moved.length; i += 200) {
+        await api.patchScreens(moved.slice(i, i + 200).map((s) => ({ key: s.key, resetPosition: true })));
+      }
+      reload();
+    } catch (e) {
+      say('danger', e instanceof Error ? e.message : String(e));
     }
   };
   const crawlUrl = data ? crawlAddress(data) : null;
@@ -235,6 +320,16 @@ function MapCanvas() {
           checked={filters.showHidden}
           onChange={(e) => set('showHidden', e.currentTarget.checked)}
         />
+        <span className="map-push" />
+        {canComment && (
+          <Button
+            icon="comment"
+            intent={commenting ? 'primary' : 'none'}
+            text={t.comment}
+            title={t.commentCanvasHint}
+            onClick={() => (commenting ? stopCommenting() : setCommenting(true))}
+          />
+        )}
         <Button
           icon="refresh"
           variant="minimal"
@@ -254,6 +349,15 @@ function MapCanvas() {
                 title={crawlUrl ? undefined : t.crawlNoApp}
                 onClick={() => crawlUrl && window.open(crawlUrl, '_blank', 'noopener')}
               />
+              {canEdit && (
+                <MenuItem
+                  icon="layout-auto"
+                  text={t.resetLayout}
+                  title={t.resetLayoutHint}
+                  disabled={moved.length === 0}
+                  onClick={() => void resetLayout()}
+                />
+              )}
               <MenuDivider />
               <MenuItem icon="export" text={t.exportManifest} onClick={() => void exportManifest()} />
               {canEdit && <MenuItem icon="import" text={t.importManifest} onClick={() => file.current?.click()} />}
@@ -274,61 +378,104 @@ function MapCanvas() {
           }}
         />
       </header>
+      {commenting && !pick && <div className="map-hint">{t.commentCanvasHint}</div>}
       {message && (
         <Callout intent={message.intent} compact className="map-notice map-message">
           {message.text}
         </Callout>
       )}
-      <div className="map-body">
+      <div className={`map-body ${commenting ? 'is-commenting' : ''}`}>
         {data.screens.length === 0 ? (
           <NonIdealState icon="layers" title={t.empty} description={t.emptyHint} />
         ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            onNodesChange={onNodesChange}
-            nodesDraggable={canEdit}
-            nodesConnectable={false}
-            elementsSelectable
-            minZoom={0.05}
-            maxZoom={2.5}
-            fitView
-            fitViewOptions={{ padding: 0.1 }}
-            onNodeClick={(_, node) => node.type === 'screen' && setSelected(node.id)}
-            onNodeDoubleClick={(_, node) => {
-              const sc = data.screens.find((s) => s.key === node.id);
-              const state =
-                sc?.states.find((s) => s.key === '' && s.hasSnapshot) ?? sc?.states.find((s) => s.hasSnapshot);
-              if (sc && state) setView({ screen: sc.key, state: state.key });
-            }}
-            onNodeDragStop={(_, node) => {
-              if (node.type !== 'screen' || !canEdit) return;
-              void api
-                .patchScreens([
-                  { key: node.id, position: { x: Math.round(node.position.x), y: Math.round(node.position.y) } },
-                ])
-                .then(reload, () => undefined);
-            }}
-            onPaneClick={() => setSelected(null)}
-          >
-            <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
-            <Controls showInteractive={false} />
-            <MiniMap pannable zoomable nodeColor={(n) => (n.type === 'section' ? '#f6f7f9' : '#abb3bf')} />
-          </ReactFlow>
+          <CanvasContext.Provider value={canvas}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              onNodesChange={onNodesChange}
+              nodesDraggable={canEdit && !commenting}
+              nodesConnectable={false}
+              elementsSelectable
+              onlyRenderVisibleElements
+              minZoom={0.05}
+              maxZoom={6}
+              onNodeClick={(_, node) => {
+                if (node.type !== 'screen') return;
+                setSelected(node.id);
+                // In the comment mode a screen too far to pick from comes close.
+                if (commenting && flow.getZoom() < LIVE_ZOOM) zoomTo(node.id);
+              }}
+              onNodeMouseEnter={(_, node) => node.type === 'screen' && setHovered(node.id)}
+              onNodeMouseLeave={() => setHovered(null)}
+              onNodeDoubleClick={(_, node) => {
+                const sc = data.screens.find((s) => s.key === node.id);
+                const state =
+                  sc?.states.find((s) => s.key === '' && s.hasSnapshot) ?? sc?.states.find((s) => s.hasSnapshot);
+                if (sc && state) setView({ screen: sc.key, state: state.key });
+              }}
+              onNodeDragStop={(_, node) => {
+                if (node.type !== 'screen' || !canEdit) return;
+                void api
+                  .patchScreens([
+                    { key: node.id, position: { x: Math.round(node.position.x), y: Math.round(node.position.y) } },
+                  ])
+                  .then(reload, () => undefined);
+              }}
+              onPaneClick={() => {
+                setSelected(null);
+                setPick(null);
+              }}
+            >
+              <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
+              <Controls showInteractive={false} />
+              <MiniMap pannable zoomable nodeColor={(n) => (n.type === 'section' ? '#f6f7f9' : '#abb3bf')} />
+            </ReactFlow>
+          </CanvasContext.Provider>
         )}
-        {screen && (
-          <ScreenPanel
-            key={screen.key}
-            map={data}
-            screen={screen}
-            version={version}
-            showNav={filters.showNav}
-            onClose={() => setSelected(null)}
-            onSelect={setSelected}
-            onOpen={(state) => setView({ screen: screen.key, state })}
-            onChanged={reload}
-          />
+        {pick && pickScreen ? (
+          <Card className="map-panel" elevation={2}>
+            <SnapshotComposer
+              key={`${pick.screen}\u0000${pick.point.x}:${pick.point.y}`}
+              screen={pickScreen}
+              state={pick.state}
+              picked={{ el: pick.el, point: pick.point, anchor: buildAnchor(pick.el, pick.point) }}
+              onCancel={() => setPick(null)}
+              onCreated={(thread) => {
+                setPick(null);
+                setPinsVersion((v) => v + 1);
+                setSelected(pick.screen);
+                setOpenThread(thread.id);
+                say('success', t.sent);
+                reload();
+              }}
+            />
+          </Card>
+        ) : (
+          screen && (
+            <ScreenPanel
+              key={`${screen.key}\u0000${openThread ?? ''}`}
+              map={data}
+              screen={screen}
+              version={version}
+              showNav={filters.showNav}
+              thread={openThread}
+              onClose={() => {
+                setSelected(null);
+                setOpenThread(null);
+              }}
+              onSelect={(key) => {
+                setOpenThread(null);
+                setSelected(key);
+              }}
+              onOpen={(state) => setView({ screen: screen.key, state })}
+              onChanged={() => {
+                setPinsVersion((v) => v + 1);
+                reload();
+              }}
+            />
+          )
         )}
       </div>
       {view && (

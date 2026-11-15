@@ -67,7 +67,7 @@ func (ms ManifestScreen) Patch() ScreenPatch {
 // Changes reports whether the patch sets anything.
 func (p ScreenPatch) Changes() bool {
 	return p.Name != nil || p.Section != nil || p.Description != nil || p.Order != nil || p.Hidden != nil ||
-		p.Position != nil || p.MergeInto != nil
+		p.Position != nil || p.ResetPosition || p.MergeInto != nil
 }
 
 // Edges are the declared transitions of the screen with the key it has on the map.

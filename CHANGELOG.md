@@ -7,6 +7,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [0.5.0] - 2026-11-15
 
+### Added
+
+- The screen map is laid out by ELK: screens of a frame in layers along their transitions with
+  few crossings and arrows routed around them; a screen that leads to many dead ends gets them as
+  a grid block with arrows along the gaps between rows. Arrows of the screen in focus (under the
+  pointer or selected) stand out with their names; arrows between frames show only for it.
+- Screens up close are their live DOM snapshots on the canvas, sharp at any zoom and with the pins
+  of their threads, and *Comment* on the toolbar picks an element right there; a far screen
+  clicked in the comment mode comes close.
+- *Reset the layout* in the map's menu, and `resetPosition` in `PATCH /api/v1/map/screens`.
+- The demo has the screen map: the app builds it while you click around, `map.html` shows it with
+  the same API in WebAssembly, and its state (with the looks) is kept in IndexedDB. The demo shows
+  the commit it was built from.
+
+### Fixed
+
+- A screen moved by hand stretched its frame over the others; now it floats and the frame keeps
+  the size of its layout.
+- Thumbnails were blurry up close: they are taken twice as large.
+- A screen whose page has tabs was shown by its window rather than by a tab.
+
+
 ### Changed
 
 - bugspot is now **pinpath**: it does more than pin comments since the screen map came. The

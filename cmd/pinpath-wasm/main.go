@@ -1,8 +1,10 @@
 //go:build js && wasm
 
 // Command pinpath-wasm runs the real API handler in the browser for the GitHub Pages demo: the
-// widget's requests go to globalThis.pinpathFetch instead of the network, the data lives in the
-// memory store and is saved to localStorage. The demo page picks the user and the access policy.
+// widget's and the map's requests go to globalThis.pinpathServer.serve instead of the network, the
+// data lives in the memory store and is saved in the browser — with the looks of the screen map
+// in IndexedDB through globalThis.pinpathDemoSave, else without them in localStorage. The demo page
+// picks the user and the access policy.
 package main
 
 import (
@@ -12,6 +14,7 @@ import (
 	"net/http/httptest"
 	"net/netip"
 	"strings"
+	"sync"
 	"syscall/js"
 	"time"
 
@@ -21,6 +24,9 @@ import (
 )
 
 const storageKey = "pinpath-demo-v1"
+
+// version is set at build time, like the service's: the demo shows the commit it was built from.
+var version = "dev"
 
 // demoAgentToken lets the demo page act as an agent through the real API rules. It only ever
 // exists inside the visitor's browser.
@@ -39,7 +45,8 @@ func rules(s string) auth.Rules {
 	return r
 }
 
-// configure rebuilds the server with a policy: {view, comment, moderate} rule strings.
+// configure rebuilds the server with a policy: {view, comment, moderate, map, collect} rule
+// strings. Admins open the screen map, and everyone who sees the widget builds it, as by default.
 func configure(_ js.Value, args []js.Value) any {
 	opts := js.Global().Get("Object").New()
 	if len(args) > 0 && args[0].Type() == js.TypeObject {
@@ -62,19 +69,41 @@ func configure(_ js.Value, args []js.Value) any {
 			View:     rules(str("view", "authenticated")),
 			Comment:  rules(str("comment", "authenticated")),
 			Moderate: rules(str("moderate", "role:admin")),
+			Map:      rules(str("map", str("moderate", "role:admin"))),
+			Collect:  rules(str("collect", str("view", "authenticated"))),
 		},
-		CookieSecure: "false", ScreenshotMaxBytes: 3 << 20, Version: "demo",
+		MapMask: "none", CookieSecure: "false", ScreenshotMaxBytes: 3 << 20, Version: version,
 	}).Handler()
 	return nil
 }
 
+var (
+	saveMu   sync.Mutex
+	saveSoon *time.Timer
+)
+
+// persist saves the state a moment after the last change: the widget reports what it sees in
+// bursts, and a full export with the looks of the map is not small.
 func persist() {
-	data, err := st.Export()
-	if err != nil {
-		return
+	saveMu.Lock()
+	defer saveMu.Unlock()
+	if saveSoon != nil {
+		saveSoon.Stop()
 	}
-	defer func() { _ = recover() }() // a full or blocked localStorage only loses persistence
-	js.Global().Get("localStorage").Call("setItem", storageKey, string(data))
+	saveSoon = time.AfterFunc(700*time.Millisecond, save)
+}
+
+func save() {
+	defer func() { _ = recover() }() // a full or blocked storage only loses persistence
+	if put := js.Global().Get("pinpathDemoSave"); put.Type() == js.TypeFunction {
+		if data, err := st.ExportAll(); err == nil {
+			put.Invoke(string(data))
+			return
+		}
+	}
+	if data, err := st.Export(); err == nil {
+		js.Global().Get("localStorage").Call("setItem", storageKey, string(data))
+	}
 }
 
 // serve takes {method, path, headers: {name: value}, body: Uint8Array|null} and returns
@@ -121,11 +150,16 @@ func reset(js.Value, []js.Value) any {
 	js.Global().Get("localStorage").Call("removeItem", storageKey)
 	configure(js.Undefined(), nil)
 	seed()
+	save()
 	return nil
 }
 
 func main() {
-	if saved := js.Global().Get("localStorage").Call("getItem", storageKey); saved.Type() == js.TypeString {
+	// The page reads IndexedDB before it starts the API (pinpathDemoSaved); older demos saved in
+	// localStorage.
+	if saved := js.Global().Get("pinpathDemoSaved"); saved.Type() == js.TypeString {
+		_ = st.Import([]byte(saved.String()))
+	} else if saved := js.Global().Get("localStorage").Call("getItem", storageKey); saved.Type() == js.TypeString {
 		_ = st.Import([]byte(saved.String()))
 	}
 	configure(js.Undefined(), nil)

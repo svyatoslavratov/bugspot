@@ -203,7 +203,9 @@ type ScreenPatch struct {
 	Order       *int    `json:"order,omitempty"`
 	Hidden      *bool   `json:"hidden,omitempty"`
 	Position    *Point  `json:"position,omitempty"`
-	MergeInto   *string `json:"mergeInto,omitempty"`
+	// ResetPosition forgets where the screen was moved by hand: the layout places it again.
+	ResetPosition bool    `json:"resetPosition,omitempty"`
+	MergeInto     *string `json:"mergeInto,omitempty"`
 }
 
 // StatePatch changes a state of a screen; nil fields stay.
