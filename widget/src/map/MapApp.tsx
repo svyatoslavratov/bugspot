@@ -45,6 +45,7 @@ import { CanvasContext, type Canvas, type CanvasPick } from './canvas';
 import { useMap } from './context';
 import { edgeTypes, focusCss, type RoutedEdgeData } from './edges';
 import { historyKey, screenBack, useHistory } from './history';
+import { typing, useGlide } from './keyboard';
 import {
   coverOf,
   crawlAddress,
@@ -87,12 +88,6 @@ function writeHash(screen: string | null, view: StateRef | null) {
   if (view) params.set('state', view.state);
   const hash = params.toString();
   history.replaceState(history.state, '', hash ? `#${hash}` : location.pathname + location.search);
-}
-
-/** Keys typed into a field are not shortcuts. */
-function typing(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null;
-  return !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
 }
 
 const prefDefaults = { mode: 'full' as const, hotkey: DEFAULT_HOTKEY };
@@ -407,8 +402,9 @@ function MapCanvas() {
     [flow, placedOf],
   );
 
-  // The keyboard: arrows or WASD move around, + and − zoom, Shift+1 shows the map, Shift+2 the
-  // selected screen, C (or the widget's shortcut) toggles comments, Esc leaves.
+  // The keyboard: arrows or WASD glide around while held, + and − zoom, Shift+1 shows the map,
+  // Shift+2 the selected screen, C (or the widget's shortcut) toggles comments, Esc leaves.
+  useGlide(flow, !view && !manifest);
   useEffect(() => {
     const hotkey = parseHotkey(loadPrefs(prefDefaults).hotkey);
     const onKey = (e: KeyboardEvent) => {
@@ -421,17 +417,6 @@ function MapCanvas() {
         return;
       }
       const plain = !e.ctrlKey && !e.metaKey && !e.altKey;
-      const step = e.shiftKey ? 480 : 160;
-      const move: Record<string, [number, number]> = {
-        ArrowLeft: [step, 0],
-        KeyA: [step, 0],
-        ArrowRight: [-step, 0],
-        KeyD: [-step, 0],
-        ArrowUp: [0, step],
-        KeyW: [0, step],
-        ArrowDown: [0, -step],
-        KeyS: [0, -step],
-      };
       if (canComment && ((hotkey && matchesHotkey(e, hotkey)) || (plain && !e.shiftKey && e.code === 'KeyC'))) {
         e.preventDefault();
         setCommenting((c) => !c);
@@ -439,13 +424,6 @@ function MapCanvas() {
       } else if (e.key === 'Escape') {
         if (commenting) stopCommenting();
         else setSelected(null);
-      } else if (plain && move[e.code]) {
-        e.preventDefault();
-        const vp = flow.getViewport();
-        void flow.setViewport(
-          { x: vp.x + move[e.code][0], y: vp.y + move[e.code][1], zoom: vp.zoom },
-          { duration: 120 },
-        );
       } else if (plain && (e.code === 'Equal' || e.code === 'NumpadAdd')) {
         e.preventDefault();
         void flow.zoomIn({ duration: 150 });

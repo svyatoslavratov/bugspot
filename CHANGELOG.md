@@ -5,6 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-15
+
+### Changed
+
+- The arrows and WASD glide the map smoothly while held, instead of jumping a step at each repeat
+  of the key: the camera picks up speed for a moment, goes at a steady pace (faster with Shift) and
+  slows down when the keys are released; a tap moves it a little. Keys let go while the window
+  loses the focus stop it.
+
 ## [0.7.0] - 2026-11-15
 
 ### Added
