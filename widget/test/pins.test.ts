@@ -47,7 +47,7 @@ const render = (threads: Thread[], extra: object = {}) =>
     root.render(createElement(PinLayer, { threads, selectedId: null, flashId: null, onOpen: vi.fn(), ...extra })),
   );
 const pins = () =>
-  [...container.querySelectorAll<HTMLButtonElement>('.bugspot-pin')].map((p) => [
+  [...container.querySelectorAll<HTMLButtonElement>('.pinpath-pin')].map((p) => [
     p.textContent,
     p.style.left,
     p.style.top,
@@ -59,10 +59,10 @@ describe('PinLayer', () => {
     const onOpen = vi.fn();
     render([thread], { onOpen });
 
-    const pin = container.querySelector<HTMLButtonElement>('.bugspot-pin')!;
+    const pin = container.querySelector<HTMLButtonElement>('.pinpath-pin')!;
     // No wrapper between the layer and the pin: a wrapper of a fixed pin has no box and put the
     // tooltip in the top left corner of the page.
-    expect(pin.parentElement?.classList.contains('bugspot-pins')).toBe(true);
+    expect(pin.parentElement?.classList.contains('pinpath-pins')).toBe(true);
     expect(pin.classList).toContain('bp6-popover-target');
     expect(pins()).toEqual([['2', '120px', '240px']]);
     expect(pin.getAttribute('aria-label')).toBe('#2');
@@ -100,6 +100,6 @@ describe('PinLayer with several elements', () => {
       ['2', '40px', '40px'],
       ['2', '60px', '60px'],
     ]);
-    expect(container.querySelector('.bugspot-pins')!.classList).toContain('is-passive');
+    expect(container.querySelector('.pinpath-pins')!.classList).toContain('is-passive');
   });
 });

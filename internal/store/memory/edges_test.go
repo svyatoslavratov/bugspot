@@ -3,7 +3,7 @@ package memory
 import (
 	"testing"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
 )
 
 func TestEdges(t *testing.T) {

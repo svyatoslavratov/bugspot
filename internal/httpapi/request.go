@@ -6,14 +6,18 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/svyatoslavratov/bugspot/internal/auth"
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/secret"
+	"github.com/svyatoslavratov/pinpath/internal/auth"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/secret"
 )
 
 // RequestHeader must be on every state-changing request from the widget. A page on another
-// origin cannot add it without passing CORS, which is what stops CSRF.
-const RequestHeader = "X-Bugspot-Request"
+// origin cannot add it without passing CORS, which is what stops CSRF. LegacyRequestHeader is its
+// name before the project was renamed from bugspot: a widget loaded before an update sends it.
+const (
+	RequestHeader       = "X-Pinpath-Request"
+	LegacyRequestHeader = "X-Bugspot-Request"
+)
 
 // caller is who sent the request and what they may do.
 type caller struct {
@@ -46,7 +50,7 @@ func (s *Server) api(h handler, write bool) http.Handler {
 		}
 		agent := id != nil && id.Provider == auth.ProviderAgent
 		if write && !agent {
-			if r.Header.Get(RequestHeader) == "" {
+			if r.Header.Get(RequestHeader) == "" && r.Header.Get(LegacyRequestHeader) == "" {
 				writeError(w, http.StatusForbidden, "csrf", "the "+RequestHeader+" header is required")
 				return
 			}
@@ -117,11 +121,11 @@ func (s *Server) identify(r *http.Request) (*auth.Identity, error) {
 }
 
 func agentToken(r *http.Request) string {
-	token := r.Header.Get(auth.TokenHeader)
+	token := auth.HeaderToken(r)
 	if token == "" {
 		token, _ = strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	}
-	if strings.HasPrefix(token, secret.AgentPrefix) {
+	if secret.IsAgentToken(token) {
 		return token
 	}
 	return ""

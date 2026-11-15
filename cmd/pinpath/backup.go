@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/backup"
-	"github.com/svyatoslavratov/bugspot/internal/config"
+	"github.com/svyatoslavratov/pinpath/internal/backup"
+	"github.com/svyatoslavratov/pinpath/internal/config"
 )
 
 // backup writes one snapshot of the database; it works while the service runs.
 func (a *app) backup(args []string) error {
 	fs := a.flags("backup")
-	out := fs.String("o", "", "file to write (default: a dated file in BUGSPOT_BACKUP_DIR, else in the current directory)")
+	out := fs.String("o", "", "file to write (default: a dated file in PINPATH_BACKUP_DIR, else in the current directory)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}

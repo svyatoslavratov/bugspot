@@ -68,16 +68,16 @@ jobs:
         run: go tool cover -func=coverage.out | tail -n 1
       - name: Coverage for Coveralls
         # The shared store tests are a test helper, not part of the service.
-        run: grep -v -E '^github.com/svyatoslavratov/bugspot/internal/store/storetest/' coverage.out > coverage.coveralls.out
+        run: grep -v -E '^github.com/svyatoslavratov/pinpath/internal/store/storetest/' coverage.out > coverage.coveralls.out
       - uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
         with:
           file: coverage.coveralls.out
           format: golang
           fail-on-error: false
       - name: Build
-        run: CGO_ENABLED=0 go build -trimpath -o bin/bugspot ./cmd/bugspot
+        run: CGO_ENABLED=0 go build -trimpath -o bin/pinpath ./cmd/pinpath
       - name: The demo compiles to WebAssembly
-        run: GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/bugspot-wasm
+        run: GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/pinpath-wasm
 
   lint:
     runs-on: ubuntu-latest
@@ -116,15 +116,15 @@ jobs:
         with:
           context: .
           load: true
-          tags: bugspot:ci
+          tags: pinpath:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Run it read-only and answer
         run: |
-          docker run -d --name bugspot --read-only -p 8090:8090 -e BUGSPOT_AUTH=anonymous -e 'BUGSPOT_VIEW=*' -e 'BUGSPOT_COMMENT=*' bugspot:ci
+          docker run -d --name pinpath --read-only -p 8090:8090 -e PINPATH_AUTH=anonymous -e 'PINPATH_VIEW=*' -e 'PINPATH_COMMENT=*' pinpath:ci
           for attempt in $(seq 20); do curl -fs http://localhost:8090/healthz && break; sleep 1; done
           curl -fs http://localhost:8090/widget.js -o /dev/null
           curl -fs http://localhost:8090/api/v1/session | grep -q '"visible":true'
       - name: Logs
         if: always()
-        run: docker logs bugspot || true
+        run: docker logs pinpath || true

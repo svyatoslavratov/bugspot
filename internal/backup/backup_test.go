@@ -58,7 +58,7 @@ func TestTakeNamesBySnapshotTime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if filepath.Base(path) != "bugspot-20261106-120000.db" {
+	if filepath.Base(path) != "pinpath-20261106-120000.db" {
 		t.Fatalf("path = %s", path)
 	}
 	if info, err := os.Stat(dir); err != nil || info.Mode().Perm() != 0o700 {
@@ -69,8 +69,9 @@ func TestTakeNamesBySnapshotTime(t *testing.T) {
 func TestPruneKeepsRecentNewestAndForeignFiles(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{
-		Name(day.AddDate(0, 0, -30)), Name(day.AddDate(0, 0, -15)), Name(day.AddDate(0, 0, -2)), Name(day),
-		"notes.txt", "bugspot-latest.db",
+		// Snapshots written before the rename from bugspot are pruned as well.
+		"bugspot-" + day.AddDate(0, 0, -30).UTC().Format(stamp) + ".db", Name(day.AddDate(0, 0, -15)), Name(day.AddDate(0, 0, -2)), Name(day),
+		"notes.txt", "pinpath-latest.db",
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name), nil, 0o600); err != nil {
 			t.Fatal(err)
@@ -80,7 +81,7 @@ func TestPruneKeepsRecentNewestAndForeignFiles(t *testing.T) {
 	if err != nil || removed != 2 {
 		t.Fatalf("removed = %d, %v", removed, err)
 	}
-	want := []string{"bugspot-20261104-120000.db", "bugspot-20261106-120000.db", "bugspot-latest.db", "notes.txt"}
+	want := []string{"notes.txt", "pinpath-20261104-120000.db", "pinpath-20261106-120000.db", "pinpath-latest.db"}
 	if got := files(t, dir); !slices.Equal(got, want) {
 		t.Fatalf("left = %v", got)
 	}
@@ -89,7 +90,7 @@ func TestPruneKeepsRecentNewestAndForeignFiles(t *testing.T) {
 	if removed, err := Prune(dir, 1, day.AddDate(0, 1, 0)); err != nil || removed != 1 {
 		t.Fatalf("removed = %d, %v", removed, err)
 	}
-	if got := files(t, dir); !slices.Contains(got, "bugspot-20261106-120000.db") {
+	if got := files(t, dir); !slices.Contains(got, "pinpath-20261106-120000.db") {
 		t.Fatalf("the newest snapshot is gone: %v", got)
 	}
 	if removed, err := Prune(dir, 0, day.AddDate(1, 0, 0)); err != nil || removed != 0 {

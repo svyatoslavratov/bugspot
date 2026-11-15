@@ -21,11 +21,11 @@ import type {
 } from './types';
 
 export interface ApiOptions {
-  /** Service root, ending with a slash: https://app.example.com/bugspot/ */
+  /** Service root, ending with a slash: https://app.example.com/pinpath/ */
   base: string;
   /** A custom fetch (the demo runs the API in WebAssembly). */
   fetch?: typeof fetch;
-  /** A short-lived JWT for the jwt provider, sent in X-Bugspot-Token. */
+  /** A short-lived JWT for the jwt provider, sent in X-Pinpath-Token. */
   token?: () => string | null | undefined | Promise<string | null | undefined>;
 }
 
@@ -55,10 +55,10 @@ export function createApi(options: ApiOptions) {
     keepalive = false,
   ): Promise<Response> {
     const headers: Record<string, string> = {};
-    if (method !== 'GET') headers['X-Bugspot-Request'] = '1';
+    if (method !== 'GET') headers['X-Pinpath-Request'] = '1';
     if (body !== undefined && json) headers['Content-Type'] = 'application/json';
     const token = await options.token?.();
-    if (token) headers['X-Bugspot-Token'] = token;
+    if (token) headers['X-Pinpath-Token'] = token;
     let res: Response;
     try {
       res = await doFetch(base + path, { method, headers, body, credentials: 'include', keepalive });

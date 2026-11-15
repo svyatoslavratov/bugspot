@@ -5,6 +5,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-15
+
+### Changed
+
+- bugspot is now **pinpath**: it does more than pin comments since the screen map came. The
+  repository is github.com/svyatoslavratov/pinpath (old links redirect), the Go module, the binary
+  and the image are `pinpath` (`ghcr.io/svyatoslavratov/pinpath`), and the names inside follow:
+  `PINPATH_*` variables, `data-pinpath-*` attributes, `X-Pinpath-Token` and `X-Pinpath-Request`
+  headers, `ppt_` agent tokens and `ppk_` access keys, `?pinpath_key=` links, `window.pinpath` and
+  `window.pinpathConfig`, `<pinpath-widget>`, the `pinpath.db` file and `pinpath-*.db` snapshots.
+- What was set up under the old names keeps working: `BUGSPOT_*` variables (listed in a warning at
+  start), `data-bugspot-*` attributes on pages, `X-Bugspot-*` headers, `bsp_`/`bsk_` credentials, the
+  `bugspot_anon` and `bugspot_key` cookies, `?bugspot_key=` links, `window.bugspotConfig`, settings
+  saved in browsers, snapshots of the map taken before, the `bugspot.db` file (used while there is
+  no `pinpath.db`) and `bugspot-*.db` snapshots (pruned as before).
+- Scripts that run the binary by name need `pinpath` instead of `bugspot`, e.g.
+  `docker compose exec pinpath pinpath token create`.
+- The Docker Compose example names its volume `pinpath-data`. A setup copied from the example
+  before keeps its data only under the old name: keep `bugspot-data` in your compose file (or copy
+  the volume) when you switch the image.
+
 ## [0.4.0] - 2026-11-15
 
 ### Added

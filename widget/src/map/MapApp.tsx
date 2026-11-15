@@ -174,7 +174,7 @@ function MapCanvas() {
   };
   const exportManifest = () =>
     api.exportManifest().then(
-      (text) => download('bugspot-map.json', text + '\n'),
+      (text) => download('pinpath-map.json', text + '\n'),
       (e: unknown) => say('danger', e instanceof Error ? e.message : String(e)),
     );
   const importManifest = async (f: File) => {

@@ -15,8 +15,8 @@ import (
 	"unicode/utf8"
 )
 
-// client talks to a running service with an agent token. BUGSPOT_URL is the service root as the
-// browser sees it, Basic Auth included if the stand has one: https://user:pass@dev.example.com/bugspot.
+// client talks to a running service with an agent token. PINPATH_URL is the service root as the
+// browser sees it, Basic Auth included if the stand has one: https://user:pass@dev.example.com/pinpath.
 type client struct {
 	base  *url.URL
 	token string
@@ -24,14 +24,14 @@ type client struct {
 }
 
 func (a *app) newClient() (*client, error) {
-	raw := a.getenv("BUGSPOT_URL")
-	token := a.getenv("BUGSPOT_TOKEN")
+	raw := a.env("PINPATH_URL")
+	token := a.env("PINPATH_TOKEN")
 	if raw == "" || token == "" {
-		return nil, errors.New("set BUGSPOT_URL (the service root, e.g. https://app.example.com/bugspot) and BUGSPOT_TOKEN (an agent token)")
+		return nil, errors.New("set PINPATH_URL (the service root, e.g. https://app.example.com/pinpath) and PINPATH_TOKEN (an agent token)")
 	}
 	base, err := url.Parse(strings.TrimSuffix(raw, "/") + "/")
 	if err != nil {
-		return nil, fmt.Errorf("BUGSPOT_URL: %w", err)
+		return nil, fmt.Errorf("PINPATH_URL: %w", err)
 	}
 	return &client{base: base, token: token, http: &http.Client{Timeout: 30 * time.Second}}, nil
 }
@@ -49,15 +49,15 @@ func (c *client) do(method, path string, body any, out any) error {
 		}
 		reader = bytes.NewReader(data)
 	}
-	req, err := http.NewRequest(method, c.base.ResolveReference(ref).String(), reader) //nolint:noctx,gosec // the operator's BUGSPOT_URL
+	req, err := http.NewRequest(method, c.base.ResolveReference(ref).String(), reader) //nolint:noctx,gosec // the operator's PINPATH_URL
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-Bugspot-Token", c.token)
+	req.Header.Set("X-Pinpath-Token", c.token)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	res, err := c.http.Do(req) //nolint:gosec // the operator's BUGSPOT_URL
+	res, err := c.http.Do(req) //nolint:gosec // the operator's PINPATH_URL
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func ref(arg string) string { return url.PathEscape(strings.TrimPrefix(arg, "#")
 
 func (a *app) threads(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: bugspot threads list|show|reply|status|screenshot")
+		return errors.New("usage: pinpath threads list|show|reply|status|screenshot")
 	}
 	c, err := a.newClient()
 	if err != nil {
@@ -174,7 +174,7 @@ func (a *app) threads(args []string) error {
 		fmt.Fprintf(a.stderr, "%d of %d\n", len(page.Data), page.Meta.Total)
 	case "show":
 		if len(args) != 2 {
-			return errors.New("usage: bugspot threads show <number or id>")
+			return errors.New("usage: pinpath threads show <number or id>")
 		}
 		var t cliThread
 		if err := c.do(http.MethodGet, "api/v1/threads/"+ref(args[1]), nil, &t); err != nil {
@@ -186,26 +186,26 @@ func (a *app) threads(args []string) error {
 			fmt.Fprintf(a.stdout, "checked by a person: %s\n", t.VerifiedBy.Name)
 		}
 		if t.HasScreenshot {
-			fmt.Fprintf(a.stdout, "screenshot: bugspot threads screenshot %d --out screenshot-%d.png\n", t.Number, t.Number)
+			fmt.Fprintf(a.stdout, "screenshot: pinpath threads screenshot %d --out screenshot-%d.png\n", t.Number, t.Number)
 		}
 		for _, r := range t.Replies {
 			fmt.Fprintf(a.stdout, "\n— %s (%s, %s):\n%s\n", r.Author.Name, r.Author.Kind, r.CreatedAt.Local().Format("2006-01-02 15:04"), r.Body)
 		}
 	case "reply":
 		if len(args) != 3 {
-			return errors.New(`usage: bugspot threads reply <number or id> "text"`)
+			return errors.New(`usage: pinpath threads reply <number or id> "text"`)
 		}
 		return c.do(http.MethodPost, "api/v1/threads/"+ref(args[1])+"/replies", map[string]string{"body": args[2]}, nil)
 	case "status":
 		if len(args) != 3 {
-			return errors.New("usage: bugspot threads status <number or id> open|in_progress|fixed|wontfix")
+			return errors.New("usage: pinpath threads status <number or id> open|in_progress|fixed|wontfix")
 		}
 		return c.do(http.MethodPatch, "api/v1/threads/"+ref(args[1]), map[string]string{"status": args[2]}, nil)
 	case "screenshot":
 		fs := a.flags("threads screenshot")
 		out := fs.String("out", "", "file to write (required)")
 		if len(args) < 2 {
-			return errors.New("usage: bugspot threads screenshot <number or id> --out file")
+			return errors.New("usage: pinpath threads screenshot <number or id> --out file")
 		}
 		if err := fs.Parse(args[2:]); err != nil {
 			return err

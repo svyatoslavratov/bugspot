@@ -14,9 +14,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/secret"
-	"github.com/svyatoslavratov/bugspot/internal/store/memory"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/secret"
+	"github.com/svyatoslavratov/pinpath/internal/store/memory"
 )
 
 func mustRules(t *testing.T, s string) Rules {

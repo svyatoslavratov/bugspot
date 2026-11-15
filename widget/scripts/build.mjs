@@ -53,7 +53,7 @@ await build({
     emptyOutDir: false,
     target: 'es2020',
     reportCompressedSize: false,
-    lib: { entry: 'src/loader.ts', name: 'bugspotLoader', formats: ['iife'], fileName: () => 'widget.js' },
+    lib: { entry: 'src/loader.ts', name: 'pinpathLoader', formats: ['iife'], fileName: () => 'widget.js' },
   },
 });
 
@@ -67,7 +67,7 @@ await writeFile(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
     <link rel="icon" href="data:," />
-    <title>bugspot</title>
+    <title>pinpath</title>
     <script type="module" src="./${mapEntry}"></script>
   </head>
   <body>

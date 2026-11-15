@@ -73,7 +73,7 @@ func (s *Server) cors(next http.Handler) http.Handler {
 			h.Add("Vary", "Origin")
 			if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
 				h.Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE")
-				h.Set("Access-Control-Allow-Headers", "Content-Type, X-Bugspot-Request, X-Bugspot-Token")
+				h.Set("Access-Control-Allow-Headers", "Content-Type, X-Pinpath-Request, X-Pinpath-Token, X-Bugspot-Request, X-Bugspot-Token")
 				h.Set("Access-Control-Max-Age", "600")
 				w.WriteHeader(http.StatusNoContent)
 				return

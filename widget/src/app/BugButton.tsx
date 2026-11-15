@@ -72,7 +72,7 @@ export function BugButton({
 
   return (
     <div
-      className={`bugspot-bug ${drag ? 'is-dragging' : ''}`}
+      className={`pinpath-bug ${drag ? 'is-dragging' : ''}`}
       style={{ left: point.x, top: point.y }}
       onPointerDown={down}
       onPointerMove={move}
@@ -94,10 +94,10 @@ export function BugButton({
           size="large"
           aria-label={t.title}
           aria-expanded={open}
-          className="bugspot-bug-button"
+          className="pinpath-bug-button"
         />
       </Tooltip>
-      {count > 0 && <span className="bugspot-bug-count">{count > 99 ? '99+' : count}</span>}
+      {count > 0 && <span className="pinpath-bug-count">{count > 99 ? '99+' : count}</span>}
     </div>
   );
 }

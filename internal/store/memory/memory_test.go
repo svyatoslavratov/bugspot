@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/store"
-	"github.com/svyatoslavratov/bugspot/internal/store/memory"
-	"github.com/svyatoslavratov/bugspot/internal/store/storetest"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/store"
+	"github.com/svyatoslavratov/pinpath/internal/store/memory"
+	"github.com/svyatoslavratov/pinpath/internal/store/storetest"
 )
 
 func TestStore(t *testing.T) {

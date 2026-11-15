@@ -11,9 +11,9 @@
     closed: { view: 'role:admin', comment: 'role:admin', moderate: 'role:admin' },
     public: { view: '*', comment: '*', moderate: 'role:admin' },
   };
-  const stored = (key, fallback) => localStorage.getItem(`bugspot-demo:${key}`) || fallback;
+  const stored = (key, fallback) => localStorage.getItem(`pinpath-demo:${key}`) || fallback;
   const state = { persona: stored('persona', 'anna'), preset: stored('preset', 'team'), lang: stored('lang', navigator.language.startsWith('ru') ? 'ru' : 'en') };
-  const jarKey = 'bugspot-demo:cookies';
+  const jarKey = 'pinpath-demo:cookies';
   const jar = JSON.parse(localStorage.getItem(jarKey) || '{}');
   const base = new URL('./', document.baseURI).href;
 
@@ -50,7 +50,7 @@
     }
     const cookie = Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; ');
     if (cookie) headers.cookie = cookie;
-    const out = window.bugspotServer.serve({ method: init.method || 'GET', path, headers, body: await bodyBytes(init.body) });
+    const out = window.pinpathServer.serve({ method: init.method || 'GET', path, headers, body: await bodyBytes(init.body) });
     const resHeaders = new Headers();
     for (const [name, value] of out.headers) {
       if (name === 'set-cookie') {
@@ -64,17 +64,17 @@
     const empty = out.status === 204 || out.status === 304;
     return new Response(empty ? null : out.body, { status: out.status, headers: resHeaders });
   }
-  window.bugspotConfig = { fetch: demoFetch, appVersion: '0.4.1' };
+  window.pinpathConfig = { fetch: demoFetch, appVersion: '0.4.1' };
 
   // --- mounting and the controls ------------------------------------------------------------
   const status = document.getElementById('status');
   function mount() {
-    window.bugspot?.destroy();
-    document.querySelector('script[data-bugspot-loader]')?.remove();
-    window.bugspotServer.configure(presets[state.preset]);
+    window.pinpath?.destroy();
+    document.querySelector('script[data-pinpath-loader]')?.remove();
+    window.pinpathServer.configure(presets[state.preset]);
     const s = document.createElement('script');
     s.src = 'widget.js';
-    s.dataset.bugspotLoader = '';
+    s.dataset.pinpathLoader = '';
     s.dataset.api = './';
     s.dataset.lang = state.lang;
     s.dataset.route = 'hash';
@@ -87,15 +87,15 @@
     select.value = state[id];
     select.addEventListener('change', () => {
       state[id] = select.value;
-      localStorage.setItem(`bugspot-demo:${id}`, select.value);
+      localStorage.setItem(`pinpath-demo:${id}`, select.value);
       if (id === 'persona') for (const k of Object.keys(jar)) delete jar[k];
       localStorage.setItem(jarKey, JSON.stringify(jar));
       mount();
     });
   }
   document.getElementById('reset').addEventListener('click', () => {
-    window.bugspotServer.reset();
-    localStorage.removeItem('bugspot:prefs');
+    window.pinpathServer.reset();
+    localStorage.removeItem('pinpath:prefs');
     mount();
   });
 
@@ -103,13 +103,13 @@
   // API with an agent token — so it cannot resolve a thread or mark it checked either.
   const say = (line) => {
     status.textContent = `Agent: ${line}`;
-    window.dispatchEvent(new CustomEvent('bugspot-demo-agent', { detail: line }));
+    window.dispatchEvent(new CustomEvent('pinpath-demo-agent', { detail: line }));
   };
   const asAgent = async (method, path, body) => {
-    const out = window.bugspotServer.serve({
+    const out = window.pinpathServer.serve({
       method,
       path,
-      headers: { 'x-bugspot-token': window.bugspotServer.agentToken, 'content-type': 'application/json' },
+      headers: { 'x-pinpath-token': window.pinpathServer.agentToken, 'content-type': 'application/json' },
       body: body ? new TextEncoder().encode(JSON.stringify(body)) : null,
     });
     return out.body.length ? JSON.parse(new TextDecoder().decode(out.body)) : null;
@@ -123,23 +123,23 @@
     await pause(1200);
     await asAgent('PATCH', `/api/v1/threads/${thread.id}`, { status: 'in_progress' });
     say(`set_status #${thread.number} in_progress`);
-    window.bugspot?.refresh();
+    window.pinpath?.refresh();
     await pause(1600);
     await asAgent('POST', `/api/v1/threads/${thread.id}/replies`, {
       body: 'Fixed in 0.4.2: the cell wraps now and keeps the currency. Please check.',
     });
     say(`reply #${thread.number} “Fixed in 0.4.2…”`);
-    window.bugspot?.refresh();
+    window.pinpath?.refresh();
     await pause(1200);
     await asAgent('PATCH', `/api/v1/threads/${thread.id}`, { status: 'fixed' });
     say(`set_status #${thread.number} fixed — waiting for a person to check`);
-    window.bugspot?.refresh();
+    window.pinpath?.refresh();
   });
 
-  window.onBugspotServerReady = mount;
+  window.onPinpathServerReady = mount;
   status.textContent = 'Starting the API…';
   const go = new Go();
-  WebAssembly.instantiateStreaming(fetch('bugspot.wasm'), go.importObject).then(
+  WebAssembly.instantiateStreaming(fetch('pinpath.wasm'), go.importObject).then(
     (result) => go.run(result.instance),
     (error) => (status.textContent = `Could not start the API: ${error}`),
   );

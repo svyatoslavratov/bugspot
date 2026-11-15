@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/store"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/store"
 )
 
 var base = time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC)

@@ -31,8 +31,8 @@ func TestPublicKeyAndChain(t *testing.T) {
 	}
 	for _, value := range []string{pemText, path} {
 		c, err := Load(env(map[string]string{
-			"BUGSPOT_AUTH": "jwt,header,anonymous", "BUGSPOT_JWT_PUBLIC_KEY": value, "BUGSPOT_TRUSTED_PROXIES": "10.0.0.1",
-			"BUGSPOT_LOG_LEVEL": "debug",
+			"PINPATH_AUTH": "jwt,header,anonymous", "PINPATH_JWT_PUBLIC_KEY": value, "PINPATH_TRUSTED_PROXIES": "10.0.0.1",
+			"PINPATH_LOG_LEVEL": "debug",
 		}))
 		if err != nil || c.JWTPublicKey == nil {
 			t.Fatalf("public key from %.20q: %v", value, err)
@@ -46,13 +46,13 @@ func TestPublicKeyAndChain(t *testing.T) {
 		}
 	}
 	for name, value := range map[string]string{"no PEM": "-----BEGIN nothing", "missing file": "/nonexistent/key.pem"} {
-		if _, err := Load(env(map[string]string{"BUGSPOT_AUTH": "jwt", "BUGSPOT_JWT_PUBLIC_KEY": value})); err == nil || !strings.Contains(err.Error(), "JWT_PUBLIC_KEY") {
+		if _, err := Load(env(map[string]string{"PINPATH_AUTH": "jwt", "PINPATH_JWT_PUBLIC_KEY": value})); err == nil || !strings.Contains(err.Error(), "JWT_PUBLIC_KEY") {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
 	_, err := Load(env(map[string]string{
-		"BUGSPOT_LOG_LEVEL": "loud", "BUGSPOT_ENABLED": "maybe", "BUGSPOT_RATE_READ": "-1", "BUGSPOT_JWT_SECRET_FILE": "/nonexistent",
-		"BUGSPOT_FORWARD_MAP": "id=", "BUGSPOT_TRUSTED_PROXIES": "nope", "BUGSPOT_AUTH": "jwt jwt forward", "BUGSPOT_FORWARD_URL": "http://app",
+		"PINPATH_LOG_LEVEL": "loud", "PINPATH_ENABLED": "maybe", "PINPATH_RATE_READ": "-1", "PINPATH_JWT_SECRET_FILE": "/nonexistent",
+		"PINPATH_FORWARD_MAP": "id=", "PINPATH_TRUSTED_PROXIES": "nope", "PINPATH_AUTH": "jwt jwt forward", "PINPATH_FORWARD_URL": "http://app",
 	}))
 	for _, want := range []string{"LOG_LEVEL", "ENABLED", "RATE_READ", "JWT_SECRET_FILE", "FORWARD_MAP", "TRUSTED_PROXIES", `"jwt" twice`, "FORWARD_COOKIES"} {
 		if err == nil || !strings.Contains(err.Error(), want) {

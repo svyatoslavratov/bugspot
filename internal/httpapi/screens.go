@@ -15,7 +15,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
 )
 
 // The screen map API: the widget reports visits, transitions and the look of states (people who
@@ -234,7 +234,7 @@ func (v *visitInput) check() error {
 }
 
 // visits saves what the widget saw: states of screens and transitions (observed after a click,
-// read from links, or declared by the page with data-bugspot-to).
+// read from links, or declared by the page with data-pinpath-to).
 func (s *Server) visits(w http.ResponseWriter, r *http.Request, c caller) error {
 	if !c.perms.Collect {
 		return errForbidden
@@ -716,7 +716,7 @@ func (s *Server) exportMap(w http.ResponseWriter, r *http.Request, c caller) err
 		}
 		out.Screens[i].To = append(out.Screens[i].To, edge)
 	}
-	w.Header().Set("Content-Disposition", `attachment; filename="bugspot-map.json"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="pinpath-map.json"`)
 	writeJSON(w, http.StatusOK, out)
 	return nil
 }

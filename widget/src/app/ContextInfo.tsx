@@ -14,7 +14,7 @@ export function ContextInfo({ context, anchor }: { context: Partial<PageContext>
   const failed = context.network ?? [];
   const problems = errors.length + failed.length;
   return (
-    <div className="bugspot-context">
+    <div className="pinpath-context">
       <Button
         variant="minimal"
         size="small"
@@ -24,7 +24,7 @@ export function ContextInfo({ context, anchor }: { context: Partial<PageContext>
         onClick={() => setOpen((o) => !o)}
       />
       <Collapse isOpen={open}>
-        <HTMLTable compact className="bugspot-context-table">
+        <HTMLTable compact className="pinpath-context-table">
           <tbody>
             {context.userAgent && (
               <tr>
@@ -51,7 +51,7 @@ export function ContextInfo({ context, anchor }: { context: Partial<PageContext>
               .map((a, i, all) => (
                 <tr key={i}>
                   <th>{all.length > 1 ? `${t.element} ${i + 1}` : t.element}</th>
-                  <td className="bugspot-code">{a.source ?? a.selector}</td>
+                  <td className="pinpath-code">{a.source ?? a.selector}</td>
                 </tr>
               ))}
           </tbody>
@@ -59,9 +59,9 @@ export function ContextInfo({ context, anchor }: { context: Partial<PageContext>
         {errors.length > 0 && (
           <>
             <h5 className={Classes.HEADING}>{t.consoleErrors}</h5>
-            <ul className="bugspot-log">
+            <ul className="pinpath-log">
               {errors.map((e, i) => (
-                <li key={i} className="bugspot-code">
+                <li key={i} className="pinpath-code">
                   {e.message}
                 </li>
               ))}
@@ -71,9 +71,9 @@ export function ContextInfo({ context, anchor }: { context: Partial<PageContext>
         {failed.length > 0 && (
           <>
             <h5 className={Classes.HEADING}>{t.failedRequests}</h5>
-            <ul className="bugspot-log">
+            <ul className="pinpath-log">
               {failed.map((n, i) => (
-                <li key={i} className="bugspot-code">
+                <li key={i} className="pinpath-code">
                   {n.status || 'ERR'} {n.method} {n.url}
                   {n.requestId ? ` · ${n.requestId}` : ''}
                 </li>

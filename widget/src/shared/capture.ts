@@ -40,7 +40,7 @@ export function redactUrl(raw: string): string {
 
 /**
  * Wraps console.error/warn, fetch and XMLHttpRequest and listens to uncaught errors. Requests to
- * the bugspot service itself (ignorePrefix) are not recorded. uninstall() restores everything.
+ * the pinpath service itself (ignorePrefix) are not recorded. uninstall() restores everything.
  */
 export function installCapture(ignorePrefix: string): Capture {
   const capture: Capture = { console: [], network: [], uninstall: () => undefined };
@@ -119,13 +119,13 @@ export function installCapture(ignorePrefix: string): Capture {
   const proto = XMLHttpRequest.prototype;
   const open = proto.open;
   const sendXhr = proto.send;
-  type Tracked = XMLHttpRequest & { __bugspot?: { method: string; url: string; started: number } };
+  type Tracked = XMLHttpRequest & { __pinpath?: { method: string; url: string; started: number } };
   proto.open = function (this: Tracked, method: string, url: string | URL, ...rest: unknown[]) {
-    this.__bugspot = { method: method.toUpperCase(), url: String(url), started: 0 };
+    this.__pinpath = { method: method.toUpperCase(), url: String(url), started: 0 };
     return (open as (...a: unknown[]) => void).call(this, method, url, ...rest);
   } as typeof proto.open;
   proto.send = function (this: Tracked, body?: Document | XMLHttpRequestBodyInit | null) {
-    const info = this.__bugspot;
+    const info = this.__pinpath;
     if (info && !own(info.url)) {
       info.started = performance.now();
       this.addEventListener('loadend', () => {

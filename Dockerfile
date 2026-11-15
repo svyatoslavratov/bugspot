@@ -17,17 +17,17 @@ RUN go mod download
 COPY . .
 COPY --from=widget /src/internal/widgetfs/dist ./internal/widgetfs/dist
 ARG VERSION=dev
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/bugspot ./cmd/bugspot \
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/pinpath ./cmd/pinpath \
     && mkdir -p /out/data
 
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
-COPY --from=server /out/bugspot /usr/local/bin/bugspot
+COPY --from=server /out/pinpath /usr/local/bin/pinpath
 COPY --from=server --chown=nonroot:nonroot /out/data /data
-ENV BUGSPOT_ADDR=:8090 \
-    BUGSPOT_DATA_DIR=/data
+ENV PINPATH_ADDR=:8090 \
+    PINPATH_DATA_DIR=/data
 EXPOSE 8090
 VOLUME ["/data"]
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s CMD ["bugspot", "healthcheck"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s CMD ["pinpath", "healthcheck"]
 USER nonroot:nonroot
-ENTRYPOINT ["bugspot"]
+ENTRYPOINT ["pinpath"]
 CMD ["serve"]

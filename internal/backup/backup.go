@@ -9,14 +9,18 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
 
 const (
-	prefix = "bugspot-"
-	suffix = ".db"
-	stamp  = "20060102-150405"
+	prefix = "pinpath-"
+	// legacyPrefix names the snapshots written before the project was renamed from bugspot: they
+	// are counted and pruned as well.
+	legacyPrefix = "bugspot-"
+	suffix       = ".db"
+	stamp        = "20060102-150405"
 	// fresh: a snapshot younger than this makes the one at start unnecessary, so a container that
 	// restarts in a loop does not fill the disk.
 	fresh = 10 * time.Minute
@@ -60,19 +64,34 @@ func snapshots(dir string) ([]string, []time.Time, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	var names []string
-	var times []time.Time
-	for _, e := range entries { // os.ReadDir sorts by name
+	type snap struct {
+		name string
+		at   time.Time
+	}
+	var found []snap
+	for _, e := range entries {
 		n := e.Name()
-		if e.IsDir() || !strings.HasPrefix(n, prefix) || !strings.HasSuffix(n, suffix) {
+		if e.IsDir() || !strings.HasSuffix(n, suffix) {
 			continue
 		}
-		t, err := time.Parse(stamp, strings.TrimSuffix(strings.TrimPrefix(n, prefix), suffix))
+		rest, ok := strings.CutPrefix(n, prefix)
+		if !ok {
+			if rest, ok = strings.CutPrefix(n, legacyPrefix); !ok {
+				continue
+			}
+		}
+		t, err := time.Parse(stamp, strings.TrimSuffix(rest, suffix))
 		if err != nil {
 			continue
 		}
-		names = append(names, n)
-		times = append(times, t)
+		found = append(found, snap{n, t})
+	}
+	// Oldest first, whatever the prefix.
+	slices.SortStableFunc(found, func(a, b snap) int { return a.at.Compare(b.at) })
+	names := make([]string, len(found))
+	times := make([]time.Time, len(found))
+	for i, s := range found {
+		names[i], times[i] = s.name, s.at
 	}
 	return names, times, nil
 }

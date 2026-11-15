@@ -125,9 +125,9 @@ test('the crawl starts at the root page the map knows, with the hash that opens 
         screen('/', { exampleUrl: 'https://app.test/' }),
       ]),
     ),
-  ).toBe('https://app.test/#bugspot-crawl');
+  ).toBe('https://app.test/#pinpath-crawl');
   expect(crawlAddress(map([screen('/campaigns', { exampleUrl: 'https://app.test/#/campaigns' })]))).toBe(
-    'https://app.test/#bugspot-crawl',
+    'https://app.test/#pinpath-crawl',
   );
 });
 

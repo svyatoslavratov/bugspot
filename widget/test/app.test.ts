@@ -62,7 +62,7 @@ function key(init: KeyboardEventInit) {
   });
 }
 
-const picking = () => container.querySelector('.bugspot-pick-bar') !== null;
+const picking = () => container.querySelector('.pinpath-pick-bar') !== null;
 
 describe('App', () => {
   test('closing the panel cancels the form, so the shortcut picks again and the form is gone', async () => {
@@ -76,10 +76,10 @@ describe('App', () => {
       target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
     });
     await flush();
-    expect(container.querySelector('.bugspot-new')).not.toBeNull();
+    expect(container.querySelector('.pinpath-new')).not.toBeNull();
 
-    act(() => container.querySelector<HTMLButtonElement>('.bugspot-panel-header [aria-label="Close"]')!.click());
-    expect(container.querySelector('.bugspot-panel')).toBeNull();
+    act(() => container.querySelector<HTMLButtonElement>('.pinpath-panel-header [aria-label="Close"]')!.click());
+    expect(container.querySelector('.pinpath-panel')).toBeNull();
 
     key({ code: 'KeyC', key: 'c', altKey: true });
     expect(picking()).toBe(true);
@@ -88,8 +88,8 @@ describe('App', () => {
 
     act(() => ref.current!.open());
     await flush();
-    expect(container.querySelector('.bugspot-panel')).not.toBeNull();
-    expect(container.querySelector('.bugspot-new')).toBeNull();
+    expect(container.querySelector('.pinpath-panel')).not.toBeNull();
+    expect(container.querySelector('.pinpath-new')).toBeNull();
   });
 
   test('tiny box expanded to the full form, then the panel closed: the shortcut picks again', async () => {
@@ -100,10 +100,10 @@ describe('App', () => {
       target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
     });
     await flush();
-    act(() => container.querySelector<HTMLButtonElement>('.bugspot-quick [aria-label="Open the full form"]')!.click());
+    act(() => container.querySelector<HTMLButtonElement>('.pinpath-quick [aria-label="Open the full form"]')!.click());
     await flush();
-    expect(container.querySelector('.bugspot-new')).not.toBeNull();
-    act(() => container.querySelector<HTMLButtonElement>('.bugspot-panel-header [aria-label="Close"]')!.click());
+    expect(container.querySelector('.pinpath-new')).not.toBeNull();
+    act(() => container.querySelector<HTMLButtonElement>('.pinpath-panel-header [aria-label="Close"]')!.click());
     key({ code: 'KeyC', key: 'c', altKey: true });
     expect(picking()).toBe(true);
   });

@@ -37,7 +37,7 @@ func TestRunCommands(t *testing.T) {
 	if r := run(t, nil, "version"); r.code != 0 || strings.TrimSpace(r.stdout) != version {
 		t.Fatalf("version = %+v", r)
 	}
-	if r := run(t, nil, "help"); r.code != 0 || !strings.Contains(r.stdout, "bugspot mcp") {
+	if r := run(t, nil, "help"); r.code != 0 || !strings.Contains(r.stdout, "pinpath mcp") {
 		t.Fatalf("help = %+v", r)
 	}
 	if r := run(t, nil, "launch"); r.code != 2 || !strings.Contains(r.stderr, `unknown command "launch"`) {
@@ -46,19 +46,19 @@ func TestRunCommands(t *testing.T) {
 	if r := run(t, nil, "token", "create", "-h"); r.code != 0 || !strings.Contains(r.stderr, "-scopes") {
 		t.Fatalf("flag help = %+v", r)
 	}
-	if r := run(t, map[string]string{"BUGSPOT_AUTH": "ldap"}, "serve"); r.code != 1 || !strings.Contains(r.stderr, "ldap") {
+	if r := run(t, map[string]string{"PINPATH_AUTH": "ldap"}, "serve"); r.code != 1 || !strings.Contains(r.stderr, "ldap") {
 		t.Fatalf("bad configuration = %+v", r)
 	}
-	if r := run(t, nil, "threads", "list"); r.code != 1 || !strings.Contains(r.stderr, "BUGSPOT_URL") {
+	if r := run(t, nil, "threads", "list"); r.code != 1 || !strings.Contains(r.stderr, "PINPATH_URL") {
 		t.Fatalf("client without settings = %+v", r)
 	}
-	if r := run(t, nil, "mcp"); r.code != 1 || !strings.Contains(r.stderr, "BUGSPOT_TOKEN") {
+	if r := run(t, nil, "mcp"); r.code != 1 || !strings.Contains(r.stderr, "PINPATH_TOKEN") {
 		t.Fatalf("mcp without settings = %+v", r)
 	}
 }
 
 func TestCredentials(t *testing.T) {
-	env := map[string]string{"BUGSPOT_DATA_DIR": t.TempDir()}
+	env := map[string]string{"PINPATH_DATA_DIR": t.TempDir()}
 	for _, c := range []struct {
 		args []string
 		want string
@@ -76,11 +76,11 @@ func TestCredentials(t *testing.T) {
 	}
 
 	token := run(t, env, "token", "create", "--name", "claude", "--expires", "24h")
-	if token.code != 0 || !strings.HasPrefix(token.stdout, "bsp_") || !strings.Contains(token.stderr, "shown once") {
+	if token.code != 0 || !strings.HasPrefix(token.stdout, "ppt_") || !strings.Contains(token.stderr, "shown once") {
 		t.Fatalf("token create = %+v", token)
 	}
 	key := run(t, env, "key", "create", "--name", "Customer", "--roles", "customer, qa")
-	if key.code != 0 || !strings.HasPrefix(key.stdout, "bsk_") || !strings.Contains(key.stderr, "?bugspot_key=") {
+	if key.code != 0 || !strings.HasPrefix(key.stdout, "ppk_") || !strings.Contains(key.stderr, "?pinpath_key=") {
 		t.Fatalf("key create = %+v", key)
 	}
 	list := run(t, env, "token", "list")
@@ -116,8 +116,8 @@ func TestServeAndClient(t *testing.T) {
 	dir := t.TempDir()
 	addr := freeAddr(t)
 	env := map[string]string{
-		"BUGSPOT_ADDR": addr, "BUGSPOT_DATA_DIR": dir, "BUGSPOT_PROJECT": "cli",
-		"BUGSPOT_AUTH": "anonymous", "BUGSPOT_VIEW": "*", "BUGSPOT_COMMENT": "*",
+		"PINPATH_ADDR": addr, "PINPATH_DATA_DIR": dir, "PINPATH_PROJECT": "cli",
+		"PINPATH_AUTH": "anonymous", "PINPATH_VIEW": "*", "PINPATH_COMMENT": "*",
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	server, serverOut, _ := newApp(ctx, env, "")
@@ -142,7 +142,7 @@ func TestServeAndClient(t *testing.T) {
 	post := func(method, path, contentType string, body []byte) *http.Response {
 		req, _ := http.NewRequest(method, base+path, bytes.NewReader(body))
 		req.Header.Set("Content-Type", contentType)
-		req.Header.Set("X-Bugspot-Request", "1")
+		req.Header.Set("X-Pinpath-Request", "1")
 		res, err := browser.Do(req)
 		if err != nil {
 			t.Fatal(err)
@@ -160,7 +160,7 @@ func TestServeAndClient(t *testing.T) {
 	}
 
 	token := strings.TrimSpace(run(t, env, "token", "create", "--name", "claude").stdout)
-	agent := map[string]string{"BUGSPOT_URL": base, "BUGSPOT_TOKEN": token}
+	agent := map[string]string{"PINPATH_URL": base, "PINPATH_TOKEN": token}
 	if r := run(t, agent, "threads", "list"); r.code != 0 || !strings.Contains(r.stdout, "The button is cut") || !strings.Contains(r.stderr, "1 of 1") {
 		t.Fatalf("threads list = %+v", r)
 	}
@@ -194,7 +194,7 @@ func TestServeAndClient(t *testing.T) {
 			t.Errorf("%v = %+v, want an error", args, r)
 		}
 	}
-	if r := run(t, map[string]string{"BUGSPOT_URL": base, "BUGSPOT_TOKEN": "bsp_wrong"}, "threads", "list"); r.code != 1 || !strings.Contains(r.stderr, "401") {
+	if r := run(t, map[string]string{"PINPATH_URL": base, "PINPATH_TOKEN": "ppt_wrong"}, "threads", "list"); r.code != 1 || !strings.Contains(r.stderr, "401") {
 		t.Fatalf("a wrong token = %+v", r)
 	}
 
@@ -224,7 +224,7 @@ func TestServeAndClient(t *testing.T) {
 	if err := <-served; err != nil {
 		t.Fatalf("serve after shutdown: %v", err)
 	}
-	if !strings.Contains(serverOut.String(), `"msg":"bugspot started"`) {
+	if !strings.Contains(serverOut.String(), `"msg":"pinpath started"`) {
 		t.Fatalf("no start log: %s", serverOut)
 	}
 	if r := run(t, env, "healthcheck"); r.code != 1 {
@@ -237,10 +237,10 @@ func TestServeAndClient(t *testing.T) {
 
 func TestBackupCommand(t *testing.T) {
 	data, backups := t.TempDir(), t.TempDir()
-	env := map[string]string{"BUGSPOT_DATA_DIR": data, "BUGSPOT_BACKUP_DIR": backups}
+	env := map[string]string{"PINPATH_DATA_DIR": data, "PINPATH_BACKUP_DIR": backups}
 	r := run(t, env, "backup")
 	path := strings.TrimSpace(r.stdout)
-	if r.code != 0 || filepath.Dir(path) != backups || !strings.HasPrefix(filepath.Base(path), "bugspot-") {
+	if r.code != 0 || filepath.Dir(path) != backups || !strings.HasPrefix(filepath.Base(path), "pinpath-") {
 		t.Fatalf("backup = %+v", r)
 	}
 	if _, err := os.Stat(path); err != nil {
@@ -253,7 +253,27 @@ func TestBackupCommand(t *testing.T) {
 	if _, err := os.Stat(out); err != nil {
 		t.Fatal(err)
 	}
-	if r := run(t, map[string]string{"BUGSPOT_DATA_DIR": data, "BUGSPOT_AUTH": "ldap"}, "backup"); r.code != 1 {
+	if r := run(t, map[string]string{"PINPATH_DATA_DIR": data, "PINPATH_AUTH": "ldap"}, "backup"); r.code != 1 {
 		t.Fatalf("bad configuration = %+v", r)
+	}
+}
+
+// A data directory and variables from before the rename from bugspot keep working.
+func TestLegacyDatabaseAndEnv(t *testing.T) {
+	dir := t.TempDir()
+	if got := databasePath(dir); got != filepath.Join(dir, "pinpath.db") {
+		t.Fatalf("a new directory = %s", got)
+	}
+	_ = os.WriteFile(filepath.Join(dir, "bugspot.db"), nil, 0o600)
+	if got := databasePath(dir); got != filepath.Join(dir, "bugspot.db") {
+		t.Fatalf("an old directory = %s", got)
+	}
+	_ = os.WriteFile(filepath.Join(dir, "pinpath.db"), nil, 0o600)
+	if got := databasePath(dir); got != filepath.Join(dir, "pinpath.db") {
+		t.Fatalf("both = %s", got)
+	}
+	a, _, _ := newApp(context.Background(), map[string]string{"BUGSPOT_URL": "https://old", "PINPATH_TOKEN": "ppt_x", "BUGSPOT_TOKEN": "bsp_x"}, "")
+	if a.env("PINPATH_URL") != "https://old" || a.env("PINPATH_TOKEN") != "ppt_x" || a.env("PINPATH_CHROME") != "" {
+		t.Fatalf("env = %q %q", a.env("PINPATH_URL"), a.env("PINPATH_TOKEN"))
 	}
 }

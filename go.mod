@@ -1,4 +1,4 @@
-module github.com/svyatoslavratov/bugspot
+module github.com/svyatoslavratov/pinpath
 
 go 1.26.0
 

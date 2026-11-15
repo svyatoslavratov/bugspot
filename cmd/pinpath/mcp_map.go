@@ -26,7 +26,7 @@ get_screen_image (a real thumbnail); then update_screens with a short name, a se
 screens people think of together, e.g. by role or area) and a description of what the screen is
 for and who uses it; update_states for tabs and dialogs; merge duplicates with mergeInto. Screen
 keys are routes with ids folded into {id}. A map that is empty or missing screens is built at once
-by "bugspot map crawl <app address>" (a token with the read and map scopes) or by "Build the map" in
+by "pinpath map crawl <app address>" (a token with the read and map scopes) or by "Build the map" in
 the widget; suggest it rather than guessing screens.`
 
 var stateRefSchema = object(map[string]any{

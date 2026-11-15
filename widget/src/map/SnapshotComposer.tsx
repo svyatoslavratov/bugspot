@@ -161,7 +161,7 @@ export function SnapshotComposer({
           {error}
         </Callout>
       )}
-      <div className="bugspot-form-actions">
+      <div className="pinpath-form-actions">
         <Button text={t.cancel} variant="minimal" onClick={onCancel} />
         <Button
           intent="primary"

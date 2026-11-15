@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/secret"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/secret"
 )
 
 type seedThread struct {
@@ -38,13 +38,13 @@ func seed() {
 	}
 	now := time.Now().UTC()
 	threads := []seedThread{
-		{route: "/campaigns", selector: `[data-bugspot="search"]`, text: "", kind: domain.KindIssue, status: domain.StatusOpen, author: anna,
+		{route: "/campaigns", selector: `[data-pinpath="search"]`, text: "", kind: domain.KindIssue, status: domain.StatusOpen, author: anna,
 			body: "The search field is not centered in its frame: the text sits 2 px too high."},
-		{route: "/campaigns", selector: `[data-bugspot="export"]`, text: "Export", kind: domain.KindQuestion, status: domain.StatusFixed, author: boris,
+		{route: "/campaigns", selector: `[data-pinpath="export"]`, text: "Export", kind: domain.KindQuestion, status: domain.StatusFixed, author: boris,
 			body: "Should the export include archived campaigns?", reply: "The export uses the current filters, archived campaigns only with the Archive filter on. Fixed the button hint in v0.4.2 — please check."},
-		{route: "/campaigns", selector: `[data-bugspot="budget-2"]`, text: "1 250 000 ₽", kind: domain.KindIssue, status: domain.StatusInProgress, author: anna,
+		{route: "/campaigns", selector: `[data-pinpath="budget-2"]`, text: "1 250 000 ₽", kind: domain.KindIssue, status: domain.StatusInProgress, author: anna,
 			body: "Budget is shown without the currency on narrow screens.", reply: "Taking it: the column hides the suffix below 390 px."},
-		{route: "/authors", selector: `[data-bugspot="add-author"]`, text: "Add author", kind: domain.KindIdea, status: domain.StatusOpen, author: boris,
+		{route: "/authors", selector: `[data-pinpath="add-author"]`, text: "Add author", kind: domain.KindIdea, status: domain.StatusOpen, author: boris,
 			body: "Let scouts add several communities at once — one per line."},
 	}
 	for i, s := range threads {

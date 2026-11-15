@@ -16,11 +16,11 @@ export function ThreadList({
 }) {
   const { t, settings } = useWidget();
   return (
-    <CardList bordered={false} compact className="bugspot-list">
+    <CardList bordered={false} compact className="pinpath-list">
       {threads.map((thread) => (
-        <Card key={thread.id} interactive onClick={() => onSelect(thread)} className="bugspot-item">
-          <div className="bugspot-item-head">
-            <span className="bugspot-number">#{thread.number}</span>
+        <Card key={thread.id} interactive onClick={() => onSelect(thread)} className="pinpath-item">
+          <div className="pinpath-item-head">
+            <span className="pinpath-number">#{thread.number}</span>
             <KindIcon kind={thread.kind} />
             <StatusTag status={thread.status} />
             {thread.verified && (
@@ -29,19 +29,19 @@ export function ThreadList({
               </Tag>
             )}
             {thread.hasScreenshot && <Icon icon="media" size={12} className={Classes.TEXT_MUTED} />}
-            <span className={`bugspot-item-time ${Classes.TEXT_MUTED}`}>
+            <span className={`pinpath-item-time ${Classes.TEXT_MUTED}`}>
               {when(thread.updatedAt, t, settings.lang)}
             </span>
           </div>
-          <div className="bugspot-item-body">{thread.body}</div>
-          <div className={`bugspot-item-meta ${Classes.TEXT_MUTED}`}>
+          <div className="pinpath-item-body">{thread.body}</div>
+          <div className={`pinpath-item-meta ${Classes.TEXT_MUTED}`}>
             <span>{thread.author.name}</span>
             {thread.replyCount > 0 && (
               <Tag minimal round icon="comment">
                 {thread.replyCount}
               </Tag>
             )}
-            {showRoute && <span className="bugspot-route">{thread.route}</span>}
+            {showRoute && <span className="pinpath-route">{thread.route}</span>}
           </div>
         </Card>
       ))}

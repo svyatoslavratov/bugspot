@@ -28,7 +28,7 @@ export function KindIcon({ kind }: { kind: Kind }) {
   const { t } = useWidget();
   return (
     <Tooltip content={t.kind[kind]} placement="top">
-      <Icon icon={kindIcon[kind]} size={14} aria-label={t.kind[kind]} className="bugspot-kind" />
+      <Icon icon={kindIcon[kind]} size={14} aria-label={t.kind[kind]} className="pinpath-kind" />
     </Tooltip>
   );
 }
@@ -64,7 +64,7 @@ export function StatusPicker({
         round
         intent={statusIntent[status]}
         endIcon="caret-down"
-        className="bugspot-status-picker"
+        className="pinpath-status-picker"
         aria-label={`${t.setStatus}: ${t.status[status]}`}
         aria-busy={busy}
       >
@@ -138,7 +138,7 @@ export function StatusFilterPicker({ value, onChange }: { value: StatusFilter; o
         size="large"
         intent={value === 'active' || value === 'all' ? 'none' : statusIntent[value]}
         endIcon="caret-down"
-        className="bugspot-status-picker bugspot-status-filter"
+        className="pinpath-status-picker pinpath-status-filter"
         aria-label={`${t.setStatus}: ${label(value)}`}
       >
         {label(value)}

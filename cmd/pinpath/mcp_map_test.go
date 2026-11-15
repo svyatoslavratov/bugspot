@@ -46,7 +46,7 @@ func TestMCPMap(t *testing.T) {
 	}))
 	defer api.Close()
 	base, _ := url.Parse(api.URL + "/")
-	s := &mcpServer{api: &client{base: base, token: "bsp_test", http: &http.Client{Timeout: 5 * time.Second}}}
+	s := &mcpServer{api: &client{base: base, token: "ppt_test", http: &http.Client{Timeout: 5 * time.Second}}}
 
 	call := func(name, args string) (string, bool) {
 		t.Helper()

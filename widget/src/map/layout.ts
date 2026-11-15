@@ -74,13 +74,13 @@ export function threadsOf(map: ScreenMap, key: string): number {
 
 /**
  * Where to start building the map: the app's root page if the map knows it, else any page it
- * knows. The widget there opens the crawl when the address carries #bugspot-crawl.
+ * knows. The widget there opens the crawl when the address carries #pinpath-crawl.
  */
 export function crawlAddress(map: ScreenMap): string | null {
   const page = map.screens.find((s) => s.key === '/' && s.exampleUrl) ?? map.screens.find((s) => s.exampleUrl);
   if (!page?.exampleUrl) return null;
   const url = new URL(page.exampleUrl);
-  url.hash = 'bugspot-crawl';
+  url.hash = 'pinpath-crawl';
   return url.href;
 }
 

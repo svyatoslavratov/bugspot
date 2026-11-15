@@ -2,6 +2,7 @@
 // from the URL, the DOM and ARIA, so it does not care which framework built the page.
 
 import type { Settings } from '../shared/types';
+import { anyAttr, attrOf, hasAttr, IGNORED } from './attrs';
 import { currentRoute } from './route';
 import { selectorOf, textOf } from './anchor';
 
@@ -57,7 +58,7 @@ export function routeKey(
 }
 
 /**
- * The key of the screen on the map: the app's own name for it (data-bugspot-screen on any element
+ * The key of the screen on the map: the app's own name for it (data-pinpath-screen on any element
  * of the page), else the key of the location.
  */
 export function screenKeyOf(
@@ -65,7 +66,8 @@ export function screenKeyOf(
   loc: Pick<Location, 'pathname' | 'hash' | 'search'> = location,
   doc: Document = document,
 ): string {
-  const own = doc.querySelector('[data-bugspot-screen]')?.getAttribute('data-bugspot-screen')?.trim();
+  const marked = doc.querySelector(anyAttr('screen'));
+  const own = marked ? attrOf(marked, 'screen')?.trim() : undefined;
   return own ? own.slice(0, 512) : routeKey(options, loc);
 }
 
@@ -100,10 +102,10 @@ export function accessibleName(el: Element): string {
 
 const DIALOGS = 'dialog[open], [role="dialog"], [role="alertdialog"], [aria-modal="true"]';
 const TABS = '[role="tab"][aria-selected="true"]';
-const NAV = 'nav, aside, header, [role="navigation"], [data-bugspot-nav]';
+const NAV = `nav, aside, header, [role="navigation"], ${anyAttr('nav')}`;
 
 function shown(el: Element): boolean {
-  if (el.closest('[data-bugspot-ignore], [hidden], [aria-hidden="true"]')) return false;
+  if (el.closest(`${IGNORED}, [hidden], [aria-hidden="true"]`)) return false;
   const style = el.ownerDocument.defaultView?.getComputedStyle(el);
   if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
   const rect = el.getBoundingClientRect();
@@ -165,7 +167,7 @@ export interface Via {
 
 const INTERACTIVE =
   'a[href], button, summary, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="option"], ' +
-  'input[type="button"], input[type="submit"], [data-bugspot-to]';
+  `input[type="button"], input[type="submit"], ${anyAttr('to')}`;
 
 /** The element a click went to: the interactive element under it, else a clickable-looking one. */
 export function interactiveOf(target: Element): Element | null {
@@ -222,7 +224,7 @@ export function structureHash(doc: Document = document): string {
   let count = 0;
   while (stack.length && count < 4000) {
     const node = stack.pop()!;
-    if (node.hasAttribute('data-bugspot-ignore') || node.localName === 'script' || node.localName === 'style') continue;
+    if (hasAttr(node, 'ignore') || node.localName === 'script' || node.localName === 'style') continue;
     count++;
     feed(node.localName);
     const role = node.getAttribute('role');
@@ -249,9 +251,7 @@ function uniq(list: string[], limit: number): string[] {
 
 export function outlineOf(doc: Document = document, exclude?: Element): Outline {
   const all = (selector: string) =>
-    [...doc.querySelectorAll(selector)].filter(
-      (el) => (!exclude || !exclude.contains(el)) && !el.closest('[data-bugspot-ignore]'),
-    );
+    [...doc.querySelectorAll(selector)].filter((el) => (!exclude || !exclude.contains(el)) && !el.closest(IGNORED));
   const fieldName = (el: Element) => {
     const id = el.getAttribute('id');
     const label = id ? doc.querySelector(`label[for="${CSS.escape(id)}"]`) : el.closest('label');

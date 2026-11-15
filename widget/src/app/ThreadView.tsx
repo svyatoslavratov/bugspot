@@ -77,7 +77,7 @@ export function ThreadView({
     );
   }
   const thread = detail.data;
-  if (!thread) return <Spinner size={24} className="bugspot-spinner" />;
+  if (!thread) return <Spinner size={24} className="pinpath-spinner" />;
   const here = thread.route === currentRoute;
   // Detached when none of the thread's elements is on the page any more.
   const detached = here && anchorsOf(thread.anchor).every((a) => !resolveAnchor(a));
@@ -89,10 +89,10 @@ export function ThreadView({
     );
 
   return (
-    <div className="bugspot-thread">
-      <div className="bugspot-thread-nav">
+    <div className="pinpath-thread">
+      <div className="pinpath-thread-nav">
         {back}
-        <span className="bugspot-number">#{thread.number}</span>
+        <span className="pinpath-number">#{thread.number}</span>
         <KindPicker
           kind={thread.kind}
           editable={thread.allowed.edit}
@@ -115,7 +115,7 @@ export function ThreadView({
           </Tooltip>
         )}
         {thread.allowed.delete && (
-          <Tooltip content={t.delete} placement="bottom" className="bugspot-push-right">
+          <Tooltip content={t.delete} placement="bottom" className="pinpath-push-right">
             <Button
               icon="trash"
               variant="minimal"
@@ -144,7 +144,7 @@ export function ThreadView({
         </Callout>
       )}
 
-      <div className={`bugspot-meta ${Classes.TEXT_MUTED}`}>
+      <div className={`pinpath-meta ${Classes.TEXT_MUTED}`}>
         {thread.author.name} · {when(thread.createdAt, t, settings.lang)} · {thread.route}
       </div>
       {editing === null ? (
@@ -152,17 +152,17 @@ export function ThreadView({
           // The text itself is the edit button: a click turns it into a field.
           <button
             type="button"
-            className="bugspot-thread-body is-editable"
+            className="pinpath-thread-body is-editable"
             title={t.clickToEdit}
             onClick={() => setEditing(thread.body)}
           >
             {thread.body}
           </button>
         ) : (
-          <p className="bugspot-thread-body">{thread.body}</p>
+          <p className="pinpath-thread-body">{thread.body}</p>
         )
       ) : (
-        <div className="bugspot-edit">
+        <div className="pinpath-edit">
           <TextArea
             fill
             autoResize
@@ -191,14 +191,14 @@ export function ThreadView({
       )}
 
       {thread.statusBy && thread.statusAt && (
-        <div className={`bugspot-meta ${Classes.TEXT_MUTED}`}>
+        <div className={`pinpath-meta ${Classes.TEXT_MUTED}`}>
           {t.statusChanged}: {t.status[thread.status]} — {thread.statusBy.name}
           {thread.statusBy.kind === 'agent' ? ` (${t.agent})` : ''}, {when(thread.statusAt, t, settings.lang)}
         </div>
       )}
 
       <Checkbox
-        className="bugspot-verified"
+        className="pinpath-verified"
         checked={thread.verified}
         disabled={!thread.allowed.verify || busy}
         onChange={(e) => {
@@ -209,7 +209,7 @@ export function ThreadView({
           <>
             {t.verified}
             {thread.verifiedBy && thread.verifiedAt && (
-              <span className={`bugspot-meta ${Classes.TEXT_MUTED}`}>
+              <span className={`pinpath-meta ${Classes.TEXT_MUTED}`}>
                 {' '}
                 · {t.verifiedBy(thread.verifiedBy.name)}, {when(thread.verifiedAt, t, settings.lang)}
               </span>
@@ -225,10 +225,10 @@ export function ThreadView({
       <h4 className={Classes.HEADING}>
         {t.replies} {thread.replies.length > 0 && `· ${thread.replies.length}`}
       </h4>
-      <div className="bugspot-replies">
+      <div className="pinpath-replies">
         {thread.replies.map((r) => (
-          <div key={r.id} className={`bugspot-reply ${r.author.kind === 'agent' ? 'is-agent' : ''}`}>
-            <div className={`bugspot-meta ${Classes.TEXT_MUTED}`}>
+          <div key={r.id} className={`pinpath-reply ${r.author.kind === 'agent' ? 'is-agent' : ''}`}>
+            <div className={`pinpath-meta ${Classes.TEXT_MUTED}`}>
               {r.author.name}
               {r.author.kind === 'agent' ? ` · ${t.agent}` : ''} · {when(r.createdAt, t, settings.lang)}
             </div>
@@ -237,7 +237,7 @@ export function ThreadView({
         ))}
       </div>
       {thread.allowed.reply && (
-        <div className="bugspot-reply-form">
+        <div className="pinpath-reply-form">
           <TextArea
             fill
             autoResize

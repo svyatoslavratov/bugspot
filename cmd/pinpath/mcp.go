@@ -14,13 +14,13 @@ import (
 	"strings"
 )
 
-// The MCP server speaks JSON-RPC 2.0 over stdio (one message per line) and calls the bugspot API
+// The MCP server speaks JSON-RPC 2.0 over stdio (one message per line) and calls the pinpath API
 // with an agent token, so the agent has exactly the token's rights: it reads threads, replies and
 // moves them up to "fixed"; resolving and "checked by a person" stay with people.
 
 var mcpVersions = []string{"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
 
-const mcpInstructions = `bugspot holds comments people pinned to elements of a web app: what is wrong, where, with a
+const mcpInstructions = `pinpath holds comments people pinned to elements of a web app: what is wrong, where, with a
 screenshot and the page context (browser, app version, console errors, failed requests with
 X-Request-ID). Work loop: list_threads → get_thread (and get_screenshot) → set_status in_progress →
 fix the code → reply with what changed and in which version → set_status fixed. People check the
@@ -178,7 +178,7 @@ func (s *mcpServer) handle(req rpcRequest) *rpcResponse {
 		res.Result = map[string]any{
 			"protocolVersion": version,
 			"capabilities":    map[string]any{"tools": map[string]any{"listChanged": false}},
-			"serverInfo":      map[string]any{"name": "bugspot", "title": "bugspot", "version": version},
+			"serverInfo":      map[string]any{"name": "pinpath", "title": "pinpath", "version": version},
 			"instructions":    mcpInstructions,
 		}
 	case "ping":

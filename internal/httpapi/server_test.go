@@ -13,10 +13,10 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/auth"
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/secret"
-	"github.com/svyatoslavratov/bugspot/internal/store/memory"
+	"github.com/svyatoslavratov/pinpath/internal/auth"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/secret"
+	"github.com/svyatoslavratov/pinpath/internal/store/memory"
 )
 
 var now = time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC)
@@ -322,7 +322,7 @@ func TestAccessKeyLink(t *testing.T) {
 		o.Policy.View = rules(t, "authenticated")
 		o.Policy.Comment = rules(t, "provider:key")
 	})
-	if w := e.do(call{method: "POST", path: "/api/v1/session/key", body: map[string]string{"key": "bsk_wrong"}}); w.Code != http.StatusUnauthorized {
+	if w := e.do(call{method: "POST", path: "/api/v1/session/key", body: map[string]string{"key": "ppk_wrong"}}); w.Code != http.StatusUnauthorized {
 		t.Fatalf("wrong key: %d", w.Code)
 	}
 	w := e.do(call{method: "POST", path: "/api/v1/session/key", body: map[string]string{"key": e.key}})

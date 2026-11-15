@@ -59,7 +59,7 @@ export function SettingsMenu({
 
   const current = formatHotkey(prefs.hotkey);
   return (
-    <Menu className="bugspot-menu">
+    <Menu className="pinpath-menu">
       <MenuDivider title={t.commentForm} />
       {(['tiny', 'full'] as ComposeMode[]).map((mode) => (
         <MenuItem

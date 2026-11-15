@@ -1,4 +1,5 @@
 import type { Anchor, ElementAnchor, Layer, Point } from '../shared/types';
+import { anyAttr, attrOf } from './attrs';
 
 const TEXT_LIMIT = 120;
 
@@ -28,8 +29,11 @@ const quoted = (value: string) => `"${value.replace(/["\\]/g, '\\$&')}"`;
 function stableAttribute(el: Element, root: ParentNode): string | null {
   const tag = el.tagName.toLowerCase();
   const candidates: string[] = [];
-  const bugspot = el.getAttribute('data-bugspot');
-  if (bugspot) candidates.push(`[data-bugspot=${quoted(bugspot)}]`);
+  // A stable name the app gives an element; data-bugspot is its name from before the rename.
+  for (const attr of ['data-pinpath', 'data-bugspot']) {
+    const name = el.getAttribute(attr);
+    if (name) candidates.push(`[${attr}=${quoted(name)}]`);
+  }
   if (el.id && !unstableId.test(el.id)) candidates.push(`#${CSS.escape(el.id)}`);
   for (const attr of ['data-testid', 'data-test', 'data-qa', 'name', 'aria-label', 'title', 'placeholder']) {
     const value = el.getAttribute(attr);
@@ -94,7 +98,8 @@ export function buildAnchor(el: Element, client: Point): Anchor {
   const win = doc.defaultView ?? window;
   const rect = el.getBoundingClientRect();
   const clamp = (v: number) => Math.min(1, Math.max(0, Number.isFinite(v) ? v : 0.5));
-  const source = el.closest('[data-bugspot-src]')?.getAttribute('data-bugspot-src') ?? undefined;
+  const marked = el.closest(anyAttr('src'));
+  const source = (marked && attrOf(marked, 'src')) ?? undefined;
   return {
     selector: selectorOf(el, doc),
     text: textOf(el),

@@ -25,13 +25,13 @@ export function Screenshot({ threadId, version }: { threadId: string; version: s
     };
   }, [api, threadId, version]);
   if (failed) return null;
-  if (!url) return <Spinner size={20} className="bugspot-spinner" />;
+  if (!url) return <Spinner size={20} className="pinpath-spinner" />;
   return (
     <>
-      <Button variant="minimal" className="bugspot-shot" onClick={() => setZoom(true)} aria-label={t.screenshot}>
+      <Button variant="minimal" className="pinpath-shot" onClick={() => setZoom(true)} aria-label={t.screenshot}>
         <img src={url} alt={t.screenshot} />
       </Button>
-      <Dialog isOpen={zoom} onClose={() => setZoom(false)} title={t.screenshot} className="bugspot-shot-dialog">
+      <Dialog isOpen={zoom} onClose={() => setZoom(false)} title={t.screenshot} className="pinpath-shot-dialog">
         <DialogBody className={Classes.DIALOG_BODY}>
           <img src={url} alt={t.screenshot} />
         </DialogBody>

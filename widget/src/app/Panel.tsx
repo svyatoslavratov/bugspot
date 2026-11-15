@@ -23,7 +23,7 @@ import { buttonPoint, panelBox } from './layout';
 import { ThreadList } from './ThreadList';
 import type { Loaded } from './useData';
 
-const PROJECT_URL = 'https://github.com/svyatoslavratov/bugspot';
+const PROJECT_URL = 'https://github.com/svyatoslavratov/pinpath';
 
 export type Tab = 'page' | 'all';
 export type { StatusFilter } from './labels';
@@ -68,14 +68,14 @@ export function Panel(p: Props) {
 
   return (
     <Card
-      className={`bugspot-panel ${p.peek ? 'is-peeking' : ''}`}
+      className={`pinpath-panel ${p.peek ? 'is-peeking' : ''}`}
       elevation={Elevation.FOUR}
       style={box}
       role="dialog"
       aria-label={t.title}
     >
-      <header className="bugspot-panel-header">
-        <div className="bugspot-panel-title">
+      <header className="pinpath-panel-header">
+        <div className="pinpath-panel-title">
           <strong>{t.title}</strong>
           <span className={Classes.TEXT_MUTED}>
             {t.signedAs}: {session.user?.name}
@@ -118,12 +118,12 @@ export function Panel(p: Props) {
       </header>
       {p.view.kind === 'list' ? (
         <>
-          <div className="bugspot-toolbar">
-            <Tabs id="bugspot-tabs" selectedTabId={p.tab} onChange={(id) => p.onTab(id as Tab)}>
+          <div className="pinpath-toolbar">
+            <Tabs id="pinpath-tabs" selectedTabId={p.tab} onChange={(id) => p.onTab(id as Tab)}>
               <BpTab id="page" title={t.thisPage} tagContent={p.counts.page || undefined} tagProps={{ round: true }} />
               <BpTab id="all" title={t.all} tagContent={p.counts.all || undefined} tagProps={{ round: true }} />
             </Tabs>
-            <div className="bugspot-filters">
+            <div className="pinpath-filters">
               <InputGroup
                 leftIcon="search"
                 placeholder={t.search}
@@ -135,16 +135,16 @@ export function Panel(p: Props) {
               <StatusFilterPicker value={p.status} onChange={p.onStatus} />
             </div>
           </div>
-          <div className="bugspot-panel-body">
+          <div className="pinpath-panel-body">
             <ListBody {...p} />
           </div>
         </>
       ) : (
-        <div className="bugspot-panel-body">{p.children}</div>
+        <div className="pinpath-panel-body">{p.children}</div>
       )}
-      <footer className="bugspot-panel-footer">
+      <footer className="pinpath-panel-footer">
         <a href={PROJECT_URL} target="_blank" rel="noopener noreferrer" title={t.aboutProject}>
-          bugspot ↗
+          pinpath ↗
         </a>
       </footer>
     </Card>
@@ -163,7 +163,7 @@ function ListBody({ list, query, status, tab, onSelect }: Props) {
       />
     );
   }
-  if (!list.data) return <Spinner size={24} className="bugspot-spinner" />;
+  if (!list.data) return <Spinner size={24} className="pinpath-spinner" />;
   if (!list.data.data.length) {
     const filtered = Boolean(query) || status !== 'active';
     return (

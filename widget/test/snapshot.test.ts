@@ -25,11 +25,13 @@ test('a snapshot: no scripts or handlers, absolute URLs, typed values masked, st
       <a href="#/author/1">Иванов</a><a href="javascript:void(0)">x</a>
       <input id="name" value="старое"><input type="password" id="pw">
       <input type="checkbox" id="cb"><textarea id="ta"></textarea>
-      <p data-bugspot-mask>Секрет</p>
+      <p data-pinpath-mask>Секрет</p>
+      <p data-bugspot-mask>Старый секрет</p>
+      <aside data-bugspot-ignore>служебное</aside>
       <iframe src="https://other.test"></iframe>
       <form action="/send"><button type="submit">Отправить</button></form>
     </main>
-    <bugspot-widget data-bugspot-ignore><span>widget</span></bugspot-widget>`;
+    <pinpath-widget data-pinpath-ignore><span>widget</span></pinpath-widget>`;
   (document.getElementById('name') as HTMLInputElement).value = 'Анна';
   (document.getElementById('pw') as HTMLInputElement).value = 'secret';
   (document.getElementById('cb') as HTMLInputElement).checked = true;
@@ -46,12 +48,15 @@ test('a snapshot: no scripts or handlers, absolute URLs, typed values masked, st
   expect(html).toContain('checked');
   expect(html).toContain('>•••••</textarea>');
   expect(html).toContain('>••••••</p>');
-  expect(html).toContain('data-bugspot-frame');
+  expect(html).toContain('data-pinpath-frame');
   expect(html).not.toContain('widget');
+  // Marks from before the rename: data-bugspot-mask masks, data-bugspot-ignore leaves out.
+  expect(html).not.toContain('Старый секрет');
+  expect(html).not.toContain('служебное');
   expect(snap.css).toHaveLength(1);
   expect(snap.css[0].text).toContain('color: red');
   expect(snap.css[0].hash).toBe(await sha256(snap.css[0].text));
-  expect(html).toContain(`<style data-bugspot-asset="${snap.css[0].hash}"></style>`);
+  expect(html).toContain(`<style data-pinpath-asset="${snap.css[0].hash}"></style>`);
 
   const plain = await serializeDocument(document, { mask: 'none' });
   expect(plain.html).toContain('value="Анна"');

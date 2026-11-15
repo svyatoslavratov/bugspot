@@ -4,7 +4,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { dictionaries } from '../lib/i18n';
-import type { BugspotHandle, MountOptions } from '../loader';
+import type { PinpathHandle, MountOptions } from '../loader';
 import { App, type AppHandle } from './App';
 import { WidgetContext } from './context';
 import { setupIcons } from './icons';
@@ -26,18 +26,18 @@ function adoptStyles(root: ShadowRoot) {
   }
 }
 
-export function mount(options: MountOptions): BugspotHandle {
-  const host = document.createElement('bugspot-widget');
-  host.setAttribute('data-bugspot-ignore', '');
+export function mount(options: MountOptions): PinpathHandle {
+  const host = document.createElement('pinpath-widget');
+  host.setAttribute('data-pinpath-ignore', '');
   const shadow = host.attachShadow({ mode: 'open' });
   adoptStyles(shadow);
   const dark =
     options.settings.theme === 'dark' ||
     (options.settings.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   const container = document.createElement('div');
-  container.className = `bugspot ${dark ? Classes.DARK : ''}`;
+  container.className = `pinpath ${dark ? Classes.DARK : ''}`;
   const portal = document.createElement('div');
-  portal.className = `bugspot-portal ${dark ? Classes.DARK : ''}`;
+  portal.className = `pinpath-portal ${dark ? Classes.DARK : ''}`;
   shadow.append(container, portal);
   document.body.append(host);
 
@@ -62,6 +62,7 @@ export function mount(options: MountOptions): BugspotHandle {
       root.unmount();
       host.remove();
       options.capture.uninstall();
+      delete window.pinpath;
       delete window.bugspot;
     },
   };

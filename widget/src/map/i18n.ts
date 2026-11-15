@@ -2,10 +2,10 @@ const ru = {
   title: 'Карта экранов',
   loading: 'Загружаем карту…',
   noAccess: 'Нет доступа к карте экранов',
-  noAccessHint: 'Карту открывают те, кому разрешено правилом BUGSPOT_MAP.',
+  noAccessHint: 'Карту открывают те, кому разрешено правилом PINPATH_MAP.',
   empty: 'Карта пока пуста',
   emptyHint:
-    'Карта собирается сама, пока люди работают в приложении с виджетом bugspot: экраны, их вкладки и окна, переходы и настоящий вид каждого состояния. Чтобы собрать её сразу, нажмите в виджете «Карта экранов → Собрать карту» или запустите bugspot map crawl.',
+    'Карта собирается сама, пока люди работают в приложении с виджетом pinpath: экраны, их вкладки и окна, переходы и настоящий вид каждого состояния. Чтобы собрать её сразу, нажмите в виджете «Карта экранов → Собрать карту» или запустите pinpath map crawl.',
   loadError: 'Не удалось загрузить карту',
   retry: 'Повторить',
   search: 'Поиск экранов',
@@ -69,7 +69,7 @@ const ru = {
   liveNow: (name: string) => `В приложении сейчас: ${name}`,
   liveHint: 'Это настоящее приложение: в нём можно работать, комментарии оставляйте его виджетом.',
   liveSilent:
-    'Приложение не отвечает. Если оно не открылось, оно запрещает показ во фрейме: разрешите адрес bugspot в X-Frame-Options или CSP frame-ancestors. Если открылось, но карта не следует за ним, на странице нет виджета bugspot.',
+    'Приложение не отвечает. Если оно не открылось, оно запрещает показ во фрейме: разрешите адрес pinpath в X-Frame-Options или CSP frame-ancestors. Если открылось, но карта не следует за ним, на странице нет виджета pinpath.',
   more: 'Ещё',
   crawl: 'Собрать карту в приложении',
   crawlNoApp: 'Адрес приложения появится, когда на карте будет хотя бы один экран.',
@@ -94,10 +94,10 @@ const en: MapDict = {
   title: 'Screen map',
   loading: 'Loading the map…',
   noAccess: 'No access to the screen map',
-  noAccessHint: 'The map opens for those the BUGSPOT_MAP rule allows.',
+  noAccessHint: 'The map opens for those the PINPATH_MAP rule allows.',
   empty: 'The map is empty so far',
   emptyHint:
-    'The map builds itself while people use the app with the bugspot widget: screens, their tabs and dialogs, transitions and the real look of each state. To build it at once, choose "Screen map → Build the map" in the widget or run bugspot map crawl.',
+    'The map builds itself while people use the app with the pinpath widget: screens, their tabs and dialogs, transitions and the real look of each state. To build it at once, choose "Screen map → Build the map" in the widget or run pinpath map crawl.',
   loadError: 'Could not load the map',
   retry: 'Retry',
   search: 'Search screens',
@@ -162,7 +162,7 @@ const en: MapDict = {
   liveNow: (name: string) => `The app is on: ${name}`,
   liveHint: 'This is the real app: work in it, and leave comments with its widget.',
   liveSilent:
-    'The app does not answer. If it did not open, it refuses frames: allow the bugspot address in X-Frame-Options or CSP frame-ancestors. If it opened but the map does not follow it, the page has no bugspot widget.',
+    'The app does not answer. If it did not open, it refuses frames: allow the pinpath address in X-Frame-Options or CSP frame-ancestors. If it opened but the map does not follow it, the page has no pinpath widget.',
   more: 'More',
   crawl: 'Build the map in the app',
   crawlNoApp: 'The app address shows up once the map has a screen.',

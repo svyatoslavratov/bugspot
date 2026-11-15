@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
 )
 
 type queryer interface {

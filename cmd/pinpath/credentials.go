@@ -8,20 +8,20 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/svyatoslavratov/bugspot/internal/config"
-	"github.com/svyatoslavratov/bugspot/internal/domain"
-	"github.com/svyatoslavratov/bugspot/internal/secret"
+	"github.com/svyatoslavratov/pinpath/internal/config"
+	"github.com/svyatoslavratov/pinpath/internal/domain"
+	"github.com/svyatoslavratov/pinpath/internal/secret"
 )
 
 // credentials manages agent tokens (token) or access keys (key) directly in the database, so it
-// runs next to the service: docker compose exec bugspot bugspot token create --name claude.
+// runs next to the service: docker compose exec pinpath pinpath token create --name claude.
 func (a *app) credentials(args []string, agent bool) error {
 	noun, kind, prefix := "key", domain.CredentialKey, secret.KeyPrefix
 	if agent {
 		noun, kind, prefix = "token", domain.CredentialAgent, secret.AgentPrefix
 	}
 	if len(args) == 0 {
-		return fmt.Errorf("usage: bugspot %s create|list|revoke", noun)
+		return fmt.Errorf("usage: pinpath %s create|list|revoke", noun)
 	}
 	cfg, err := config.Load(a.getenv)
 	if err != nil {
@@ -69,7 +69,7 @@ func (a *app) credentials(args []string, agent bool) error {
 		}
 		fmt.Fprintf(a.stderr, "Created %s %s (%s). It is shown once; only its hash is stored.\n", noun, c.ID, c.Name)
 		if !agent {
-			fmt.Fprintf(a.stderr, "Share a link with ?bugspot_key=%s added to any page that loads the widget.\n", raw)
+			fmt.Fprintf(a.stderr, "Share a link with ?pinpath_key=%s added to any page that loads the widget.\n", raw)
 		}
 		fmt.Fprintln(a.stdout, raw)
 	case "list":
@@ -90,7 +90,7 @@ func (a *app) credentials(args []string, agent bool) error {
 		return tw.Flush()
 	case "revoke":
 		if len(args) != 2 {
-			return fmt.Errorf("usage: bugspot %s revoke ID", noun)
+			return fmt.Errorf("usage: pinpath %s revoke ID", noun)
 		}
 		if err := st.RevokeCredential(ctx, args[1], time.Now().UTC()); err != nil {
 			return fmt.Errorf("revoke %s: %w", args[1], err)

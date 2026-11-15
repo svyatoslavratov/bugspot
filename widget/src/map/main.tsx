@@ -45,7 +45,7 @@ function Root() {
   const [failed, setFailed] = useState<string | null>(null);
   const t = mapDictionaries[lang];
   useEffect(() => {
-    document.title = `${t.title} · bugspot`;
+    document.title = `${t.title} · pinpath`;
     api.session().then(setSession, (e: unknown) => setFailed(e instanceof Error ? e.message : String(e)));
   }, [t.title]);
   if (failed) return <NonIdealState icon="error" title={t.loadError} description={failed} />;
