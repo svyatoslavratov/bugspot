@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com), and the proje
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-15
+
 ### Added
 
 - A map of the screens at `/map`. While people use the app, the widget records its screens (routes
